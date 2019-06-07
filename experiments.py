@@ -195,7 +195,7 @@ def erdos_renyi_exp_for_parallel(filename='erdos_renyi_exp2'):
 
     for structure in ['erdos_renyi']:
         
-        for m in [6]:
+        for m in [300, 1000]:
 
             exact = False
             jt_perms = None

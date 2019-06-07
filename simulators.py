@@ -153,7 +153,7 @@ def create_queues_heap(event_stream, customer_queues, server_queues, m, n, sim_l
         heappush(server_queues[j], sim_len + 1)
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True)
 def matching_sim_loop_pairs(customer_queues, server_queues, event_stream, s_adj, c_adj, m, n, sim_len):
 
 
@@ -221,7 +221,7 @@ def matching_sim_loop_pairs(customer_queues, server_queues, event_stream, s_adj,
     return matching_counter/matching_counter.sum()
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True)
 def matching_sim_loop_pairs2(customer_queues, server_queues, event_stream, s_adj, c_adj, m, n, sim_len):
 
     server_arrived_idx = [-1] * n
