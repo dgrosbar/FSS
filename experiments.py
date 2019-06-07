@@ -201,9 +201,9 @@ def erdos_renyi_exp_for_parallel(filename='erdos_renyi_exp3'):
             jt_perms = None
             print_progress = False
 
-            k = 0
+            k = 17
             p = 8
-            while k < 30:
+            while k < 36:
                 exps = []
                 while len(exps) < p:
 
@@ -1168,21 +1168,22 @@ def go_back_and_approximate_sbpss(filename='FZ_Kaplan_exp_dissapative_res'):
 def go_back_and_approximate_sbpss_customer_dependet(filename='FZ_Kaplan_exp_dissapative_res'):
 
     df = pd.read_csv(filename + '.csv')
-    newfilename = 'FZ_Kaplan_exp_sbpss'
+    newfilename = 'FZ_Kaplan_exp_sbpss_cd'
 
-    p = 8
+    p = 3
     k = 0
     exps = []
     pool = mp.Pool(processes=8)
-    for n in range(7, 11, 1):
-        for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
-            exps.append([exp, timestamp])
-        print('no_of_exps:', len(exps), 'n:', n)
-        print('starting work with {} cpus'.format(p))
-        sbpss_dfs = pool.starmap(approximate_sbpss, exps)
-        exps = []
-        sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-        write_df_to_file('FZ_Kaplan_exp_sbpss2', sbpss_df)
+
+
+    for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
+        exps.append([exp, timestamp])
+    print('no_of_exps:', len(exps), 'n:', n)
+    print('starting work with {} cpus'.format(p))
+    sbpss_dfs = pool.starmap(approximate_sbpss, exps)
+    exps = []
+    sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+    write_df_to_file('FZ_Kaplan_exp_sbpss2', sbpss_df)
 
 
 def approximate_sbpss(exp, timestamp):
