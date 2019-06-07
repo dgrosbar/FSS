@@ -190,7 +190,7 @@ def grids_exp_for_parallel(filename='grids_exp_parallel_test'):
                         res_df.to_csv(filename + '.csv', index=False)
 
 
-def erdos_renyi_exp_for_parallel(filename='erdos_renyi_exp2'):
+def erdos_renyi_exp_for_parallel(filename='erdos_renyi_exp3'):
 
 
     for structure in ['erdos_renyi']:
@@ -202,7 +202,7 @@ def erdos_renyi_exp_for_parallel(filename='erdos_renyi_exp2'):
             print_progress = False
 
             k = 0
-            p = 3
+            p = 8
             while k < 30:
                 exps = []
                 while len(exps) < p:
