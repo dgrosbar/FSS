@@ -202,8 +202,8 @@ def erdos_renyi_exp_for_parallel(filename='erdos_renyi_exp3'):
             print_progress = False
 
             k = 17
-            p = 8
-            while k < 36:
+            p = 7
+            while k < 30:
                 exps = []
                 while len(exps) < p:
 
