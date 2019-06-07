@@ -8,7 +8,6 @@ import heapq as hq
 from time import time
 from copy import copy
 from scipy import sparse as sps
-import line_profiler 
 import atexit
 from jit_heap import *
 
