@@ -8,7 +8,8 @@ from numpy import ma
 from utilities import printarr
 from scipy import sparse as sps
 import sys
-from gurobipy import *
+# from gurobipy import *
+
 
 def adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta, jt_perms=None, print_progress=False):
 
