@@ -391,7 +391,7 @@ def comparison_graph4(filename, approx_names):
     plt.show()
 
 
-def comparison_graph5(filename='erdos_renyi_exp_w_qp'):
+def comparison_graph5(filename='grid_exp_parallel'):
 
     df = pd.read_csv(filename + '.csv')
     printcols(df)
@@ -481,11 +481,11 @@ def comparison_graph5(filename='erdos_renyi_exp_w_qp'):
 
         return pd.Series(d, index=index) 
 
-    sum_base_cols = ['approximation']
+    sum_base_cols = ['approximation', 'm']
 
     sum_res = agg_res[sum_base_cols + ['err_pct_of_rate', 'sum_abs_error_sim']]
     print(sum_res)
-    sum_res = sum_res.groupby(by='approximation', as_index=False).apply(g).set_index('approx').reset_index()
+    sum_res = sum_res.groupby(by=['approximation', 'm'], as_index=False).apply(g).reset_index()
     
     print(sum_res)
 
@@ -1419,7 +1419,7 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    
+    comparison_graph5('grid_exp_final')
 
 
 

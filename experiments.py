@@ -139,7 +139,7 @@ def grids_exp(filename='grids_exp'):
                             res_df.to_csv(filename + '.csv', index=False)
 
 
-def grids_exp_for_parallel(filename='grids_exp_parallel_test'):
+def grids_exp_for_parallel(filename='grids_exp_parallel_extra_30x30_5_8'):
 
     jt_perm_dict = {9: list(jpermute(range(9)))}
     print_progress = True
@@ -152,42 +152,42 @@ def grids_exp_for_parallel(filename='grids_exp_parallel_test'):
             m =sqrt_m**2
             jt_perms = jt_perm_dict[9] if sqrt_m ==3 else None
 
-            k = 2
+            k = 5
             while k < 8:
                 exps = []
-                while len(exps) < 3:
+                while len(exps) < 2:
 
                     alpha = np.random.exponential(scale=1, size=sqrt_m**2) # obtain values for non normelized customer frecompatability_matrixuency       
                     beta = np.random.exponential(scale=1, size=sqrt_m**2) # obtain values for non normelized server frecompatability_matrixuency
                     alpha = alpha/alpha.sum()
                     beta = beta/beta.sum()
                     valid = False
-                    d = 0
+                    d = 3
+                    compatability_matrix, g = generate_grid_compatability_matrix(sqrt_m, d)
+                    valid, _ = verify_crp_condition(compatability_matrix, alpha, beta)
                     
-                    for d in range(1, 4, 1):
-
-                        compatability_matrix, g = generate_grid_compatability_matrix(sqrt_m, d)
-                        valid, _ = verify_crp_condition(compatability_matrix, alpha, beta)
-                        
-                        if valid:
-                            k += 1
-                            arc_dist=d
-                            print(k-1, str(sqrt_m) + 'x' + str(sqrt_m), 'd=', arc_dist)
-                            print('-'*75)
-                            aux_data = {'exp_num': k, 'size': str(sqrt_m) + 'x' + str(sqrt_m), 'arc_dist': arc_dist, 'structure': structure}
-                            exps.append([compatability_matrix, alpha, beta, jt_perms, exact, print_progress, aux_data])
-                            break
+                    if valid:
+                        k += 1
+                        arc_dist=d
+                        print(k-1, str(sqrt_m) + 'x' + str(sqrt_m), 'd=', arc_dist)
+                        print('-'*75)
+                        aux_data = {'exp_num': k, 'size': str(sqrt_m) + 'x' + str(sqrt_m), 'arc_dist': arc_dist, 'structure': structure}
+                        exps.append([compatability_matrix, alpha, beta, jt_perms, exact, print_progress, aux_data])
                             
-                pool = mp.Pool(processes=3)
+                pool = mp.Pool(processes=2)
                 exps_res = pool.starmap(compare_approximations_generic_parallel, exps)
-                for res_df_k in exps_res:
-                    if os.path.exists(filename + '.csv'):
-                        res_df = pd.read_csv(filename + '.csv')
-                        res_df = pd.concat([res_df, res_df_k], axis=0)
-                        res_df.to_csv(filename + '.csv', index=False)
-                    else:
-                        res_df = res_df_k
-                        res_df.to_csv(filename + '.csv', index=False)
+
+                exps_res_df = pd.concat(exps_res, axis=0)
+
+                exps_res_df = go_back_and_solve_qp(exps_res_df) 
+                
+                if os.path.exists(filename + '.csv'):
+                    res_df = pd.read_csv(filename + '.csv')
+                    res_df = pd.concat([res_df, exps_res_df], axis=0)
+                    res_df.to_csv(filename + '.csv', index=False)
+                else:
+                    res_df = exps_res_df
+                    res_df.to_csv(filename + '.csv', index=False)
 
 
 def erdos_renyi_exp_for_parallel(filename='erdos_renyi_exp3'):
@@ -195,13 +195,13 @@ def erdos_renyi_exp_for_parallel(filename='erdos_renyi_exp3'):
 
     for structure in ['erdos_renyi']:
         
-        for m in [300, 1000]:
+        for m in [500]:
 
             exact = False
             jt_perms = None
             print_progress = False
 
-            k = 17
+            k = 0
             p = 7
             while k < 30:
                 exps = []
@@ -761,48 +761,39 @@ def compare_approximations_generic_parallel(compatability_matrix, alpha, beta, j
     s = time()
     print('getting entropy approximation')
     converge, ent_matching_rates, gap_pct = entropy_approximation(compatability_matrix, alpha, beta)
-    ent_matching_rates = ent_matching_rates.toarray()
+    try:
+        ohm_law_approx, _, _ = ohm_law_approximation(compatability_matrix, alpha, beta)
+    except:
+        ohm_law_approx= -1 * np.ones((m,n))
+
+
     print(time() - s)
     s = time()
-    # print('ohm law approximation')
-    # try:
-    #     ohm_matching_rates, v, w = ohm_law_approximation(compatability_matrix, alpha, beta)
-    # except Exception as exc:
-    # ohm_matching_rates = np.ones((m,n)) * -1
-    # v = np.ones((m)) *-1
-    # w = np.ones((n)) *-1
-    #     print(exc)
-    # print(time() - s)
+
     
     if exact:
-        # print('getting exact matching_rates')
-        s = time()
+
         exact_matching_rates = adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta, jt_perms, print_progress)
         sim_matching_rates = np.zeros((m,n))
         sim_matching_rates_stdev = np.zeros((m,n))
-        sim_matching_rates_upper_ci = np.zeros((m,n))
-        sim_matching_rates_lower_ci = np.zeros((m,n))
-        # print(time() - s)
+
     else:
         exact_matching_rates = np.zeros((m,n))
-        # print('getting sim matching_rates')
+
         s = time()
         sim_matching_rates, sim_matching_rates_stdev = simulate_matching_sequance(
             compatability_matrix,
             alpha,
             beta,
-            sim_len=None,
+            sim_len=edge_count * 1000,
             sim_name=aux_data.get('sim_name', ''),
             prt=True
         )
-        # print(time() - s)
-        sim_matching_rates_upper_ci = sim_matching_rates + 1.96 * sim_matching_rates_stdev
-        sim_matching_rates_lower_ci = sim_matching_rates - 1.96 * sim_matching_rates_stdev
 
     cols = [
-        'timestamp', 'm', 'n', 'max_edges', 'edge_count', 'edge_density', 'utilization', 'exact',
-        'i', 'j', 'alpha', 'beta', 'exact_matching_rate', 'sim_matching_rate', 'entropy_approx',
-        'sim_matching_rate_CI_95_U', 'sim_matching_rate_CI_95_L', 'no_of_sims', 'sim_matching_rate_stdev', '95_CI_len', 'in_CI'] + [key for key in aux_data]
+        'timestamp', 'm', 'n', 'max_edges', 'edge_count', 'edge_density', 'utilization', 'exact', 'no_of_sims',
+        'i', 'j', 'alpha', 'beta', 'exact_matching_rate', 'sim_matching_rate', 'sim_matching_rate_stdev',
+        'entropy_approx', 'ohm_approx'] + [key for key in aux_data]
 
 
     res_df = pd.DataFrame.from_dict({
@@ -813,10 +804,8 @@ def compare_approximations_generic_parallel(compatability_matrix, alpha, beta, j
         'exact_matching_rate': exact_matching_rates[nnz],
         'sim_matching_rate': sim_matching_rates[nnz],
         'sim_matching_rate_stdev': sim_matching_rates_stdev[nnz],
-        '95_CI_len': 1.96 * sim_matching_rates_stdev[nnz],
-        'sim_matching_rate_CI_95_U': sim_matching_rates_upper_ci[nnz],
-        'sim_matching_rate_CI_95_L': sim_matching_rates_lower_ci[nnz],
         'entropy_approx': ent_matching_rates[nnz],
+        'ohm_approx': ohm_law_approx[nnz]
     })
 
     res_df.loc[:, 'timestamp'] = dt.datetime.now() #
@@ -828,10 +817,6 @@ def compare_approximations_generic_parallel(compatability_matrix, alpha, beta, j
     res_df.loc[:, 'n'] = n
     res_df.loc[:, 'utilization'] = alpha.sum()/beta.sum()
     res_df.loc[:, 'no_of_sims'] = 30
-    res_df.loc[:, 'in_CI'] = (
-        (res_df['exact_matching_rate'] <= res_df['sim_matching_rate_CI_95_U']) &
-        (res_df['exact_matching_rate'] >= res_df['sim_matching_rate_CI_95_L'])
-    ) if exact else 0
     if aux_data is not None:
         for key, val in aux_data.items():
             res_df.loc[:, key] = val
@@ -1099,14 +1084,13 @@ def ohm_singular(filename='FZ_Kaplan_exp'):
         printarr(compatability_matrix, timestamp)
 
 
-def go_back_and_solve_qp(infilename='erdos_renyi_exp', filename='erdos_renyi_exp_w_qp'):
+def go_back_and_solve_qp(df):
 
-
-    df = pd.read_csv(infilename + '.csv')
+    quad_df_list = []
 
     for timestamp, exp in df.groupby(['timestamp']):
 
-        exp_data = exp[['m', 'n', 'structure', 'exp_num']].drop_duplicates()
+        exp_data = exp[['m', 'n','exp_num']].drop_duplicates()
         alpha_data = exp[['i', 'alpha']].drop_duplicates()
         beta_data = exp[['j', 'beta']].drop_duplicates()
         m = exp_data['m'].iloc[0]
@@ -1125,30 +1109,45 @@ def go_back_and_solve_qp(infilename='erdos_renyi_exp', filename='erdos_renyi_exp
             compatability_matrix[int(row['i']), int(row['j'])] = 1.
 
         nnz = compatability_matrix.nonzero()
+        try:
+            quad_matching_rates = quadratic_approximation(compatability_matrix, alpha, beta)
+        except:
+            print('bad_quad:', timestamp)
+            quad_matching_rates = np.zeros((m,n))
+        if quad_matching_rates is None:
+            print('bad_quad:', timestamp)
+            quad_matching_rates = np.zeros((m,n))
+        try:
+            ohm_matching_rates,_,_ = ohm_law_approximation(compatability_matrix, alpha, beta)
+        except:
+            print('bad_ohm:', timestamp)
+            ohm_matching_rates = np.zeros((m,n))
+        if ohm_matching_rates is None:
+            print('bad_ohm:', timestamp)
+            ohm_matching_rates = np.zeros((m,n))
 
-        matching_rates = quadratic_approximation(compatability_matrix, alpha, beta)
 
-        quadratic_df = pd.DataFrame.from_dict({
+        quad_df_k = pd.DataFrame.from_dict({
             'i': nnz[0],
             'j': nnz[1],
-            'quad_approx': matching_rates[nnz]
+            'quad_approx': quad_matching_rates[nnz],
+            'ohm_approx': ohm_matching_rates[nnz]
         })
 
-        quadratic_df.loc[:, 'timestamp'] = timestamp
+        quad_df_k.loc[:, 'timestamp'] = timestamp
+        quad_df_list.append(quad_df_k)
 
-        if os.path.exists(filename + '.csv'):
-            res_df = pd.read_csv(filename + '.csv')
-            res_df = pd.concat([res_df, quadratic_df], axis=0)
-            res_df.to_csv(filename + '.csv', index=False)
-        else:
-            res_df = quadratic_df
-            res_df.to_csv(filename + '.csv', index=False)
+    quad_df = pd.concat(quad_df_list, axis=0)
+
+    df = pd.merge(left=df, right=quad_df, on=['timestamp', 'i', 'j'], how='left')
+
+    return df
 
 
-def go_back_and_approximate_sbpss(filename='FZ_Kaplan_exp_dissapative_res'):
+def go_back_and_approximate_sbpss(filename='erdos_renyi_exp4'):
 
     df = pd.read_csv(filename + '.csv')
-    newfilename = 'FZ_Kaplan_exp_sbpss'
+    newfilename = 'erdos_renyi_exp4_w_approx'
 
     p = 8
     k = 0
@@ -1163,27 +1162,6 @@ def go_back_and_approximate_sbpss(filename='FZ_Kaplan_exp_dissapative_res'):
         exps = []
         sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
         write_df_to_file('FZ_Kaplan_exp_sbpss2', sbpss_df)
-
-
-def go_back_and_approximate_sbpss_customer_dependet(filename='FZ_Kaplan_exp_dissapative_res'):
-
-    df = pd.read_csv(filename + '.csv')
-    newfilename = 'FZ_Kaplan_exp_sbpss_cd'
-
-    p = 3
-    k = 0
-    exps = []
-    pool = mp.Pool(processes=8)
-
-
-    for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
-        exps.append([exp, timestamp])
-    print('no_of_exps:', len(exps), 'n:', n)
-    print('starting work with {} cpus'.format(p))
-    sbpss_dfs = pool.starmap(approximate_sbpss, exps)
-    exps = []
-    sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-    write_df_to_file('FZ_Kaplan_exp_sbpss2', sbpss_df)
 
 
 def approximate_sbpss(exp, timestamp):
@@ -1279,17 +1257,44 @@ def approximate_sbpss(exp, timestamp):
         return sbpss_df
 
 
+def go_back_and_approximate_sbpss_customer_dependet(filename='FZ_final_w_qp'):
+
+    df = pd.read_csv(filename + '.csv')
+    p = 8
+    pool = mp.Pool(processes=p)
+
+    for n in range(7,11,1):
+        exps = []
+        for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
+            exps.append([exp, timestamp])
+            if len(exps) == p:
+                print('no_of_exps:', len(exps), 'n:', n)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
+                sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd', sbpss_df)
+                exps = []
+        else:
+            if len(exps) > 0:
+                print('no_of_exps:', len(exps), 'n:', n)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
+                sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd', sbpss_df)
+                exps = []   
+
+
+
 def approximate_sbpss_customer_dependent(exp, timestamp):
 
-
-        exp_data = exp[['m', 'n', 'graph_no', 'exp_no', 'beta_dist']].drop_duplicates()
+        exp_data = exp[['m', 'n', 'graph_no', 'exp_num', 'beta_dist']].drop_duplicates()
         alpha_data = exp[['i', 'alpha']].drop_duplicates()
         beta_data = exp[['j', 'beta']].drop_duplicates()
         
         m = exp_data['m'].iloc[0]
         n = exp_data['n'].iloc[0]
         graph_no = exp_data['graph_no'].iloc[0]
-        exp_no = exp_data['exp_no'].iloc[0]
+        exp_no = exp_data['exp_num'].iloc[0]
         beta_dist = exp_data['beta_dist'].iloc[0]
 
         print('graph_no:', graph_no, 'exp_no:', exp_no, 'beta_dist:', beta_dist)
@@ -1309,66 +1314,73 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
 
         nnz = compatability_matrix.nonzero()
 
-        pad_compatability_matrix = np.vstack([compatability_matrix, np.ones(n)])
+        # pad_compatability_matrix = np.vstack([compatability_matrix, np.ones(n)])
         no_of_edges = len(nnz[0])
 
         sbpss_df = []
-        exact = n <= 10
 
-        for rho in [0.01] + [0.05] + [0.1*i for i in range(1, 10, 1)] + [.95, .99]:
+        for split in ['one', 'half', 'rand']:
 
-            
-            lamda = alpha * rho
-            mu = beta
-            pad_lamda = np.append(alpha*rho, 1. - rho)
-
-            print(
-                'rho:' , rho, '\n',
-                'lamda: ', np.array2string(lamda, max_line_width=np.inf), '\n',
-                'mu', np.array2string(mu, max_line_width=np.inf)
-                )
-
-            _, heavy_traffic_approx_entropy, _ = entropy_approximation(pad_compatability_matrix, pad_lamda, mu)
-            
-            heavy_traffic_approx_entropy = heavy_traffic_approx_entropy[:m, :]
-            low_traffic_approx_entropy = local_entropy(compatability_matrix, alpha * rho, beta)
-            if exact:
-                heavy_traffic_approx_exact = adan_weiss_fcfs_alis_matching_rates(pad_compatability_matrix, pad_lamda, mu, print_progress= False)
-                heavy_traffic_approx_exact = heavy_traffic_approx_exact[:m, :]
+            if split == 'one':
+                theta = np.ones(m)
+            elif split == 'half':
+                theta = 0.5 * np.ones(m)
             else:
+                theta = np.random.uniform(0.1, 0.9, m)
+
+            # for rho in [0.01] + [0.05] + [0.1*i for i in range(1, 10, 1)] + [.95, .99]:
+            for rho in [0.1, 0.9]:
+                
+                st = time()            
+                lamda = np.ones(m) * rho * theta
+                s = alpha * (1./theta)
+                eta = lamda * s
+                mu = beta
+
+                print(
+                    'rho:' , rho, '\n',
+                    'lamda: ', np.array2string(lamda, max_line_width=np.inf), '\n',
+                    'eta: ', np.array2string(eta, max_line_width=np.inf), '\n',
+                    'mu', np.array2string(mu, max_line_width=np.inf)
+                    )
+
+                _, heavy_traffic_approx_entropy_eta, _ = entropy_approximation(compatability_matrix, eta, mu, pad=True)
+                heavy_traffic_approx_entropy = np.dot(np.diag(1./s), heavy_traffic_approx_entropy_eta)
+                low_traffic_approx_entropy = local_entropy(compatability_matrix, lamda, beta, s)
                 heavy_traffic_approx_exact = np.zeros((m,n))
+                sim_results = simulate_queueing_system(compatability_matrix, lamda, beta, s=s, sims=30)
+                print('ending - graph_no: ', graph_no, 'exp_no: ', exp_no, 'beta_dist: ', beta_dist, 'rho: ', rho, 'split:', split ,'duration: ', time() - st)
+                print('pct_error_rho_entropy:'  , np.abs(sim_results['matching_rates_mean'] - ((1 - rho) * low_traffic_approx_entropy + (rho) * heavy_traffic_approx_entropy)).sum()/lamda.sum())
+                sbpss_rho_df = pd.DataFrame.from_dict({
+                    'i': nnz[0],
+                    'j': nnz[1],
+                    'alpha': alpha[nnz[0]],
+                    'beta': beta[nnz[1]],
+                    'theta': theta[nnz[0]],
+                    'lamda': lamda[nnz[0]],
+                    'mu': beta[nnz[1]],
+                    's': s[nnz[0]], 
+                    'sim_matching_rates': sim_results['matching_rates_mean'][nnz],
+                    'sim_matching_rates_stdev': sim_results['matching_rates_stdev'][nnz],
+                    'heavy_traffic_approx_entropy': heavy_traffic_approx_entropy[nnz],  
+                    'low_traffic_approx_entropy': low_traffic_approx_entropy[nnz], # 'rho_approx': rho * heavy_traffic_approx_entropy[nnz] + (1. - rho) * low_traffic_approx_entropy[nnz],
+                    'rho_approx': (rho) * heavy_traffic_approx_entropy[nnz] + (1. - rho) * low_traffic_approx_entropy[nnz],
+                    'waiting_time': sim_results['waiting_times_mean'][nnz[0]],
+                    'waiting_time_stdev': sim_results['waiting_times_stdev'][nnz[0]],
+                    'sig_waiting_time_mean' : sim_results['waiting_times_stdev_mean'][nnz[0]],
+                    'sig_waiting_time_stdev': sim_results['waiting_times_stdev_stdev'][nnz[0]]
+                })
 
-            print('ending___ graph_no: ', graph_no, 'exp_no: ', exp_no, 'beta_dist: ', beta_dist, 'rho: ', rho, 'duration: ', time() - s)
-            sim_matching_rates, sim_matching_rates_stdev = simulate_queueing_system(compatability_matrix, alpha * rho, beta, sims=30)
+                sbpss_rho_df.loc[:, 'timestamp'] = timestamp
+                sbpss_rho_df.loc[:, 'rho'] = rho
+                sbpss_rho_df.loc[:, 'm'] = m
+                sbpss_rho_df.loc[:, 'n'] = n
+                sbpss_rho_df.loc[:, 'graph_no'] = graph_no
+                sbpss_rho_df.loc[:, 'exp_no'] = exp_no
+                sbpss_rho_df.loc[:, 'beta_dist'] = beta_dist
+                sbpss_rho_df.loc[:, 'split'] = split
 
-            if exact:
-                print('pct_error_rho_exact:'    , np.abs(sim_matching_rates - ((1 - rho) * low_traffic_approx_entropy + (rho) * heavy_traffic_approx_exact)).sum()/rho)
-                print('pct_error_rho^2_exact:'  , np.abs(sim_matching_rates - ((1 - rho**2) * low_traffic_approx_entropy + (rho**2) * heavy_traffic_approx_exact)).sum()/rho)
-            print('pct_error_rho_entropy:'  , np.abs(sim_matching_rates - ((1 - rho) * low_traffic_approx_entropy + (rho) * heavy_traffic_approx_entropy)).sum()/rho)
-            print('pct_error_rho_2_entropy:', np.abs(sim_matching_rates - ((1 - rho**2) * low_traffic_approx_entropy + (rho**2) * heavy_traffic_approx_entropy)).sum()/rho)
-
-            sbpss_rho_df = pd.DataFrame.from_dict({
-                'i': nnz[0],
-                'j': nnz[1],
-                'sim_matching_rates': sim_matching_rates[nnz],
-                'sim_matching_rates_stdev': sim_matching_rates_stdev[nnz],
-                'heavy_traffic_approx_entropy': heavy_traffic_approx_entropy[nnz], 
-                'heavy_traffic_approx_exact':heavy_traffic_approx_exact[nnz], 
-                'low_traffic_approx_entropy': low_traffic_approx_entropy[nnz], 
-                'rho_approx_w_exact': rho * heavy_traffic_approx_exact[nnz] + (1. - rho) * low_traffic_approx_entropy[nnz], 
-                'rho^2_approx_w_exact': (rho**2) * heavy_traffic_approx_exact[nnz] + (1. - rho**2) * low_traffic_approx_entropy[nnz],# 'rho_approx': rho * heavy_traffic_approx_entropy[nnz] + (1. - rho) * low_traffic_approx_entropy[nnz],
-                'rho_2_approx': (rho**2) * heavy_traffic_approx_entropy[nnz] + (1. - rho**2) * low_traffic_approx_entropy[nnz]
-            })
-
-            sbpss_rho_df.loc[:, 'timestamp'] = timestamp
-            sbpss_rho_df.loc[:, 'rho'] = rho
-            sbpss_rho_df.loc[:, 'm'] = m
-            sbpss_rho_df.loc[:, 'n'] = n
-            sbpss_rho_df.loc[:, 'graph_no'] = graph_no
-            sbpss_rho_df.loc[:, 'exp_no'] = exp_no
-            sbpss_rho_df.loc[:, 'beta_dist'] = beta_dist
-
-            sbpss_df.append(sbpss_rho_df)
+                sbpss_df.append(sbpss_rho_df)
 
         return sbpss_df
 
@@ -1492,7 +1504,19 @@ def fix_bad():
     df['rho_approx'] = df['rho'] * df['heavy_approx'] + (1. - df['rho']) * df['light_approx']
     df['rho_2_approx'] = (df['rho']**2) * df['heavy_approx'] + (1. - df['rho']**2) * df['light_approx']
     df.to_csv('FZ_Kaplan_exp_sbpss_fixed.csv', index=False)
-        
+
+
+def join_df_from_files(files_to_be_joined, join_cols, writefile):
+    
+    main_df = pd.read_csv(files_to_be_joined[0] + '.csv')
+    for file in  files_to_be_joined[1:]:
+
+        df = pd.read_csv(file + '.csv')
+        main_df = pd.merge(left=main_df, right=df, on=join_cols, how='left')
+
+    main_df.to_csv(writefile + '.csv', index=False)    
+
+
 if __name__ == '__main__':
 
     np.set_printoptions(threshold=sys.maxsize)
@@ -1501,14 +1525,29 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
+    go_back_and_approximate_sbpss_customer_dependet()
+    # df = pd.read_csv('erdos_renyi_exp_final.csv')
+    # df = go_back_and_solve_qp(df)
+    # df.to_csv('erdos_renyi_exp_final_w_qp.csv', index=False)
+    # go_back_and_solve_qp('grids_exp_parallel_extra_9x9')
+    # join_df_from_files(['grids_exp_parallel_extra_9x9', 'grids_exp_parallel_extra_w_qp'], join_cols=['timestamp', 'i', 'j'], writefile='grids_exp_parallel_w_qp_full')
 
 
-    erdos_renyi_exp_for_parallel()
+    
 
     
     # comparison_graph4('FZ_Kaplan_exp', ['ent', 'diss'])
-
+    # m,n = compatability_matrix.shape
     # compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
+
+    # matching_rates_g= quadratic_approximation_gurobi(compatability_matrix, alpha, beta)
+    # matching_rates_c= quadratic_approximation(compatability_matrix, alpha, beta)
+
+    # printarr(matching_rates_g, 'gurobi')
+    # printarr(matching_rates_c, 'cplex')
+    # rho = 0.8
+    # simulate_queueing_system(compatability_matrix, np.one(m) * rho, beta, s=alpha ,sims=30)
+
     # sps_compatability_matrix = sps.csr_matrix(compatability_matrix)
     # mr, _ = simulate_matching_sequance(sps_compatability_matrix, alpha, beta, sims=30)
     # mre  = adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta)

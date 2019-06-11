@@ -59,29 +59,21 @@ def simulate_matching_sequance(compatability_matrix, alpha, beta, prt=True, sims
         if prt:
             print('starting_sim ', k)
         
-        if sparse:
+        customer_sizes = np.array([int((sim_len + sim_len//5) * alpha[i]) for i in range(m)], dtype=np.int32)
+        server_sizes = np.array([int((sim_len + sim_len//5) * beta[j]) for j in range(n)], dtype=np.int32)
+        customer_stream = np.hstack([i * np.ones(customer_sizes[i], dtype=np.int32) for i in range(m)])
+        server_stream = np.hstack([j * np.ones(server_sizes[j], dtype=np.int32) for j in range(n)])
+        np.random.shuffle(customer_stream)
+        np.random.shuffle(server_stream)
+        full_len = min(len(customer_stream), len(server_stream))
+        server_stream = np.array(server_stream[ : full_len])
+        customer_stream = np.array(customer_stream[: full_len])
+        event_stream = np.vstack([customer_stream, server_stream]).T
 
-            customer_sizes = np.array([int((sim_len + sim_len//5)* alpha[i]) for i in range(m)], dtype=np.int32)
-            server_sizes = np.array([int((sim_len + sim_len//5) * beta[j]) for j in range(n)], dtype=np.int32)
-            customer_stream = np.hstack([i * np.ones(customer_sizes[i], dtype=np.int32) for i in range(m)])
-            server_stream = np.hstack([j * np.ones(server_sizes[j], dtype=np.int32) for j in range(n)])
-            np.random.shuffle(customer_stream)
-            np.random.shuffle(server_stream)
-            full_len = min(len(customer_stream), len(server_stream))
-            server_stream = np.array(server_stream[ : full_len])
-            customer_stream = np.array(customer_stream[: full_len])
-            event_stream = np.vstack([customer_stream, server_stream]).T
+        server_queues = tuple([int(1)] for i in range(m))
+        customer_queues = tuple([int(1)] for j in range(n))
 
-            server_queues = tuple([int(1)] for i in range(m))
-            customer_queues = tuple([int(1)] for j in range(n))
-
-            matching_rates_k = matching_sim_loop_pairs(customer_queues, server_queues, event_stream, s_adj, c_adj, m, n, sim_len)    
-        
-        else:
-            
-            customer_stream = np.random.choice(range(len(alpha)), size=sim_len + sim_len//5, replace=True, p=alpha)
-            server_stream = np.random.choice(range(len(beta)), size=sim_len + sim_len//5, replace=True, p=beta)
-            matching_rates_k = matching_sim_loop(customer_stream, server_stream, s_adj, m , n)
+        matching_rates_k = matching_sim_loop_pairs(customer_queues, server_queues, event_stream, s_adj, c_adj, m, n, sim_len)    
         
         matching_rates.append(matching_rates_k)
 
@@ -153,7 +145,7 @@ def create_queues_heap(event_stream, customer_queues, server_queues, m, n, sim_l
         heappush(server_queues[j], sim_len + 1)
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def matching_sim_loop_pairs(customer_queues, server_queues, event_stream, s_adj, c_adj, m, n, sim_len):
 
 
@@ -303,29 +295,33 @@ def matching_sim_loop(customer_stream, server_stream, s_adj, m, n):
     return matching_rates
 
 
-def simulate_queueing_system(compatability_matrix, lamda, mu, s=None,  prt=False, sims=30, sim_len=None, seed=1, sim_name='sim'):
+def simulate_queueing_system(compatability_matrix, lamda, mu, s=None,  prt=False, sims=30, sim_len=None, warm_up=None, seed=None, sim_name='sim'):
 
 
     m = len(lamda)  # m- number of servers
     n = len(mu)  # n - number of customers    
     matching_rates = []
+    waiting_times = []
+    waiting_times_stdev = []
 
     if sim_len is None:
-            sim_len = 10000 * m
+            sim_len = 1000 * m
+            warm_up = 100 * m 
 
     s_adj = tuple(set(np.nonzero(compatability_matrix[:, j])[0]) for j in range(n))  # adjacency list for servers
     c_adj = tuple(set(np.nonzero(compatability_matrix[i, :])[0]) for i in range(m)) 
 
-    if s == None:
+    if s is None:
         s = np.ones(m)
     
     service_rates = np.dot(np.dot(np.diag(s), compatability_matrix), np.diag(1./mu))
 
     start_time = time()
+    
     for k in range(sims):
 
         if seed is not None:
-            np.random.seed(seed+k)
+            np.random.seed(seed + k)
 
         
         customer_classes = np.random.choice(a=range(m), size=sim_len, p=lamda/lamda.sum())
@@ -334,32 +330,48 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None,  prt=False
         service_times = np.random.exponential(service_rates, size=(sim_len, m, n))
         customer_queues = tuple([-1.] for i in range(m))
 
-        matching_rates_k = queueing_sim_loop(customer_queues, event_stream, service_times, s_adj, c_adj, m, n)
+        matching_rates_k, waiting_k = queueing_sim_loop(customer_queues, event_stream, service_times, s_adj, c_adj, m, n, warm_up)
 
-
+        waiting_k_mean = waiting_k[:, 1]/waiting_k[:, 0]
+        waiting_k_stdev = ((waiting_k[:, 2] - ((waiting_k[:, 1]**2)/waiting_k[:, 0]))**0.5)/(waiting_k[:, 0] - 1)
         matching_rates.append(matching_rates_k)
+        waiting_times.append(waiting_k_mean)
+        waiting_times_stdev.append(waiting_k_stdev)
+
     if prt:
         print('ending sim ', k, 'duration:', time() - start_time)
 
+    results = dict()
     nnz = compatability_matrix.nonzero()        
-    matching_rates_mean = sum(matching_rates)*(1.0/sims)
+    results['matching_rates_mean'] = sum(matching_rates)*(1./sims)
+    results['waiting_times_mean'] = sum(waiting_times)*(1./sims)
+    results['waiting_times_stdev_mean'] = sum(waiting_times_stdev)*(1./sims)
+    matching_rates_mean = results['matching_rates_mean']
+    waiting_times_mean = results['waiting_times_mean']
+    waiting_times_stdev_mean = results['waiting_times_stdev_mean']
     if sims > 1:
-        matching_rates_stdev = (sum((matching_rates[k]-matching_rates_mean)**2 for k in range(sims))*(1.0/(sims-1)))**0.5
+        results['matching_rates_stdev'] = (sum((matching_rates[k] - matching_rates_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5
+        results['waiting_times_stdev'] = (sum((waiting_times[k] - waiting_times_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5
+        results['waiting_times_stdev_stdev'] = (sum((waiting_times_stdev[k] - waiting_times_stdev_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5
     else:
-        matching_rates_stdev = 0 * matching_rates_mean
-    
-    return matching_rates_mean, matching_rates_stdev
+        results['matching_rates_stdev'] = 0 * matching_rates_mean
+        results['waiting_times_stdev'] = 0 * matching_rates_mean
+        results['waiting_times_stdev_stdev'] = 0 * matching_rates_mean
+    return results
 
 
 @jit(nopython=True)
-def queueing_sim_loop(customer_queues, event_stream, service_times, s_adj, c_adj, m, n):
+def queueing_sim_loop(customer_queues, event_stream, service_times, s_adj, c_adj, m, n, warm_up):
 
     matching_counter = np.zeros((m,n))
     idle_times = np.zeros((n, 3))
     waiting_times = np.zeros((m, 3))
-    server_states = np.zeros(n, dtype=np.int64)
+    server_states = np.zeros(n, dtype=np.int8)
     server_idled_at = np.zeros(n, dtype=np.float64)
-    service_time_idx = np.zeros((m, n), dtype=np.int64)
+    service_time_idx = np.zeros((m, n), dtype=np.int32)
+    matches = 0
+    record = False
+    record_stat_time = 0
 
     for i in range(m):
         heapify(customer_queues[i])
@@ -370,6 +382,7 @@ def queueing_sim_loop(customer_queues, event_stream, service_times, s_adj, c_adj
     while event_stream:
 
         event = heappop(event_stream)
+
 
         cur_time = event[0]
         i = event[1]
@@ -393,13 +406,20 @@ def queueing_sim_loop(customer_queues, event_stream, service_times, s_adj, c_adj
 
                 if j >= 0:
 
-                    matching_counter[i, j] = matching_counter[i, j] + 1
-                    waiting_times[i] = waiting_times[i] + np.array([1, 0, 0])
-                    idle_time = cur_time - idled_time
-                    idle_times[j, :] = idle_times[j, :] + np.array([1, idle_time, idle_time**2])
+                    matches = matches + 1
+                    if matches > warm_up:
+                        if not record:
+                            record = True
+                            record_stat_time = cur_time
+                        matching_counter[i, j] = matching_counter[i, j] + 1
+                        waiting_times[i] = waiting_times[i] + np.array([1, 0, 0])
+                        idle_time = cur_time - idled_time
+                        idle_times[j, :] = idle_times[j, :] + np.array([1, idle_time, idle_time**2])
+                    
                     server_states[j] = 1
                     service_time = service_times[service_time_idx[i, j], i, j]
                     service_time_idx[i, j] = service_time_idx[i, j] + 1
+
                     heappush(event_stream, (cur_time + service_time, i, j))
                 else:
                     customer_queues[i].append(cur_time)
@@ -416,18 +436,26 @@ def queueing_sim_loop(customer_queues, event_stream, service_times, s_adj, c_adj
 
             if i >= 0:
 
+
                 arrival_time = heappop(customer_queues[i])
-                matching_counter[i, j] = matching_counter[i,j] + 1
-                waiting_time = cur_time - arrival_time
-                waiting_times[i, :] = waiting_times[i, :] + np.array([1, waiting_time, waiting_time**2])
+
+                matches = matches + 1
+                if matches > warm_up:
+                    if not record:
+                        record = True
+                        record_stat_time = cur_time
+                    matching_counter[i, j] = matching_counter[i,j] + 1
+                    waiting_time = cur_time - arrival_time
+                    waiting_times[i, :] = waiting_times[i, :] + np.array([1, waiting_time, waiting_time**2])
                 service_time = service_times[service_time_idx[i, j], i, j]
                 service_time_idx[i, j] = service_time_idx[i, j] + 1
+
                 heappush(event_stream, (cur_time + service_time, i, j))
             else:
                 server_states[j] = 0
                 server_idled_at[j] = cur_time
 
-    return matching_counter/cur_time
+    return matching_counter/(cur_time - record_stat_time), waiting_times
 
 
 

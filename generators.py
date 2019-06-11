@@ -3,6 +3,7 @@ import numpy as np
 from math import log
 from scipy import sparse as sps
 from utilities import fast_choice, sp_unique
+from itertools import product
 
 
 def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):

@@ -7,7 +7,8 @@ from time import time
 from numpy import ma
 from utilities import printarr
 from scipy import sparse as sps
-
+import sys
+from gurobipy import *
 
 def adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta, jt_perms=None, print_progress=False):
 
@@ -287,22 +288,25 @@ def jpermute(iterable):
 
 		yield list(sequence), min(mobile_index-1, sees-1)
 
+
 @jit(nopython=True)
 def matching_rates_add(matching_rates, arr_phi_x_alpha_1_j, prod_inv_beta_alpha_xhi_1_k, prod_inv_beta_alpha_k_j, n, d):
 	matching_rates[n-d:, :, :] += arr_phi_x_alpha_1_j * prod_inv_beta_alpha_xhi_1_k * prod_inv_beta_alpha_k_j
 	return matching_rates
+
 
 @jit(nopython=True)    
 def update_prod_inv_beta_alpha_xhi_1_k(prod_inv_beta_alpha_xhi_1_k, inv_beta_alpha_x_xhi_new, inv_beta_alpha_xhi_1_k, swap_idx):
 	prod_inv_beta_alpha_xhi_1_k[swap_idx:] *= inv_beta_alpha_x_xhi_new/inv_beta_alpha_xhi_1_k
 	return prod_inv_beta_alpha_xhi_1_k
 
+
 @jit(nopython=True)
 def update_prod_inv_beta_alpha_k_j(prod_inv_beta_alpha_k_j, inv_beta_alpha_new, inv_beta_alpha_k_j, swap_idx):
 	prod_inv_beta_alpha_k_j[:swap_idx + 1] *= inv_beta_alpha_new/inv_beta_alpha_k_j
 	return prod_inv_beta_alpha_k_j
 
-def quadratic_approximation(compatability_matrix, alpha, beta, prt=False):
+def quadratic_approximation_cplex(compatability_matrix, alpha, beta, prt=False):
 
 	col_names = []
 	qual_names = []
@@ -474,7 +478,7 @@ def ohm_law_approximation(compatability_matrix, alpha, beta):
 	return matching_rates, v, w
 
 
-def local_entropy(compatability_matrix, lamda, mu, prt=False):
+def local_entropy(compatability_matrix, lamda, mu, s=None, prt=False):
 
 
 	m, n  = compatability_matrix.shape
@@ -484,6 +488,8 @@ def local_entropy(compatability_matrix, lamda, mu, prt=False):
 	rows = []
 	cols = []
 	data = []
+	if s is None:
+		s = np.ones(m)
 	col_set = set()
 
 	for i, j in zip(*compatability_matrix.nonzero()):
@@ -496,9 +502,9 @@ def local_entropy(compatability_matrix, lamda, mu, prt=False):
 
 			rows.append(m + j)
 			cols.append(i * n + j)
-			data.append(lamda[i]/mu[j])
+			data.append(lamda[i] * s[i]/mu[j])
 
-			col_set.add(i * n + j)
+			# col_set.add(i * n + j)
 
 	for j in range(n):
 
@@ -713,6 +719,44 @@ def fast_primal_dual_algorithm(A, b, z, m, n, pi0=None, act_rows=None , check_ev
 		print('ended fast primal-dual algorithm after ' + str(i) + ' iterations')
 		print('run time:', time() - s, 'seconds')
 	return pi_hat, lamda
+
+
+def quadratic_approximation(compatability_matrix, alpha, beta, prt=False):
+
+	qp = Model()
+	obj = QuadExpr()
+
+	m, n = compatability_matrix.shape
+	matching_rates = np.zeros((m, n))
+
+	customers = range(m)
+	servers = range(n)
+
+	edges = list(zip(*compatability_matrix.nonzero()))
+	flow = qp.addVars(edges, name="flow", lb=0, ub=1, vtype=GRB.CONTINUOUS)
+
+	min_a_b = 1
+	for i, j in zip(*compatability_matrix.nonzero()):
+		if (alpha[i]*beta[j])< min_a_b:
+			min_a_b = alpha[i]*beta[j]
+		obj += flow[i,j] * flow[i,j] * (1/(alpha[i]*beta[j]))
+
+	print('max_quad_coeff:', 1/min_a_b)
+
+	qp.addConstrs((flow.sum(i, '*') == alpha[i] for i in customers), 'row_sums')
+	qp.addConstrs((flow.sum('*', j) == beta[j] for j in servers), 'col_sums')
+
+	qp.setObjective(obj)
+	qp.optimize()
+
+	if qp.status == GRB.Status.OPTIMAL:
+		x = qp.getAttr('x', flow)
+
+	for i, j in edges:
+		matching_rates[i, j] = x[i, j]
+
+	return matching_rates
+
 
 
 # def get_pi_hat(compatability_matrix, lamda, mu, rho, c=None):

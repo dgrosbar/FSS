@@ -1,6 +1,7 @@
 import numpy as np
 from math import floor
 from scipy import sparse as sps
+import os
 
 def printcols(df):
 	
@@ -65,7 +66,6 @@ def sp_unique(sp_matrix, axis=0):
     if axis == 1:
         ret = ret.T        
     return ret
-
 
 def lexsort_row(A):
     ''' numpy lexsort of the rows, not used in sp_unique'''
