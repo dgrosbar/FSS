@@ -360,7 +360,7 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None,  prt=False
     return results
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def queueing_sim_loop(customer_queues, event_stream, service_times, s_adj, c_adj, m, n, warm_up):
 
     matching_counter = np.zeros((m,n))

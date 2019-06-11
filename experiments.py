@@ -1260,7 +1260,7 @@ def approximate_sbpss(exp, timestamp):
 def go_back_and_approximate_sbpss_customer_dependet(filename='FZ_final_w_qp'):
 
     df = pd.read_csv(filename + '.csv')
-    p = 8
+    p = 7
     pool = mp.Pool(processes=p)
 
     for n in range(7,11,1):
