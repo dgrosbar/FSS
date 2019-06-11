@@ -1328,8 +1328,8 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
             else:
                 theta = np.random.uniform(0.1, 0.9, m)
 
-            # for rho in [0.01] + [0.05] + [0.1*i for i in range(1, 10, 1)] + [.95, .99]:
-            for rho in [0.1, 0.9]:
+            for rho in [0.01] + [0.05] + [0.1*i for i in range(1, 10, 1)] + [.95, .99]:
+            # for rho in [0.1, 0.9]:
                 
                 st = time()            
                 lamda = np.ones(m) * rho * theta
