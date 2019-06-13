@@ -8,10 +8,11 @@ from numpy import ma
 from utilities import printarr
 from scipy import sparse as sps
 import sys
-# from gurobipy import *
+
+#from gurobipy import *
 
 
-def adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta, jt_perms=None, print_progress=False):
+def adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta, jt_perms=None, print_progress=False, pad=False):
 
 
 	# Modified Adan_Weiss Matching Rate Fromula:
@@ -25,7 +26,12 @@ def adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta, jt_pe
 	#                          |   /______   /______                                                                        |
 	#                          |    p in P     k=1                                                                          |
 	#                          |__                                                                                        __|
-							
+
+	if pad:
+		compatability_matrix = np.vstack([compatability_matrix, np.ones(len(beta))])
+		alpha = np.append(alpha, beta.sum() - alpha.sum())
+
+
 	start_time = time()
 
 	m = len(alpha) # m customer classes 
@@ -229,7 +235,10 @@ def adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta, jt_pe
 		matching_rates = np.dot(alpha.reshape((m,1)), beta.reshape((1,n))) * matching_rates
 		matching_rates = matching_rates/matching_rates.sum()
 
-		return matching_rates
+		if pad:
+			return matching_rates[: m-1, :]
+		else:
+			return matching_rates
 
 	return(sum_over_permutations(jt_perms, inv_beta_alpha_x_xhi, inv_beta_alpha, phi_x_alpha, m, n))
 
@@ -481,7 +490,6 @@ def ohm_law_approximation(compatability_matrix, alpha, beta):
 
 def local_entropy(compatability_matrix, lamda, mu, s=None, prt=False):
 
-
 	m, n  = compatability_matrix.shape
 	k = m + n
 	l = (m + 1) * n
@@ -527,6 +535,52 @@ def local_entropy(compatability_matrix, lamda, mu, s=None, prt=False):
 	pi_hat = pi_hat.reshape((m + 1, n))
 	return(np.dot(np.diag(lamda), pi_hat[:m, :]))
 
+
+def rho_entropy(compatability_matrix, lamda, mu, s=None, prt=False):
+
+	m, n  = compatability_matrix.shape
+	k = m + n
+	l = (m + 1) * n
+
+	rows = []
+	cols = []
+	data = []
+	if s is None:
+		s = np.ones(m)
+	col_set = set()
+
+	for i, j in zip(*compatability_matrix.nonzero()):
+
+			if prt:
+				print((i, j),'-->', (i, i * n + j), (m + j, i * n + j))
+
+			rows.append(i)
+			cols.append(i * n + j)
+			data.append(1)
+
+			rows.append(m + j)
+			cols.append(i * n + j)
+			data.append(lamda[i] * s[i]/mu[j])
+
+	for j in range(n):
+
+		rows.append(m + j)
+		cols.append(m * n + j)
+		data.append(-1)
+
+	rows = np.array(rows)
+	cols = np.array(cols)
+	data = np.array(data)
+	
+	A = np.zeros((m + n, (m + 1) * n))
+	A[rows, cols] = data
+	b = np.hstack((np.ones(m), np.zeros(n)))
+	
+	z = np.vstack([compatability_matrix, np.ones(n)]).ravel()
+	
+	pi_hat, duals = fast_primal_dual_algorithm(A, b, z, m, n, prt=True)
+	pi_hat = pi_hat.reshape((m + 1, n))
+	return(np.dot(np.diag(lamda), pi_hat[:m, :]))
 
 def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	
@@ -722,12 +776,17 @@ def fast_primal_dual_algorithm(A, b, z, m, n, pi0=None, act_rows=None , check_ev
 	return pi_hat, lamda
 
 
-def quadratic_approximation(compatability_matrix, alpha, beta, prt=False):
+def quadratic_approximation(compatability_matrix, alpha, beta, prt=False, pad=False):
+
+	if pad:
+		compatability_matrix = np.vstack((compatability_matrix, np.ones(len(beta))))
+		alpha = np.append(alpha, beta.sum() - alpha.sum())
 
 	qp = Model()
 	obj = QuadExpr()
 
 	m, n = compatability_matrix.shape
+
 	matching_rates = np.zeros((m, n))
 
 	customers = range(m)
@@ -756,7 +815,10 @@ def quadratic_approximation(compatability_matrix, alpha, beta, prt=False):
 	for i, j in edges:
 		matching_rates[i, j] = x[i, j]
 
-	return matching_rates
+	if pad:
+		return matching_rates[:m, :]
+	else:
+		return matching_rates
 
 
 
