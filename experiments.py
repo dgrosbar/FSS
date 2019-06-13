@@ -1257,7 +1257,7 @@ def approximate_sbpss(exp, timestamp):
         return sbpss_df
 
 
-def go_back_and_approximate_sbpss_customer_dependet(filename='missing_cd'):
+def go_back_and_approximate_sbpss_customer_dependet(filename='FZ_final_w_qp'):
 
     df = pd.read_csv(filename + '.csv')
     p = 8
@@ -1272,7 +1272,7 @@ def go_back_and_approximate_sbpss_customer_dependet(filename='missing_cd'):
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_miss_test', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd4', sbpss_df)
                 exps = []
                 break
         else:
@@ -1281,7 +1281,7 @@ def go_back_and_approximate_sbpss_customer_dependet(filename='missing_cd'):
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_miss_test', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd4', sbpss_df)
                 exps = []   
 
 
