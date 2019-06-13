@@ -9,7 +9,7 @@ from utilities import printarr
 from scipy import sparse as sps
 import sys
 
-#from gurobipy import *
+# from gurobipy import *
 
 
 def adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta, jt_perms=None, print_progress=False, pad=False):
@@ -404,61 +404,72 @@ def quadratic_approximation_cplex(compatability_matrix, alpha, beta, prt=False):
 	return matching_rates
 
 
-def entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, max_iter=10**7, epsilon=10**-9, pad=False):
+def entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, max_iter=10**7, epsilon=10**-9, pad=False, ret_all=False):
 
 	k = 0
 	within_epsilon = True
-
+	converge = False
 
 	if  sps.isspmatrix(compatability_matrix):
+		is_sps = True
+	else:
+		is_sps = False
 
-		if pad:
+	if pad:
+		if is_sps:
 			compatability_matrix = sps.vstack([compatability_matrix, np.ones(len(mu))])
 			lamda = np.append(lamda, mu.sum() - lamda.sum())
-
-		matching_rates = compatability_matrix
-
-		for k in range(max_iter):
-			matching_rates = sps.diags(lamda/matching_rates.sum(axis=1).A.ravel()).dot(matching_rates)
-			matching_rates = matching_rates.dot(sps.diags(mu/matching_rates.sum(axis=0).A.ravel()))
-			if k > 0 and k % check_every == 0:
-				cur_iter, gap_pct =  (k, 
-					max(
-						np.max(np.abs((mu - matching_rates.sum(axis=0)))/mu[:np.newaxis]),
-						np.max(np.abs((matching_rates.sum(axis=1).T - lamda))/lamda[:np.newaxis])
-						)
-					)
-				if gap_pct < epsilon:
-					if pad:
-						return True, matching_rates[:-1, :], gap_pct
-					else:
-						return True, matching_rates, gap_pct
-
-	else:
-		if pad:
-			compatability_matrix = np.vstack([compatability_matrix, np.ones(len(mu))])
-			lamda = np.append(lamda, mu.sum() - lamda.sum())
-		
-		matching_rates = compatability_matrix
-
-		for k in range(max_iter):
-			matching_rates = (matching_rates.transpose() * lamda/matching_rates.sum(axis=1)).transpose()
-			matching_rates = matching_rates * mu/matching_rates.sum(axis=0)
-			if k > 0 and k % check_every == 0 or k == max_iter - 1:
-				cur_iter, gap_pct = (k,
-					max(
-						max(abs(mu - matching_rates.sum(axis=0))/mu),
-						max(abs(lamda - matching_rates.sum(axis=1))/lamda)
-						)
-					)
-				if gap_pct < epsilon:
-					if pad:
-						return True, matching_rates[:-1, :], gap_pct
-					else:
-						return True, matching_rates, gap_pct
-
 		else:
-			return False, matching_rates, gap_pct 
+			compatability_matrix = np.vstack([compatability_matrix, np.ones(len(mu))])
+			lamda = np.append(lamda, mu.sum() - lamda.sum())			
+
+		matching_rates = compatability_matrix
+
+		for k in range(max_iter):
+
+			if is_sps:
+				matching_rates = sps.diags(lamda/matching_rates.sum(axis=1).A.ravel()).dot(matching_rates)
+				matching_rates = matching_rates.dot(sps.diags(mu/matching_rates.sum(axis=0).A.ravel()))
+				if k > 0 and k % check_every == 0:
+					cur_iter, gap_pct =  (k, 
+						max(
+							np.max(np.abs((mu - matching_rates.sum(axis=0)))/mu[:np.newaxis]),
+							np.max(np.abs((matching_rates.sum(axis=1).T - lamda))/lamda[:np.newaxis])
+							)
+						)
+					if gap_pct < epsilon:
+						converge = True
+						break
+			else:
+				matching_rates = (matching_rates.transpose() * lamda/matching_rates.sum(axis=1)).transpose()
+				matching_rates = matching_rates * mu/matching_rates.sum(axis=0)
+				if k > 0 and k % check_every == 0 or k == max_iter - 1:
+					cur_iter, gap_pct = (k,
+						max(
+							max(abs(mu - matching_rates.sum(axis=0))/mu),
+							max(abs(lamda - matching_rates.sum(axis=1))/lamda)
+							)
+						)
+					if gap_pct < epsilon:
+						converge = True
+						break
+
+		if converge:
+			if pad:
+				if ret_all:
+					return True, matching_rates[:-1, :], gap_pct
+				else:
+					return matching_rates[:-1, :]
+			else:
+				if ret_all:
+					return True, matching_rates, gap_pct
+				else:
+					return matching_rates	
+		else:
+			if ret_all:
+				return False, None, gap_pct
+			else:
+				return None
 
 
 def ohm_law_approximation(compatability_matrix, alpha, beta):
@@ -582,6 +593,7 @@ def rho_entropy(compatability_matrix, lamda, mu, s=None, prt=False):
 	pi_hat = pi_hat.reshape((m + 1, n))
 	return(np.dot(np.diag(lamda), pi_hat[:m, :]))
 
+
 def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	
 
@@ -631,7 +643,7 @@ def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	return(np.dot(np.diag(lamda[: m - 1]), pi_hat[: m-1, :]))
 
 
-def fast_primal_dual_algorithm(A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**6, epsilon=10**-6, prt=True, prtall=False):
+def fast_primal_dual_algorithm(A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**8, epsilon=10**-6, prt=True, prtall=False):
 
 	m_p_n_p_1, m_p_1_t_n = A.shape
 	pi_k = np.zeros((m_p_1_t_n, ))

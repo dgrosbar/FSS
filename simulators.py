@@ -295,7 +295,7 @@ def matching_sim_loop(customer_stream, server_stream, s_adj, m, n):
     return matching_rates
 
 
-def simulate_queueing_system(compatability_matrix, lamda, mu, s=None,  prt=False, sims=30, sim_len=None, warm_up=None, seed=None, sim_name='sim', per_edge=1000, prt_all=False, low_mem=False):
+def simulate_queueing_system(compatability_matrix, lamda, mu, s=None,  prt=False, sims=30, sim_len=None, warm_up=None, seed=None, sim_name='sim', per_edge=1000, prt_all=False):
 
 
     m = len(lamda)  # m- number of servers
@@ -326,7 +326,7 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None,  prt=False
     if prt:
         print('sim length: ', sim_len, ' warm_up_period: ', warm_up)    
     
-    for k in range(sims):
+    for k in range(1, sims+1, 1):
 
 
         customer_queues = tuple([-1.] for i in range(m))
@@ -355,46 +355,38 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None,  prt=False
         if prt_all:
             print('ending sim ', k, 'duration: {:.4f} , {:.4f}'.format(time() - start_time_k ,time() - start_time))
     
+    total_duration = time() - start_time
     if prt:
-        print('ending ',k, ' sims. duration: {:.4f}'.format(time() - start_time))
 
-    results = dict()
+        print('ending ',k, ' sims. duration: {:.4f}'.format(total_duration))
+
+    results = {'mat': dict(), 'col': dict(), 'row': dict(), 'aux': dict()}
+
     nnz = compatability_matrix.nonzero()        
     
-    results['matching_rates'] = (sum(matching_rates)*(1./sims), 'mat')
+    results['mat']['sim_matching_rates'] = sum(matching_rates)*(1./sims)
+    results['row']['sim_waiting_times'] = sum(waiting_times)*(1./sims)
+    results['row']['sig_sim_waiting_times'] = sum(waiting_times_stdev)*(1./sims)
+    results['col']['sim_idle_times'] = sum(idle_times)*(1./sims)
+    results['col']['sig_sim_idle_times'] = sum(idle_times_stdev)*(1./sims)
 
-    results['waiting_times'] = (sum(waiting_times)*(1./sims), 'row')
-    results['sig_waiting_times'] = (sum(waiting_times_stdev)*(1./sims), 'row')
+    matching_rates_mean = results['mat']['sim_matching_rates']
+    waiting_times_mean = results['row']['sim_waiting_times']
+    waiting_times_stdev_mean = results['row']['sig_sim_waiting_times']
+    idle_times_mean = results['col']['sim_idle_times']
+    idle_times_stdev_mean = results['col']['sig_sim_idle_times']
 
-    results['idle_times'] = (sum(idle_times)*(1./sims), 'col')
-    results['sig_idle_times'] = (sum(idle_times_stdev)*(1./sims), 'col')
-
-    matching_rates_mean = results['matching_rates'][0]
-
-    waiting_times_mean = results['waiting_times'][0]
-    waiting_times_stdev_mean = results['sig_waiting_times'][0]
+    results['mat']['sim_matching_rates_stdev'] = (sum((matching_rates[k] - matching_rates_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5 if sims > 1 else 0 * matching_rates_mean
+    results['row']['sim_waiting_times_stdev'] = (sum((waiting_times[k] - waiting_times_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5 if sims > 1 else 0 * matching_rates_mean
+    results['row']['sig_sim_waiting_times_stdev'] = (sum((waiting_times_stdev[k] - waiting_times_stdev_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5 if sims > 1 else 0 * matching_rates_mean
+    results['col']['sim_idle_times_stdev'] = (sum((idle_times[k] - idle_times_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5 if sims > 1 else 0 * matching_rates_mean
+    results['col']['sig_sim_idle_times_stdev'] = (sum((idle_times_stdev[k] - idle_times_stdev_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5 if sims > 1 else 0 * matching_rates_mean
     
-    idle_times_mean = results['idle_times'][0]
-    idle_times_stdev_mean = results['sig_idle_times'][0]
-
-    if sims > 1:
-        results['matching_rates_stdev'] = ((sum((matching_rates[k] - matching_rates_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5, 'mat')
-
-        results['waiting_times_stdev'] = ((sum((waiting_times[k] - waiting_times_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5, 'row')
-        results['sig_waiting_times_stdev'] = ((sum((waiting_times_stdev[k] - waiting_times_stdev_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5, 'row')
-
-        results['idle_times_stdev'] = ((sum((idle_times[k] - idle_times_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5, 'col')
-        results['sig_idle_times_stdev'] = ((sum((idle_times_stdev[k] - idle_times_stdev_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5, 'col')
-
-    else:
-        results['matching_rates_stdev'] = (0 * matching_rates_mean, 'mat')
-
-        results['waiting_times_stdev'] = (0 * matching_rates_mean, 'row')
-        results['sig_waiting_times_stdev'] = (0 * matching_rates_mean, 'row')
-
-        results['idle_times_stdev'] = (0 * matching_rates_mean, 'col')
-        results['idle_times_stdev_stdev'] = (0 * matching_rates_mean, 'col')
-    
+    results['aux']['no_of_sims'] = sims
+    results['aux']['sim_duration'] = total_duration
+    results['aux']['sim_len'] = sim_len
+    results['aux']['warm_up'] = warm_up
+    results['aux']['seed'] = seed
 
     return results
 

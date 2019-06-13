@@ -1257,10 +1257,10 @@ def approximate_sbpss(exp, timestamp):
         return sbpss_df
 
 
-def go_back_and_approximate_sbpss_customer_dependet(filename='FZ_final_w_qp'):
+def go_back_and_approximate_sbpss_customer_dependet(filename='missing_cd'):
 
     df = pd.read_csv(filename + '.csv')
-    p = 7
+    p = 8
     pool = mp.Pool(processes=p)
 
     for n in range(7,11,1):
@@ -1272,21 +1272,23 @@ def go_back_and_approximate_sbpss_customer_dependet(filename='FZ_final_w_qp'):
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_miss_test', sbpss_df)
                 exps = []
+                break
         else:
             if len(exps) > 0:
                 print('no_of_exps:', len(exps), 'n:', n)
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd2', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_miss_test', sbpss_df)
                 exps = []   
 
 
 def approximate_sbpss_customer_dependent(exp, timestamp):
 
-        exp_data = exp[['m', 'n', 'graph_no', 'exp_num', 'beta_dist']].drop_duplicates()
+
+        exp_data = exp[['m', 'n', 'density_level', 'graph_no', 'exp_num', 'beta_dist']].drop_duplicates()
         alpha_data = exp[['i', 'alpha']].drop_duplicates()
         beta_data = exp[['j', 'beta']].drop_duplicates()
         
@@ -1295,8 +1297,9 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
         graph_no = exp_data['graph_no'].iloc[0]
         exp_no = exp_data['exp_num'].iloc[0]
         beta_dist = exp_data['beta_dist'].iloc[0]
+        density_level = exp_data['density_level'].iloc[0]
 
-        print('graph_no:', graph_no, 'exp_no:', exp_no, 'beta_dist:', beta_dist)
+        print('density_level:', density_level, 'graph_no:', graph_no, 'exp_no:', exp_no, 'beta_dist:', beta_dist)
 
         alpha = np.zeros(m)
         beta = np.zeros(n)
@@ -1328,7 +1331,6 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                 theta = np.random.uniform(0.1, 0.9, m)
 
             for rho in [0.01] + [0.05] + [0.1*i for i in range(1, 10, 1)] + [.95, .99]:
-            # for rho in [0.1, 0.9]:
                 
                 st = time()            
                 lamda = np.ones(m) * rho * theta
@@ -1338,46 +1340,34 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
 
                 print(
                     'rho:' , rho, '\n',
-                    'lamda: ', np.array2string(lamda, max_line_width=np.inf), '\n',
-                    'eta: ', np.array2string(eta, max_line_width=np.inf), '\n',
-                    'mu', np.array2string(mu, max_line_width=np.inf)
+                    'lamda: ', np.array2string(lamda, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x}), '\n',
+                    'eta: ', np.array2string(eta, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x}), '\n',
+                    'mu', np.array2string(mu, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x})
                     )
 
-                _, heavy_traffic_approx_entropy_eta, _ = entropy_approximation(compatability_matrix, eta, mu, pad=True)
+                exp_res = simulate_queueing_system(compatability_matrix, lamda, beta, s=s, sims=30)
+                heavy_traffic_approx_entropy_eta=  entropy_approximation(compatability_matrix, eta, mu, pad=True)
                 heavy_traffic_approx_entropy = np.dot(np.diag(1./s), heavy_traffic_approx_entropy_eta)
-                low_traffic_approx_entropy = local_entropy(compatability_matrix, lamda, beta, s)
-                heavy_traffic_approx_exact = np.zeros((m,n))
-                sim_results = simulate_queueing_system(compatability_matrix, lamda, beta, s=s, sims=30)
-                print('ending - graph_no: ', graph_no, 'exp_no: ', exp_no, 'beta_dist: ', beta_dist, 'rho: ', rho, 'split:', split ,'duration: ', time() - st)
-                print('pct_error_rho_entropy:'  , np.abs(sim_results['matching_rates_mean'] - ((1 - rho) * low_traffic_approx_entropy + (rho) * heavy_traffic_approx_entropy)).sum()/lamda.sum())
-                sbpss_rho_df = pd.DataFrame.from_dict({
-                    'i': nnz[0],
-                    'j': nnz[1],
-                    'alpha': alpha[nnz[0]],
-                    'beta': beta[nnz[1]],
-                    'theta': theta[nnz[0]],
-                    'lamda': lamda[nnz[0]],
-                    'mu': beta[nnz[1]],
-                    's': s[nnz[0]], 
-                    'sim_matching_rates': sim_results['matching_rates_mean'][nnz],
-                    'sim_matching_rates_stdev': sim_results['matching_rates_stdev'][nnz],
-                    'heavy_traffic_approx_entropy': heavy_traffic_approx_entropy[nnz],  
-                    'low_traffic_approx_entropy': low_traffic_approx_entropy[nnz], # 'rho_approx': rho * heavy_traffic_approx_entropy[nnz] + (1. - rho) * low_traffic_approx_entropy[nnz],
-                    'rho_approx': (rho) * heavy_traffic_approx_entropy[nnz] + (1. - rho) * low_traffic_approx_entropy[nnz],
-                    'waiting_time': sim_results['waiting_times_mean'][nnz[0]],
-                    'waiting_time_stdev': sim_results['waiting_times_stdev'][nnz[0]],
-                    'sig_waiting_time_mean' : sim_results['waiting_times_stdev_mean'][nnz[0]],
-                    'sig_waiting_time_stdev': sim_results['waiting_times_stdev_stdev'][nnz[0]]
-                })
+                exp_res['mat']['heavy_traffic_approx_entropy'] = heavy_traffic_approx_entropy
+                exp_res['mat']['low_traffic_approx_entropy'] = local_entropy(compatability_matrix, lamda, beta, s)
+                exp_res['mat']['rho_approx'] = (1. - rho) * exp_res['mat']['low_traffic_approx_entropy'] + (rho) * exp_res['mat']['heavy_traffic_approx_entropy']
+                exp_res['mat']['heavy_traffic_approx_exact'] = np.zeros((m, n))
+                
+                print('ending - density_level: ', density_level, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' beta_dist: ', beta_dist, ' rho: ', rho, ' split:', split ,' duration: ', time() - st)
+                print('pct_error_rho_entropy:'  , (np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['rho_approx'])/lamda).sum())
 
-                sbpss_rho_df.loc[:, 'timestamp'] = timestamp
-                sbpss_rho_df.loc[:, 'rho'] = rho
-                sbpss_rho_df.loc[:, 'm'] = m
-                sbpss_rho_df.loc[:, 'n'] = n
-                sbpss_rho_df.loc[:, 'graph_no'] = graph_no
-                sbpss_rho_df.loc[:, 'exp_no'] = exp_no
-                sbpss_rho_df.loc[:, 'beta_dist'] = beta_dist
-                sbpss_rho_df.loc[:, 'split'] = split
+                exp_res['aux']['split'] =  split
+                exp_res['aux']['graph_no'] =  graph_no
+                exp_res['aux']['exp_no'] =  exp_no
+                exp_res['aux']['beta_dist'] =  beta_dist
+                exp_res['aux']['density_level'] =  density_level
+                exp_res['aux']['rho'] = rho
+
+                exp_res['row']['theta'] = theta
+                exp_res['row']['eta'] = eta
+
+
+                sbpss_rho_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu,  result_dict=exp_res)
 
                 sbpss_df.append(sbpss_rho_df)
 
@@ -1523,18 +1513,24 @@ def increasing_n_system():
 
         for n in [5, 10, 25, 50, 75, 100]:
 
-            compatability_matrix = np.tril(np.ones((n, n)))
-            lamda = rho * np.ones(n)/n
-            mu = np.ones(n)/n
-            _, ent_mr,_ = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
-            sim_res = simulate_queueing_system(compatability_matrix, lamda, mu,  prt=True, per_edge=50000, prt_all=True, sims=30)
-            res_dict = {**sim_res, 'entropy_approx': (ent_mr, 'mat')}
-            res_df = log_res_to_df(compatability_matrix, lamda, mu, res_dict, alpha_beta=False)
-            sim_mr = sim_res['matching_rates'][0]
-            print((sim_mr- np.diag(np.diag(sim_mr))).sum())
-            print((ent_mr- np.diag(np.diag(ent_mr))).sum())
-            print(res_df[['i','j','m','n','utilization','matching_rates']])
-            write_df_to_file('increasing_n_system', res_df)
+            if (rho, n) not in [(.95, 5), (.95, 10)]:
+                compatability_matrix = np.tril(np.ones((n, n)))
+                alpha = np.ones(n)/n
+                lamda = rho * alpha
+                s = np.ones(n)
+                mu = np.ones(n)/n
+                beta = mu
+                exp_res = simulate_queueing_system(compatability_matrix, alpha, beta, lamda, s, mu, prt=True, per_edge=5000, prt_all=True, sims=30)
+                _, ent_mr,_ = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
+                exp_res['mat']['entropy_approx'] = ent_mr
+                res_df = log_res_to_df(compatability_matrix, lamda, mu, res_dict, alpha_beta=False)
+                sim_mr = sim_res['mat']['matching_rates']
+                print((sim_mr - np.diag(np.diag(sim_mr))).sum())
+                print((ent_mr - np.diag(np.diag(ent_mr))).sum())
+                print(res_df[['i','j','m','n','utilization','matching_rates']])
+                write_df_to_file('increasing_n_system', res_df)
+
+
 
 if __name__ == '__main__':
 
@@ -1545,7 +1541,7 @@ if __name__ == '__main__':
     pd.set_option('display.width', 10000)
 
     # increasing_n_system()
-    # go_back_and_approximate_sbpss_customer_dependet()
+    go_back_and_approximate_sbpss_customer_dependet()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')
     # df = go_back_and_solve_qp(df)
     # df.to_csv('erdos_renyi_exp_final_w_qp.csv', index=False)
@@ -1572,32 +1568,34 @@ if __name__ == '__main__':
     # mr, _ = simulate_matching_sequance(sps_compatability_matrix, alpha, beta, sims=30)
     # mre  = adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta)
 
-    n = 10
-    rho = 0.1
+    # n = 10
+    # rho = 0.1
     # compatability_matrix = np.tril(np.ones((n, n)))
     # lamda = rho * np.ones(n)/n
     # mu = np.ones(n)/n
-    compatability_matrix, lamda, mu = BASE_EXAMPLES[6]
-    lamda = rho * np.ones(6)*0.15
-    mu = np.ones(6)*0.15
-    sim_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt=True, sims=3, seed=1, sim_name='sim', prt_all=False, per_edge=50000)
+    # compatability_matrix, lamda, mu = BASE_EXAMPLES[6]
+    # lamda = rho * np.ones(6)*0.15
+    # mu = np.ones(6)*0.15
+    # exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt=True, sims=3, seed=1, sim_name='sim', prt_all=False, per_edge=50000)
 
     # mr_sim = mr_sim['matching_rates'][0]
 
-    _, mr_ent, _ = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
-    quad_approx = quadratic_approximation(compatability_matrix, lamda, mu, pad=True)
-    mr_loc = local_entropy(compatability_matrix, lamda, mu)
-    mr_rho = rho_entropy(compatability_matrix, lamda, mu)
-    sim_res = sim_res['matching_rates']
-    res_dict= { 'entropy_approx': (mr_ent,'mat'), 'local_approx':(mr_loc, 'mat') ,'quad_approx':(quad_approx, 'mat'), 'rho_approx':(mr_rho, 'mat')}
-    res_df = log_res_to_df(compatability_matrix, lamda, mu, {'matching_rates': sim_res, **res_dict}, alpha_beta=False)  
-    approx_df = res_df[['i','j', 'matching_rates']+ list(res_dict.keys())]
-    print(approx_df)
-    print(approx_df[['j', 'matching_rates'] + list(res_dict.keys())].groupby(by='j').sum())
+    # exp_res['mat']['entropy_approx'] = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
+    # exp_res['mat']['quad_approx'] = quadratic_approximation(compatability_matrix, lamda, mu, pad=True)
+    # exp_res['mat']['local_approx'] = local_entropy(compatability_matrix, lamda, mu)
+    # exp_res['mat']['rho_approx'] = rho_entropy(compatability_matrix, lamda, mu)
 
-    approx_df = pd.melt(approx_df, id_vars=['i','j','matching_rates'], value_vars=list(res_dict.keys()), var_name='approximation', value_name='approx_match_rate')
-    approx_df.loc[:, 'abs_error'] = np.abs(approx_df['matching_rates'] - approx_df['approx_match_rate'])/rho
-    print(approx_df[['approximation','abs_error']].groupby(by='approximation').sum())
+    # approx_names = ['entropy_approx','quad_approx','local_approx','rho_approx']
+
+    # res_df = log_res_to_df(compatability_matrix, lamda=lamda, mu=mu, result_dict=exp_res)
+    # print(res_df)
+    # approx_df = res_df[['i','j', 'sim_matching_rates'] + approx_names]
+    # print(approx_df)
+    # print(approx_df[['j', 'sim_matching_rates'] + approx_names].groupby(by='j').sum())
+
+    # approx_df = pd.melt(approx_df, id_vars=['i','j','sim_matching_rates'], value_vars=approx_names, var_name='approximation', value_name='approx_match_rate')
+    # approx_df.loc[:, 'abs_error'] = np.abs(approx_df['sim_matching_rates'] - approx_df['approx_match_rate'])/rho
+    # print(approx_df[['approximation','abs_error']].groupby(by='approximation').sum())
 
     # simulate_queueing_system(compatability_matrix, alpha * 0.99, beta, prt=True, sims=3, sim_len=10000000, seed=1, sim_name='sim', prt_all=True, low_mem=True)
     # m, n = compatability_matrix.shape
