@@ -1354,7 +1354,7 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                 exp_res['mat']['heavy_traffic_approx_exact'] = np.zeros((m, n))
                 
                 print('ending - density_level: ', density_level, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' beta_dist: ', beta_dist, ' rho: ', rho, ' split:', split ,' duration: ', time() - st)
-                print('pct_error_rho_entropy:'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['rho_approx'])/lamda.sum())
+                print('pct_error_rho_entropy:'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['rho_approx']).sum()/lamda.sum())
 
                 exp_res['aux']['split'] =  split
                 exp_res['aux']['graph_no'] =  graph_no
