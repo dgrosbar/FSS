@@ -1274,7 +1274,6 @@ def go_back_and_approximate_sbpss_customer_dependet(filename='FZ_final_w_qp'):
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
                 write_df_to_file('FZ_Kaplan_exp_sbpss_cd4', sbpss_df)
                 exps = []
-                break
         else:
             if len(exps) > 0:
                 print('no_of_exps:', len(exps), 'n:', n)
