@@ -72,7 +72,7 @@ def write_df_to_file(filename, df):
         with open(filename + '.csv', 'w') as file:
             df.to_csv(file, index=False)
 
-def log_res_to_df(compatability_matrix, alpha=None, beta=None, lamda=None, s = None, mu=None, result_dict=None, timestamp=None):
+def log_res_to_df(compatability_matrix, alpha=None, beta=None, lamda=None, s = None, mu=None, result_dict=None, timestamp=None, aux_data=None):
 
     if timestamp is None:
         timestamp = dt.datetime.now() 
@@ -98,7 +98,11 @@ def log_res_to_df(compatability_matrix, alpha=None, beta=None, lamda=None, s = N
     }
     for data_name , data in zip(['alpha', 'lamda', 's'], [alpha, lamda, s]):
         if data is not None:
-            input_dict[data_name] = data[nnz[0]]
+            try:
+                input_dict[data_name] = data[nnz[0]]
+            except:
+                print(data_name, data)
+                raise Exception
 
     for data_name , data in zip(['beta', 'mu'], [beta, mu]):
         if data is not None:
@@ -114,6 +118,9 @@ def log_res_to_df(compatability_matrix, alpha=None, beta=None, lamda=None, s = N
     res_df.loc[:, 'edge_density'] = edge_count/ (m*n)
     res_df.loc[:, 'm'] = m
     res_df.loc[:, 'n'] = n
+    
+    for key, val in aux_data.items():
+        res_df.loc[:, key] = val
 
     return res_df
 

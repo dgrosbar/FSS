@@ -423,53 +423,53 @@ def entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, ma
 			compatability_matrix = np.vstack([compatability_matrix, np.ones(len(mu))])
 			lamda = np.append(lamda, mu.sum() - lamda.sum())			
 
-		matching_rates = compatability_matrix
+	matching_rates = compatability_matrix
 
-		for k in range(max_iter):
+	for k in range(max_iter):
 
-			if is_sps:
-				matching_rates = sps.diags(lamda/matching_rates.sum(axis=1).A.ravel()).dot(matching_rates)
-				matching_rates = matching_rates.dot(sps.diags(mu/matching_rates.sum(axis=0).A.ravel()))
-				if k > 0 and k % check_every == 0:
-					cur_iter, gap_pct =  (k, 
-						max(
-							np.max(np.abs((mu - matching_rates.sum(axis=0)))/mu[:np.newaxis]),
-							np.max(np.abs((matching_rates.sum(axis=1).T - lamda))/lamda[:np.newaxis])
-							)
+		if is_sps:
+			matching_rates = sps.diags(lamda/matching_rates.sum(axis=1).A.ravel()).dot(matching_rates)
+			matching_rates = matching_rates.dot(sps.diags(mu/matching_rates.sum(axis=0).A.ravel()))
+			if k > 0 and k % check_every == 0:
+				cur_iter, gap_pct =  (k, 
+					max(
+						np.max(np.abs((mu - matching_rates.sum(axis=0)))/mu[:np.newaxis]),
+						np.max(np.abs((matching_rates.sum(axis=1).T - lamda))/lamda[:np.newaxis])
 						)
-					if gap_pct < epsilon:
-						converge = True
-						break
-			else:
-				matching_rates = (matching_rates.transpose() * lamda/matching_rates.sum(axis=1)).transpose()
-				matching_rates = matching_rates * mu/matching_rates.sum(axis=0)
-				if k > 0 and k % check_every == 0 or k == max_iter - 1:
-					cur_iter, gap_pct = (k,
-						max(
-							max(abs(mu - matching_rates.sum(axis=0))/mu),
-							max(abs(lamda - matching_rates.sum(axis=1))/lamda)
-							)
+					)
+				if gap_pct < epsilon:
+					converge = True
+					break
+		else:
+			matching_rates = (matching_rates.transpose() * lamda/matching_rates.sum(axis=1)).transpose()
+			matching_rates = matching_rates * mu/matching_rates.sum(axis=0)
+			if k > 0 and k % check_every == 0 or k == max_iter - 1:
+				cur_iter, gap_pct = (k,
+					max(
+						max(abs(mu - matching_rates.sum(axis=0))/mu),
+						max(abs(lamda - matching_rates.sum(axis=1))/lamda)
 						)
-					if gap_pct < epsilon:
-						converge = True
-						break
+					)
+				if gap_pct < epsilon:
+					converge = True
+					break
 
-		if converge:
-			if pad:
-				if ret_all:
-					return True, matching_rates[:-1, :], gap_pct
-				else:
-					return matching_rates[:-1, :]
+	if converge:
+		if pad:
+			if ret_all:
+				return True, matching_rates[:-1, :], gap_pct
 			else:
-				if ret_all:
-					return True, matching_rates, gap_pct
-				else:
-					return matching_rates	
+				return matching_rates[:-1, :]
 		else:
 			if ret_all:
-				return False, None, gap_pct
+				return True, matching_rates, gap_pct
 			else:
-				return None
+				return matching_rates	
+	else:
+		if ret_all:
+			return False, None, gap_pct
+		else:
+			return None
 
 
 def ohm_law_approximation(compatability_matrix, alpha, beta):
@@ -571,13 +571,13 @@ def rho_entropy(compatability_matrix, lamda, mu, s=None, prt=False):
 
 			rows.append(m + j)
 			cols.append(i * n + j)
-			data.append(lamda[i] * s[i]/mu[j])
+			data.append(lamda[i] * s[i])
 
 	for j in range(n):
 
 		rows.append(m + j)
 		cols.append(m * n + j)
-		data.append(-1)
+		data.append(-mu[j])
 
 	rows = np.array(rows)
 	cols = np.array(cols)
@@ -831,6 +831,101 @@ def quadratic_approximation(compatability_matrix, alpha, beta, prt=False, pad=Fa
 		return matching_rates[:m, :]
 	else:
 		return matching_rates
+
+
+def alis_approximation(compatability_matrix, alpha, beta, rho):
+
+
+	m, n = compatability_matrix.shape
+
+	adj_beta = np.ones(n)/n * (1 - rho) + beta * rho
+
+	# p = np.ones((n,n)) *(1/n)
+	p = np.vstack((beta for _ in range(n)))
+	p = entropy_approximation(p, np.ones(n), n*adj_beta)
+
+	def p_to_r(p, alpha):
+
+		q = (1. - np.dot(compatability_matrix, p.T)).T
+		# printarr(q,'q')
+		q = np.cumprod(q, axis=0)
+		# printarr(q,'q')
+		c = 1. / (np.ones(m) - q[-1, :])
+		# printarr(c,'c')
+		q = np.vstack((np.ones((1, m)), q[:-1, :]))
+		# printarr(q,'q')
+		q = q * c
+		# printarr(q,'q')
+		try:
+			q = q * alpha
+		except:
+			print('q', q.shape)
+			print('alpha', alpha.shape)
+
+		# printarr(q,'q')
+		r = np.zeros((n, m, n))
+		for k in range(n):
+			for i,j in zip(*compatability_matrix.nonzero()):
+				r[k,i,j] = q[k, i] * p[k, j]
+
+		# for k in range(n):
+		# 	printarr(r[k, :,:], 'r[{}, :, :]'.format(k))
+		# for k in range(m):
+		# 	printarr(r[:, k,:], 'r[:, {}, :]'.format(k))
+		# 	printarr(r[:, k,:].sum(), 'r[:, {}, :].sum()'.format(k))
+		# for k in range(n):
+		# 	printarr(r[:, :,k], 'r[:, :, {}]'.format(k))
+		
+		return r, p[0, :]
+	
+	def r_to_p(r, p_one):
+
+		p = np.zeros((n, n))
+
+		for k in range(1, n, 1):
+			for j in range(n):
+				p[k, j] = r[:k, :, j].sum()/r[:k, :, :].sum()
+
+		# printarr(p, 'p')
+		# printarr(p.sum(axis=1), 'p.sum(axis=1)')
+
+		p = np.vstack((p_one, p[1:, :]))
+
+		p = entropy_approximation(p, np.ones(n), n*adj_beta)
+
+		# printarr(p, 'p')
+
+		return p
+
+	converge = False
+	iter_k = 0
+
+	while not converge and iter_k < 100000:
+
+		prev_p = p 
+		r , p_one = p_to_r(p, alpha)
+		p = r_to_p(r, p_one)
+		
+		# print(iter_k, np.abs(p - prev_p).sum())
+		if np.abs(p - prev_p).sum() < 10**-8:
+			converge = True
+
+		iter_k += 1
+	
+	r, _ = p_to_r(p, alpha)
+
+	Q = compatability_matrix
+	for k in range(n):
+		for i in range(m):
+			for j in range(n):
+				if Q[i,j] == 1.:
+					ratio = p[k, j]/sum(p[k,h]*Q[i,h] for h in range(n))
+					h_ratio = (1/p[k, j])/sum(Q[i,h]/p[k,h] for h in range(n) if Q[i,h]>0)
+					print(k, i, j, ratio, h_ratio)
+
+	r = rho * r.sum(axis=0)
+
+	return r
 
 
 

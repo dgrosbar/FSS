@@ -139,54 +139,54 @@ def grids_exp(filename='grids_exp'):
                             res_df.to_csv(filename + '.csv', index=False)
 
 
-def grids_exp_for_parallel(filename='grids_exp_parallel_extra_30x30_5_8'):
+def grids_exp_for_parallel(filename='grids_exp_parallel_new', p=8):
 
     jt_perm_dict = {9: list(jpermute(range(9)))}
     print_progress = True
 
+    pool = mp.Pool(processes=p)
     for structure in ['torus']:
 
-        for sqrt_m in [30]:
+        for sqrt_m, d  in zip([9, 30], [2, 3]):
 
+            aux_data = {'size': str(sqrt_m) + 'x' + str(sqrt_m), 'arc_dist': d, 'structure': structure}
             exact = False
-            m =sqrt_m**2
-            jt_perms = jt_perm_dict[9] if sqrt_m ==3 else None
-
-            k = 5
-            while k < 8:
+            m = sqrt_m**2
+            k = 0
+            while k < 30:
+                valid = False
                 exps = []
-                while len(exps) < 2:
+                exps_no = []
+                while len(exps) < p:
 
                     alpha = np.random.exponential(scale=1, size=sqrt_m**2) # obtain values for non normelized customer frecompatability_matrixuency       
                     beta = np.random.exponential(scale=1, size=sqrt_m**2) # obtain values for non normelized server frecompatability_matrixuency
                     alpha = alpha/alpha.sum()
                     beta = beta/beta.sum()
                     valid = False
-                    d = 3
                     compatability_matrix, g = generate_grid_compatability_matrix(sqrt_m, d)
                     valid, _ = verify_crp_condition(compatability_matrix, alpha, beta)
                     
                     if valid:
-                        k += 1
                         arc_dist=d
                         print(k-1, str(sqrt_m) + 'x' + str(sqrt_m), 'd=', arc_dist)
                         print('-'*75)
-                        aux_data = {'exp_num': k, 'size': str(sqrt_m) + 'x' + str(sqrt_m), 'arc_dist': arc_dist, 'structure': structure}
-                        exps.append([compatability_matrix, alpha, beta, jt_perms, exact, print_progress, aux_data])
-                            
-                pool = mp.Pool(processes=2)
-                exps_res = pool.starmap(compare_approximations_generic_parallel, exps)
+                        exps_no.append(k)
+                        exps.append([compatability_matrix, alpha, beta])
+                        k += 1
 
-                exps_res_df = pd.concat(exps_res, axis=0)
-
-                exps_res_df = go_back_and_solve_qp(exps_res_df) 
+                exps_res = pool.starmap(simulate_matching_sequance, exps)
+                exp_res_df = pd.concat([
+                    log_res_to_df(compatability_matrix, alpha, beta, result_dict=res_dict, aux_data={**aux_data, 'exp_no': k}) 
+                    for res_dict, (compatability_matrix, alpha, beta) , k in zip(exps_res, exps, exps_no)
+                ])
                 
                 if os.path.exists(filename + '.csv'):
                     res_df = pd.read_csv(filename + '.csv')
-                    res_df = pd.concat([res_df, exps_res_df], axis=0)
+                    res_df = pd.concat([res_df, exp_res_df], axis=0)
                     res_df.to_csv(filename + '.csv', index=False)
                 else:
-                    res_df = exps_res_df
+                    res_df = exp_res_df
                     res_df.to_csv(filename + '.csv', index=False)
 
 
@@ -238,48 +238,32 @@ def erdos_renyi_exp_for_parallel(filename='erdos_renyi_exp3'):
                         res_df.to_csv(filename + '.csv', index=False)
 
 
-def growing_chains_exp(filename='growing_chains'):
+def growing_chains_exp(filename='growing_chains_new2'):
 
 
     #jt = dict((v, [(x[0] , x[1]) for x in jpermute(range(v))]) for v in [5,7,9])
 
     # for k, n in [(3,5), (3,7),(5,7), (3, 9), (5, 9), (7,9), (3, 30), (5, 30), (7, 30), (9, 30), (11, 30), (3, 100), (5, 100), (7, 100), (9, 100), (11, 100)]:
-    for k,n in list(product([7, 9,11,13, 15, 17, 19],[200, 300])) + [(13, 100), (17, 100)]:
+    for n in [5, 10, 15, 25, 50, 100, 150, 200]:
+        for k in [3, 5, 7, 9, 11, 15, 19, 23, 31, 39]:
+            if k <= n - 2 and (n,k) in list(product([50], [3, 5, 7, 9, 11, 15, 19, 23, 31])):
+                compatability_matrix = 1*np.array([[(0<=(j-i)<k) or (0<=(j+n-i)<k) for j in range(n)] for i in range(n)])
+                alpha = np.array([1./n]*n)
+                beta = np.array([1./n]*n)
 
+                print('-'*30 + str(n) +','+str(k) + '-'*30)
 
-        base = [1]*k + [0]*(n-k)
-        compatability_matrix = 1*np.array([[(0<=(j-i)<k) or (0<=(j+n-i)<k) for j in range(n)] for i in range(n)])
-        alpha = np.array([1./n]*n)
-        beta = np.array([1./n]*n)
-        nnz = compatability_matrix.nonzero()
+                exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt=False, sims=30, per_edge=1000, p=3)
+                exp_res['aux']['k'] = k
+                cur_res_df = log_res_to_df(compatability_matrix, alpha=alpha, beta=beta, result_dict=exp_res)
 
-        print('-'*30 + str(n) +','+str(k) + '-'*30)
-
-        if n <=10:
-            jt_perms = jt[n]
-            matching_rates = adan_weiss_fcfs_alis_matching_rates_vec_jt_numba(compatability_matrix, alpha, beta, jt_perms)
-            matching_rates_stdev = np.zeros((n, n))
-        else:
-            matching_rates, matching_rates_stdev = simulate_matching_sequance(compatability_matrix, alpha, beta, prt=False, sims=1, sim_len=n*k*5000)
-
-        cur_res_df = pd.DataFrame.from_dict({
-            'i': nnz[0],
-            'j': nnz[1],
-            'alpha': alpha[nnz[0]],
-            'beta': beta[nnz[1]],
-            'matching_rate': matching_rates[nnz],
-        })
-        cur_res_df.loc[:, 'n'] = n
-        cur_res_df.loc[:, 'k'] = k
-        cur_res_df.loc[:, 'arc_type'] = np.where(cur_res_df['i']<=cur_res_df['j'], cur_res_df['j'] - cur_res_df['i'], cur_res_df['j'] + n - cur_res_df['i'])
-
-        if os.path.exists(filename + '.csv'):
-            res_df = pd.read_csv(filename + '.csv')
-            res_df = pd.concat([res_df, cur_res_df], axis=0)
-            res_df.to_csv(filename + '.csv', index=False)
-        else:
-            res_df = cur_res_df
-            res_df.to_csv(filename + '.csv', index=False)
+                if os.path.exists(filename + '.csv'):
+                    res_df = pd.read_csv(filename + '.csv')
+                    res_df = pd.concat([res_df, cur_res_df], axis=0)
+                    res_df.to_csv(filename + '.csv', index=False)
+                else:
+                    res_df = cur_res_df
+                    res_df.to_csv(filename + '.csv', index=False)
 
 
 def compare_entropy_and_ohn_law_approximation(filename='FZ_Kaplan_exp_100'):
@@ -1090,7 +1074,7 @@ def go_back_and_solve_qp(df):
 
     for timestamp, exp in df.groupby(['timestamp']):
 
-        exp_data = exp[['m', 'n','exp_num']].drop_duplicates()
+        exp_data = exp[['m', 'n','density_level','exp_num', 'rho']].drop_duplicates()
         alpha_data = exp[['i', 'alpha']].drop_duplicates()
         beta_data = exp[['j', 'beta']].drop_duplicates()
         m = exp_data['m'].iloc[0]
@@ -1110,7 +1094,7 @@ def go_back_and_solve_qp(df):
 
         nnz = compatability_matrix.nonzero()
         try:
-            quad_matching_rates = quadratic_approximation(compatability_matrix, alpha, beta)
+            bs_matching = quadratic_approximation(compatability_matrix, alpha, beta)
         except:
             print('bad_quad:', timestamp)
             quad_matching_rates = np.zeros((m,n))
@@ -1153,15 +1137,15 @@ def go_back_and_approximate_sbpss(filename='erdos_renyi_exp4'):
     k = 0
     exps = []
     pool = mp.Pool(processes=8)
-    for n in range(7, 11, 1):
-        for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
+    for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
+        while len(exps < p):
             exps.append([exp, timestamp])
-        print('no_of_exps:', len(exps), 'n:', n)
-        print('starting work with {} cpus'.format(p))
-        sbpss_dfs = pool.starmap(approximate_sbpss, exps)
-        exps = []
-        sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-        write_df_to_file('FZ_Kaplan_exp_sbpss2', sbpss_df)
+            print('no_of_exps:', len(exps), 'n:', n)
+            print('starting work with {} cpus'.format(p))
+            sbpss_dfs = pool.starmap(approximate_sbpss, exps)
+            exps = []
+            sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+            write_df_to_file('FZ_Kaplan_exp_sbpss2', sbpss_df)
 
 
 def approximate_sbpss(exp, timestamp):
@@ -1284,6 +1268,59 @@ def go_back_and_approximate_sbpss_customer_dependet(filename='FZ_final_w_qp'):
                 exps = []   
 
 
+def go_back_and_approximate_sbpss_w_alis(filename='FZ_Kaplan_exp_sbpss_good2'):
+
+    df = pd.read_csv(filename + '.csv')
+    p = 3
+    pool = mp.Pool(processes=p)
+
+    for density_level in ['high', 'medium', 'low']:
+        exps = []
+        for (timestamp, rho), exp in df[df['density_level'] == density_level].groupby(by=['timestamp', 'rho'], as_index=False):
+            exps.append([exp, timestamp, rho])
+            if len(exps) == p:
+                print('no_of_exps:', len(exps), 'density_level:', density_level)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(approximate_sbpss_w_alis, exps)
+                sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_good_w_alis', sbpss_df)
+                exps = []
+        else:
+            if len(exps) > 0:
+                print('no_of_exps:', len(exps), 'density_level:', density_level)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(approximate_sbpss_w_alis, exps)
+                sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_good_w_alis', sbpss_df)
+                exps = []   
+
+
+# def go_back_and_approximate_sbpss_w_alis(filename='FZ_Kaplan_exp_sbpss_good2'):
+
+#     df = pd.read_csv(filename + '.csv')
+#     p = 3
+#     pool = mp.Pool(processes=p)
+
+#     for density_level in ['high', 'medium', 'low']:
+#     exps = []
+#     for (timestamp, rho), exp in df[df['density_level'] == density_level].groupby(by=['timestamp', 'rho'], as_index=False):
+#         exps.append([exp, timestamp, rho])
+#         if len(exps) == p:
+#             print('no_of_exps:', len(exps), 'density_level:', density_level)
+#             print('starting work with {} cpus'.format(p))
+#             sbpss_dfs = pool.starmap(approximate_sbpss_w_alis, exps)
+#             sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+#             write_df_to_file('FZ_Kaplan_exp_sbpss_good_w_alis', sbpss_df)
+#             exps = []
+#     else:
+#         if len(exps) > 0:
+#             print('no_of_exps:', len(exps), 'density_level:', density_level)
+#             print('starting work with {} cpus'.format(p))
+#             sbpss_dfs = pool.starmap(approximate_sbpss_w_alis, exps)
+#             sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+#             write_df_to_file('FZ_Kaplan_exp_sbpss_good_w_alis', sbpss_df)
+#             exps = []   
+
 def approximate_sbpss_customer_dependent(exp, timestamp):
 
 
@@ -1373,6 +1410,152 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
         return sbpss_df
 
 
+def approximate_sbpss_w_alis(exp, timestamp, rho):
+
+
+        exp_data = exp[['m', 'n', 'density_level', 'graph_no', 'exp_no', 'beta_dist']].drop_duplicates()
+        
+        m = exp_data['m'].iloc[0]
+        n = exp_data['n'].iloc[0]
+        graph_no = exp_data['graph_no'].iloc[0]
+        exp_no = exp_data['exp_no'].iloc[0]
+        beta_dist = exp_data['beta_dist'].iloc[0]
+        density_level = exp_data['density_level'].iloc[0]
+
+        alpha = np.zeros(m)
+        s = np.ones(m)
+        beta = np.zeros(n)
+        compatability_matrix = np.zeros((m, n))
+        sim_matching_rates = np.zeros((m, n))
+        sim_matching_rates_stdev = np.zeros((m, n))
+        light_approx = np.zeros((m, n))
+        rho_approx = np.zeros((m, n))        
+
+        for k, row in exp.iterrows():
+            sim_matching_rates[int(row['i']), int(row['j'])] = row['sim_matching_rates']
+            sim_matching_rates_stdev[int(row['i']), int(row['j'])] = row['sim_matching_rates_stdev']
+            light_approx[int(row['i']), int(row['j'])] = row['light_approx']
+            rho_approx[int(row['i']), int(row['j'])] = row['rho_approx']
+            alpha[int(row['i'])] = float(row['alpha'])
+            beta[int(row['j'])] = float(row['beta'])
+            compatability_matrix[int(row['i']), int(row['j'])] = 1.
+
+        nnz = compatability_matrix.nonzero()
+
+        no_of_edges = len(nnz[0])
+
+        sbpss_df = []
+                
+        st = time()            
+        lamda = alpha * rho
+        mu = beta
+
+        exp_res = {'mat': dict(), 'row': dict(), 'col': dict(), 'aux': dict()}
+
+        exp_res['mat']['heavy_approx'] = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
+        exp_res['mat']['alis_approx'] = alis_approximation(compatability_matrix, alpha, beta, rho)
+        exp_res['mat']['rho_approx_alis'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['heavy_approx']
+        exp_res['mat']['sim_matching_rates'] = sim_matching_rates
+        exp_res['mat']['sim_matching_rates_stdev'] = sim_matching_rates_stdev
+        exp_res['mat']['light_approx'] = light_approx
+        exp_res['mat']['rho_approx'] = rho_approx
+
+        print('density_level:', density_level, 'graph_no:', graph_no, 'exp_no:', exp_no, 'beta_dist:', beta_dist, 'rho:', rho)
+        print('alis_approx_error:', (np.abs(exp_res['mat']['alis_approx']-sim_matching_rates).sum())/lamda.sum())
+        print('heavy_approx_error:', (np.abs(exp_res['mat']['heavy_approx']-sim_matching_rates).sum())/lamda.sum())
+        print('rho_approx_alis_error:', (np.abs(exp_res['mat']['rho_approx_alis']-sim_matching_rates).sum())/lamda.sum())
+        print('rho_approx_error:', (np.abs(exp_res['mat']['rho_approx']-sim_matching_rates).sum())/lamda.sum())
+
+        exp_res['aux']['graph_no'] =  graph_no
+        exp_res['aux']['exp_no'] =  exp_no
+        exp_res['aux']['beta_dist'] =  beta_dist
+        exp_res['aux']['density_level'] =  density_level
+        exp_res['aux']['rho'] = rho
+
+
+        sbpss_rho_df = log_res_to_df(compatability_matrix, alpha, beta, lamda,  s, mu,  result_dict=exp_res, timestamp=timestamp)
+
+        sbpss_df.append(sbpss_rho_df)
+
+        return sbpss_df
+
+
+def approximate_sbpss_cd_w_alis(exp, timestamp, rho):
+
+
+        exp_data = exp[['m', 'n', 'density_level', 'graph_no', 'exp_no', 'beta_dist']].drop_duplicates()
+        
+        m = exp_data['m'].iloc[0]
+        n = exp_data['n'].iloc[0]
+        graph_no = exp_data['graph_no'].iloc[0]
+        exp_no = exp_data['exp_no'].iloc[0]
+        beta_dist = exp_data['beta_dist'].iloc[0]
+        density_level = exp_data['density_level'].iloc[0]
+
+        alpha = np.zeros(m)
+        s = np.zeros(m)
+        beta = np.zeros(n)
+        mu = np.zeros(n)
+        compatability_matrix = np.zeros((m, n))
+        sim_matching_rates = np.zeros((m, n))
+        sim_matching_rates_stdev = np.zeros((m, n))
+        light_approx = np.zeros((m, n))
+        rho_approx = np.zeros((m, n))        
+
+        for k, row in exp.iterrows():
+            sim_matching_rates[int(row['i']), int(row['j'])] = row['sim_matching_rates']
+            sim_matching_rates_stdev[int(row['i']), int(row['j'])] = row['sim_matching_rates_stdev']
+            light_approx[int(row['i']), int(row['j'])] = row['light_approx']
+            rho_approx[int(row['i']), int(row['j'])] = row['rho_approx']
+
+            beta[int(row['j'])] = float(row['beta'])
+            alpha[int(row['i'])] = float(row['alpha'])
+            lamda[int(row['i'])] = float(row['lamda'])
+            s[int(row['i'])] = float(row['s'])
+            compatability_matrix[int(row['i']), int(row['j'])] = 1.
+
+        nnz = compatability_matrix.nonzero()
+
+        no_of_edges = len(nnz[0])
+
+        sbpss_df = []
+                
+        st = time()            
+        lamda = alpha * rho
+        mu = beta
+
+        exp_res = {'mat': dict(), 'row': dict(), 'col': dict(), 'aux': dict()}
+
+        heavy_traffic_approx_entropy_eta =  entropy_approximation(compatability_matrix, eta, mu, pad=True)
+        heavy_traffic_approx_entropy = np.dot(np.diag(1./s), heavy_traffic_approx_entropy_eta)
+        exp_res['mat']['heavy_traffic_approx_entropy'] = heavy_traffic_approx_entropy
+        exp_res['mat']['alis_approx'] = alis_approximation(compatability_matrix, alpha, beta, rho)
+        exp_res['mat']['rho_approx_alis'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['heavy_approx']
+        exp_res['mat']['sim_matching_rates'] = sim_matching_rates
+        exp_res['mat']['sim_matching_rates_stdev'] = sim_matching_rates_stdev
+        exp_res['mat']['light_approx'] = light_approx
+        exp_res['mat']['rho_approx'] = rho_approx
+
+        print('density_level:', density_level, 'graph_no:', graph_no, 'exp_no:', exp_no, 'beta_dist:', beta_dist, 'rho:', rho)
+        print('alis_approx_error:', (np.abs(exp_res['mat']['alis_approx']-sim_matching_rates).sum())/lamda.sum())
+        print('heavy_approx_error:', (np.abs(exp_res['mat']['heavy_approx']-sim_matching_rates).sum())/lamda.sum())
+        print('rho_approx_alis_error:', (np.abs(exp_res['mat']['rho_approx_alis']-sim_matching_rates).sum())/lamda.sum())
+        print('rho_approx_error:', (np.abs(exp_res['mat']['rho_approx']-sim_matching_rates).sum())/lamda.sum())
+
+        exp_res['aux']['graph_no'] =  graph_no
+        exp_res['aux']['exp_no'] =  exp_no
+        exp_res['aux']['beta_dist'] =  beta_dist
+        exp_res['aux']['density_level'] =  density_level
+        exp_res['aux']['rho'] = rho
+
+
+        sbpss_rho_df = log_res_to_df(compatability_matrix, alpha, beta, lamda,  s, mu,  result_dict=exp_res, timestamp=timestamp)
+
+        sbpss_df.append(sbpss_rho_df)
+
+        return sbpss_df
+
+
 def find_bad_sum():
 
     df_full = pd.read_csv('FZ_Kaplan_exp_sbpss_fixed_adj.csv')
@@ -1428,14 +1611,14 @@ def find_bad_sum():
 def go_back_and_adjust_sums():
 
 
-    df_full = pd.read_csv('FZ_Kaplan_exp_sbpss_fixed.csv')
+    df_full = pd.read_csv('FZ_Kaplan_exp_sbpss_good_w_alis.csv')
 
     sim_sum_rates = df_full[['timestamp', 'rho', 'sim_matching_rates']].groupby(by=['timestamp', 'rho'], as_index=False).sum().rename(columns={'sim_matching_rates':'sum_sim_rates'})
     df_full = pd.merge(left=df_full, right=sim_sum_rates, on=['rho', 'timestamp'], how='left')
     df_full.loc[:, 'adj_sim_matching_rates'] = df_full['sim_matching_rates'] * df_full['rho']/df_full['sum_sim_rates']
     df_full.loc[:, 'sim_rate_gap'] = np.abs(df_full['rho'] - df_full['sum_sim_rates'])/df_full['rho']
 
-    df_full.to_csv('FZ_Kaplan_exp_sbpss_fixed_adj.csv')
+    df_full.to_csv('FZ_Kaplan_exp_sbpss_good_w_alis_adj.csv')
 
 
 def fix_bad():
@@ -1530,6 +1713,55 @@ def increasing_n_system():
                 write_df_to_file('increasing_n_system', res_df)
 
 
+def go_back_and_approximate_sbpss_er():
+
+    exp_data = exp[['m', 'n', 'size', 'structure', 'exp_no']].drop_duplicates()
+    alpha_data = exp[['i', 'alpha']].drop_duplicates()
+    beta_data = exp[['j', 'beta']].drop_duplicates()
+    
+    m = exp_data['m'].iloc[0]
+    n = exp_data['n'].iloc[0]
+    size = exp_data['size'].iloc[0]
+    structure = exp_data['structure'].iloc[0]
+    exp_no = exp_data['exp_no'].iloc[0]
+
+    print('size:', size, 'structure:', structure, 'exp_no:', exp_no)
+
+    alpha = np.zeros(m)
+    beta = np.zeros(n)
+    compatability_matrix = np.zeros((m,n))
+
+    for k, row in alpha_data.iterrows():
+        alpha[int(row['i'])] = float(row['alpha'])
+
+    for k, row in beta_data.iterrows():
+        beta[int(row['j'])] = float(row['beta'])
+
+    for k, row in exp.iterrows():
+        compatability_matrix[int(row['i']), int(row['j'])] = 1.
+
+    nnz = compatability_matrix.nonzero()
+
+    pad_compatability_matrix = np.vstack([compatability_matrix, np.ones(n)])
+    no_of_edges = len(nnz[0])
+
+    sbpss_df = []
+    exact = n <= 10
+
+    for rho in [0.01] + [0.05] + [0.1*i for i in range(1, 10, 1)] + [.95, .99]:
+
+        lamda = alpha * rho
+        mu = beta
+        pad_lamda = np.append(alpha*rho, 1. - rho)
+
+        heavy_traffic_approx_entropy = entropy_approximation(pad_compatability_matrix, pad_lamda, mu)
+        heavy_traffic_approx_entropy = heavy_traffic_approx_entropy[:m, :]
+        low_traffic_approx_entropy = local_entropy(compatability_matrix, alpha * rho, beta)
+        alis_approx = alis_approximation(compatability_matrix, alpha, beta, rho)
+        exp_res = simulate_queueing_system(compatability_matrix, lamda, beta, s=np.ones(m), sims=30)
+
+    return sbpss_df
+
 
 if __name__ == '__main__':
 
@@ -1539,17 +1771,18 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
+    # growing_chains_exp()
+    grids_exp_for_parallel()
     # increasing_n_system()
-    go_back_and_approximate_sbpss_customer_dependet()
+    # go_back_and_approximate_sbpss_customer_dependet()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')
     # df = go_back_and_solve_qp(df)
     # df.to_csv('erdos_renyi_exp_final_w_qp.csv', index=False)
     # go_back_and_solve_qp('grids_exp_parallel_extra_9x9')
     # join_df_from_files(['grids_exp_parallel_extra_9x9', 'grids_exp_parallel_extra_w_qp'], join_cols=['timestamp', 'i', 'j'], writefile='grids_exp_parallel_w_qp_full')
 
-
-    
-
+    # go_back_and_solve_ball_stacks()  
+    # go_back_and_adjust_sums()
     
     # comparison_graph4('FZ_Kaplan_exp', ['ent', 'diss'])
     # m,n = compatability_matrix.shape
@@ -1570,31 +1803,74 @@ if __name__ == '__main__':
     # n = 10
     # rho = 0.1
     # compatability_matrix = np.tril(np.ones((n, n)))
-    # lamda = rho * np.ones(n)/n
+    # alpha = np.ones(n)/n
     # mu = np.ones(n)/n
-    # compatability_matrix, lamda, mu = BASE_EXAMPLES[6]
-    # lamda = rho * np.ones(6)*0.15
-    # mu = np.ones(6)*0.15
-    # exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt=True, sims=3, seed=1, sim_name='sim', prt_all=False, per_edge=50000)
+    # beta = mu
 
-    # mr_sim = mr_sim['matching_rates'][0]
+    # compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
+    # mu = beta
+    # m , n = compatability_matrix.shape
 
-    # exp_res['mat']['entropy_approx'] = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
-    # exp_res['mat']['quad_approx'] = quadratic_approximation(compatability_matrix, lamda, mu, pad=True)
-    # exp_res['mat']['local_approx'] = local_entropy(compatability_matrix, lamda, mu)
-    # exp_res['mat']['rho_approx'] = rho_entropy(compatability_matrix, lamda, mu)
+    # res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt=True, sims=30, sim_len=None, seed=None, sim_name='sim', p=3)
 
-    # approx_names = ['entropy_approx','quad_approx','local_approx','rho_approx']
+    # printarr(res['mat']['sim_matching_rates'])
+    # matching_rates_bs, mean_state, mean_state_stdev = ball_stacks2(compatability_matrix, alpha, 10000, 10**6, 10**5)
+    # printarr(mean_state/mean_state.sum())
+    
+    if False:
+        for rho in [0.01] + [i*0.1 for i in range(1, 10, 2)] + [0.95, 0.99]:
+            print(rho)
+            lamda = rho * alpha
+            # beta = (1 - rho) * np.ones(n)/n + rho * mu
+            exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt=True, sims=3, seed=1, sim_name='sim', prt_all=False, per_edge=5000)
+            # matching_rates_bs, mean_state, mean_state_stdev = ball_stacks(compatability_matrix, alpha, 100, 10**5, 10**4)
 
-    # res_df = log_res_to_df(compatability_matrix, lamda=lamda, mu=mu, result_dict=exp_res)
-    # print(res_df)
-    # approx_df = res_df[['i','j', 'sim_matching_rates'] + approx_names]
-    # print(approx_df)
-    # print(approx_df[['j', 'sim_matching_rates'] + approx_names].groupby(by='j').sum())
+            matching_rates_bs_adj_beta = alis_approximation(compatability_matrix, alpha, beta, rho)
+            # matching_rates_bs_beta = alis_approximation(compatability_matrix, alpha, beta=mu)
+            # matching_rates_bs = alis_approximation(compatability_matrix, alpha, beta=np.ones(n)/n)
+            # matching_rates_bs = ball_stacks4(compatability_matrix, lamda, mu, 10, 10**2, 10)
 
-    # approx_df = pd.melt(approx_df, id_vars=['i','j','sim_matching_rates'], value_vars=approx_names, var_name='approximation', value_name='approx_match_rate')
-    # approx_df.loc[:, 'abs_error'] = np.abs(approx_df['sim_matching_rates'] - approx_df['approx_match_rate'])/rho
-    # print(approx_df[['approximation','abs_error']].groupby(by='approximation').sum())
+            # exp_res['mat']['ball_stacks4'] = rho * matching_rates_bs
+            # matching_rates_bs, mean_state, mean_state_stdev = ball_stacks2(compatability_matrix, alpha, 1000, 10**5, 10**4)
+            # printarr(mean_state)
+
+
+            # matching_rates_bs, mean_state, mean_state_stdev = ball_stacks2(compatability_matrix, alpha, 1000, 10**5, 10**4, start = 'unifrom')
+            # printarr(mean_state)
+
+
+            # matching_rates_bs, mean_state, mean_state_stdev = ball_stacks2(compatability_matrix, alpha, 1000, 10**5, 10**4, start='layers')
+            # printarr(mean_state)
+
+
+            exp_res['mat']['ball_stacks_adj'] = matching_rates_bs_adj_beta
+            # exp_res['mat']['ball_stacks'] = rho * matching_rates_bs
+            # exp_res['mat']['ball_stacks_beta'] = rho * matching_rates_bs_beta
+
+            exp_res['mat']['entropy_approx'] = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
+            # exp_res['mat']['quad_approx'] = quadratic_approximation(compatability_matrix, lamda, mu, pad=True)
+            exp_res['mat']['node_entropy'] = node_entropy(compatability_matrix, lamda, mu)
+            exp_res['mat']['local_approx'] = local_entropy(compatability_matrix, lamda, mu)
+            exp_res['mat']['rho_approx'] = rho * exp_res['mat']['entropy_approx'] + (1-rho)*exp_res['mat']['local_approx']
+            # exp_res['mat']['rho_approx_bs'] = rho * exp_res['mat']['entropy_approx'] + (1-rho)*exp_res['mat']['ball_stacks']
+            exp_res['mat']['rho_approx_bs_adj'] = rho * exp_res['mat']['entropy_approx'] + (1-rho)*exp_res['mat']['ball_stacks_adj']
+            # exp_res['mat']['rho_approx_bs3'] = rho * exp_res['mat']['entropy_approx'] + (1-rho)*exp_res['mat']['ball_stacks4']
+            # exp_res['mat']['rho_approx_bs'] = rho * exp_res['mat']['entropy_approx'] + (1-rho)*exp_res['mat']['ball_stacks']
+
+            approx_names = ['entropy_approx','local_approx','rho_approx', 'node_entropy', 'ball_stacks_adj','rho_approx_bs_adj']
+            #, 'ball_stacks3', 'rho_approx_bs', 'rho_approx_bs4']
+
+            res_df = log_res_to_df(compatability_matrix, lamda=lamda, mu=mu, result_dict=exp_res)
+            # print(res_df)
+            approx_df = res_df[['i','j', 'sim_matching_rates'] + approx_names]
+            print(approx_df)
+            approx_df.loc[:,'total'] = 'total_rate'
+            print(approx_df[['j', 'sim_matching_rates'] + approx_names].groupby(by='j').sum())
+            print(approx_df[['total', 'sim_matching_rates'] + approx_names].groupby(by='total').sum())
+
+            approx_df = pd.melt(approx_df, id_vars=['i','j','sim_matching_rates'], value_vars=approx_names, var_name='approximation', value_name='approx_match_rate')
+            approx_df.loc[:, 'abs_error'] = np.abs(approx_df['sim_matching_rates'] - approx_df['approx_match_rate'])/rho
+            print(approx_df[['approximation','abs_error']].groupby(by='approximation').sum())
 
     # simulate_queueing_system(compatability_matrix, alpha * 0.99, beta, prt=True, sims=3, sim_len=10000000, seed=1, sim_name='sim', prt_all=True, low_mem=True)
     # m, n = compatability_matrix.shape
@@ -1689,3 +1965,7 @@ if __name__ == '__main__':
     # mr = adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta)
 
     # printarr(mr, 'exact')
+
+
+
+
