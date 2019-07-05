@@ -568,484 +568,8 @@ def comparison_table_grids(filename='grid_final_w_qp'):
 
     # print(df)
 
-# def comparison_table1(filename):
 
-#     res_df = pd.read_csv(filename + '.csv')
-#     # res_df[~res_df['exact']]['ohm_error_abs'] = res_df[~res_df['exact']]['ohm_error_abs_sim']
-#     # res_df[~res_df['exact']]['ent_error_abs'] = res_df[~res_df['exact']]['ent_error_abs_sim']
-#     base_cols = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'alph_dist', 'beta_dist']
-#     data_cols = ['ohm_error_abs','ent_error_abs', 'ohm_error_abs_pct','ent_error_abs_pct']
-#     cols = base_cols + data_cols
-
-#     def f(df):
-
-#         d = {}
-
-#         d['sum_ohm_error_abs'] = df['ohm_error_abs'].sum()
-#         d['mean_ohm_error_abs'] = df['ohm_error_abs'].mean()
-#         d['max_ohm_error_abs'] = df['ohm_error_abs'].max()
-#         d['sum_ent_error_abs'] = df['ent_error_abs'].sum()
-#         d['mean_ent_error_abs'] = df['ent_error_abs'].mean()
-#         d['max_ent_error_abs'] = df['ent_error_abs'].max()
-#         d['mean_ohm_error_abs_pct'] = df['ohm_error_abs_pct'].mean()
-#         d['max_ohm_error_abs_pct'] = df['ohm_error_abs_pct'].max()
-#         d['mean_ent_error_abs_pct'] = df['ent_error_abs_pct'].mean()
-#         d['max_ent_error_abs_pct'] = df['ent_error_abs_pct'].max()
-
-#         index = [
-#             'sum_ohm_error_abs','mean_ohm_error_abs','max_ohm_error_abs',
-#             'sum_ent_error_abs','mean_ent_error_abs','max_ent_error_abs',
-#             'mean_ohm_error_abs_pct','max_ohm_error_abs_pct',
-#             'mean_ent_error_abs_pct','max_ent_error_abs_pct'
-#             ]
-
-#         return pd.Series(d, index=index)
-
-#     agg_res = res_df[cols].groupby(by=base_cols, as_index=False).apply(f).reset_index()
-
-#     agg_res.loc[:, 'sum_ohm_>_sum_ent'] = agg_res['sum_ohm_error_abs'] >= agg_res['sum_ent_error_abs']   
-#     agg_res.loc[:, 'sum_ent_>_sum_ohm'] = agg_res['sum_ent_error_abs'] >= agg_res['sum_ohm_error_abs'] 
-#     agg_res.loc[:, 'max_ohm_>_max_ent'] = agg_res['max_ohm_error_abs'] >= agg_res['max_ent_error_abs'] 
-#     agg_res.loc[:, 'max_ent_>_max_ohm'] = agg_res['max_ent_error_abs'] >= agg_res['max_ohm_error_abs']
-
-#     agg_res.loc[:, 'sum_ohm_-_sum_ent'] = agg_res.loc[:, 'sum_ohm_>_sum_ent'] * (agg_res['sum_ohm_error_abs'] - agg_res['sum_ent_error_abs'])
-#     agg_res.loc[:, 'sum_ent_-_sum_ohm'] = agg_res.loc[:, 'sum_ent_>_sum_ohm'] * (agg_res['sum_ent_error_abs'] - agg_res['sum_ohm_error_abs'])
-#     agg_res.loc[:, 'max_ohm_-_max_ent'] = agg_res.loc[:, 'max_ohm_>_max_ent'] * (agg_res['max_ohm_error_abs'] - agg_res['max_ent_error_abs'])
-#     agg_res.loc[:, 'max_ent_-_max_ohm'] = agg_res.loc[:, 'max_ent_>_max_ohm'] * (agg_res['max_ent_error_abs'] - agg_res['max_ohm_error_abs'])
-
-#     data_cols = [
-#         'sum_ohm_error_abs', 'mean_ohm_error_abs','max_ohm_error_abs',
-#         'sum_ent_error_abs', 'mean_ent_error_abs','max_ent_error_abs',
-#         'sum_ent_>_sum_ohm', 'max_ent_>_max_ohm',
-#         'sum_ohm_>_sum_ent', 'max_ohm_>_max_ent',
-#         'sum_ohm_-_sum_ent', 'max_ohm_-_max_ent',
-#         'sum_ent_-_sum_ohm', 'max_ent_-_max_ohm']
-    
-#     base_cols = ['density_level', 'beta_dist']
-    
-#     cols = base_cols + data_cols
-
-#     def g(df):
-
-#         d = {}
-
-#         d['sum_ohm_error_abs_avg'] = df['sum_ohm_error_abs'].mean()
-#         d['mean_ohm_error_abs_avg'] = df['mean_ohm_error_abs'].mean()
-#         d['max_ohm_error_abs_avg'] = df['max_ohm_error_abs'].mean()
-#         d['sum_ent_error_abs_avg'] = df['sum_ent_error_abs'].mean()
-#         d['mean_ent_error_abs_avg'] = df['mean_ent_error_abs'].mean()
-#         d['max_ent_error_abs_avg'] = df['max_ent_error_abs'].mean()
-#         d['sum_ohm_error_abs_max'] = df['sum_ohm_error_abs'].max()
-#         d['mean_ohm_error_abs_max'] = df['mean_ohm_error_abs'].max()
-#         d['max_ohm_error_abs_max'] = df['max_ohm_error_abs'].max()
-#         d['sum_ent_error_abs_max'] = df['sum_ent_error_abs'].max()
-#         d['mean_ent_error_abs_max'] = df['mean_ent_error_abs'].max()
-#         d['max_ent_error_abs_max'] = df['max_ent_error_abs'].max()
-#         d['sum_(sum_ohm_>_sum_ent)'] = df['sum_ohm_>_sum_ent'].sum()
-#         d['sum_(sum_ent_>_sum_ohm)'] = df['sum_ent_>_sum_ohm'].sum()
-#         d['sum_(max_ohm_>_max_ent)'] = df['max_ohm_>_max_ent'].sum()
-#         d['sum_(max_ent_>_max_ohm)'] = df['max_ent_>_max_ohm'].sum()
-#         d['sum_(sum_ohm_-_sum_ent)'] = df['sum_ohm_-_sum_ent'].sum()
-#         d['sum_(sum_ent_-_sum_ohm)'] = df['sum_ent_-_sum_ohm'].sum()
-#         d['sum_(max_ohm_-_max_ent)'] = df['max_ohm_-_max_ent'].sum()
-#         d['sum_(max_ent_-_max_ohm)'] = df['max_ent_-_max_ohm'].sum()
-#         d['max_(sum_ohm_-_sum_ent)'] = df['sum_ohm_-_sum_ent'].max()
-#         d['max_(sum_ent_-_sum_ohm)'] = df['sum_ent_-_sum_ohm'].max()
-
-
-#         index = [
-#             'sum_ohm_error_abs_avg','mean_ohm_error_abs_avg','max_ohm_error_abs_avg',
-#             'sum_ent_error_abs_avg','mean_ent_error_abs_avg','max_ent_error_abs_avg',
-#             'sum_ohm_error_abs_max','mean_ohm_error_abs_max','max_ohm_error_abs_max',
-#             'sum_ent_error_abs_max','mean_ent_error_abs_max','max_ent_error_abs_max',
-#             'sum_(sum_ohm_>_sum_ent)','sum_(sum_ent_>_sum_ohm)',
-#             'sum_(max_ohm_>_max_ent)','sum_(max_ent_>_max_ohm)',
-#             'sum_(sum_ohm_-_sum_ent)','sum_(sum_ent_-_sum_ohm)',
-#             'sum_(max_ohm_-_max_ent)','sum_(max_ent_-_max_ohm)',
-#             'max_(sum_ohm_-_sum_ent)','max_(sum_ent_-_sum_ohm)'
-#         ]
-
-#         return pd.Series(d, index=index)
-
-
-#     table = agg_res[cols].groupby(by=base_cols, as_index=False).apply(g)
-
-#     table.loc[:, 'avg_gap_sum_abs_error_ent'] = table['sum_(sum_ohm_-_sum_ent)']/table['sum_(sum_ohm_>_sum_ent)'] 
-#     table.loc[:, 'avg_gap_sum_abs_error_ohm'] = table['sum_(sum_ent_-_sum_ohm)']/table['sum_(sum_ent_>_sum_ohm)']
-    
-
-#     new_cols = [
-#         'avg_sum_abs_error', 'max_sum_abs_error',
-#         'avg_mean_abs_error', 'max_mean_abs_error',
-#         'max_single_abs_error',
-#         'lower_sum_abs_error_count', 'lower_max_abs_error_count',
-#         'avg_gap_when_better', 'max_gap_when_better']
-
-#     ohm_cols =[
-#         'sum_ohm_error_abs_avg', 'sum_ohm_error_abs_max', 
-#         'mean_ohm_error_abs_avg', 'mean_ohm_error_abs_max',
-#         'max_ohm_error_abs_max',
-#         'sum_(sum_ent_>_sum_ohm)', 'sum_(max_ent_>_max_ohm)',
-#         'avg_gap_sum_abs_error_ohm', 'max_(sum_ent_-_sum_ohm)'
-#     ]
-
-#     ent_cols = [
-#         'sum_ent_error_abs_avg', 'sum_ent_error_abs_max', 
-#         'mean_ent_error_abs_avg', 'mean_ent_error_abs_max', 
-#         'max_ent_error_abs_max',
-#         'sum_(sum_ohm_>_sum_ent)', 'sum_(max_ohm_>_max_ent)',
-#         'avg_gap_sum_abs_error_ent' , 'max_(sum_ohm_-_sum_ent)'  
-#     ]
-
-#     ohm_table = table[ohm_cols].rename(columns=dict(zip(ohm_cols, new_cols)))
-#     ohm_table.loc[:, 'approximation'] = 'ohm'
-#     ent_table = table[ent_cols].rename(columns=dict(zip(ent_cols, new_cols)))
-#     ent_table.loc[:, 'approximation'] = 'ent'
-    
-    
-    
-    
-#     compare_table = pd.concat([ohm_table, ent_table])
-#     #compare_table =compare_table.pivot(columns='approximation')
-#     print(compare_table[['approximation','avg_sum_abs_error', 'avg_mean_abs_error','max_sum_abs_error']].pivot(columns='approximation'))
-#     print('-'*100)
-#     print(compare_table[['approximation','lower_sum_abs_error_count', 'lower_max_abs_error_count','avg_gap_when_better', 'max_gap_when_better']].pivot(columns='approximation'))
-
-
-# def comparison_table2(filename):
-
-#     res_df = pd.read_csv(filename + '.csv')
-#     # res_df[~res_df['exact']]['ohm_error_abs'] = res_df[~res_df['exact']]['ohm_error_abs_sim']
-#     # res_df[~res_df['exact']]['ent_error_abs'] = res_df[~res_df['exact']]['ent_error_abs_sim']
-#     # for col in list(res_df.columns.values):
-#     #     print(col)
-#     base_cols = ['timestamp','structure','size', 'exp_num', 'm', 'n','arc_dist', 'exact']
-#     data_cols = [
-#         'ohm_error_abs', 'ent_error_abs', 'ohm_error_abs_pct', 'ent_error_abs_pct',
-#         'ohm_error_abs_sim', 'ent_error_abs_sim', 'ohm_error_abs_pct_sim', 'ent_error_abs_pct_sim'
-#     ]
-#     cols = base_cols + data_cols
-
-#     def f(df):
-
-#         if df['exact'].sum() > 0:
-#             x = ''
-#         else:
-#             x = '_sim'
-
-#         d = {}
-
-#         d['sum_ohm_error_abs'] = df['ohm_error_abs' + x].sum()
-#         d['mean_ohm_error_abs'] = df['ohm_error_abs' + x].mean()
-#         d['max_ohm_error_abs'] = df['ohm_error_abs' + x].max()
-#         d['sum_ent_error_abs'] = df['ent_error_abs' + x].sum()
-#         d['mean_ent_error_abs'] = df['ent_error_abs' + x].mean()
-#         d['max_ent_error_abs'] = df['ent_error_abs' + x].max()
-#         d['mean_ohm_error_abs_pct'] = df['ohm_error_abs_pct' + x].mean()
-#         d['max_ohm_error_abs_pct'] = df['ohm_error_abs_pct' + x].max()
-#         d['mean_ent_error_abs_pct'] = df['ent_error_abs_pct' + x].mean()
-#         d['max_ent_error_abs_pct'] = df['ent_error_abs_pct' + x].max()
-
-#         index = [
-#             'sum_ohm_error_abs','mean_ohm_error_abs','max_ohm_error_abs',
-#             'sum_ent_error_abs','mean_ent_error_abs','max_ent_error_abs',
-#             'mean_ohm_error_abs_pct','max_ohm_error_abs_pct',
-#             'mean_ent_error_abs_pct','max_ent_error_abs_pct'
-#             ]
-
-#         return pd.Series(d, index=index)
-
-#     agg_res = res_df[cols].groupby(by=base_cols, as_index=False).apply(f).reset_index()
-
-#     agg_res.loc[:, 'sum_ohm_>_sum_ent'] = agg_res['sum_ohm_error_abs'] >= agg_res['sum_ent_error_abs']   
-#     agg_res.loc[:, 'sum_ent_>_sum_ohm'] = agg_res['sum_ent_error_abs'] >= agg_res['sum_ohm_error_abs'] 
-#     agg_res.loc[:, 'max_ohm_>_max_ent'] = agg_res['max_ohm_error_abs'] >= agg_res['max_ent_error_abs'] 
-#     agg_res.loc[:, 'max_ent_>_max_ohm'] = agg_res['max_ent_error_abs'] >= agg_res['max_ohm_error_abs']
-
-#     agg_res.loc[:, 'sum_ohm_-_sum_ent'] = agg_res.loc[:, 'sum_ohm_>_sum_ent'] * (agg_res['sum_ohm_error_abs'] - agg_res['sum_ent_error_abs'])
-#     agg_res.loc[:, 'sum_ent_-_sum_ohm'] = agg_res.loc[:, 'sum_ent_>_sum_ohm'] * (agg_res['sum_ent_error_abs'] - agg_res['sum_ohm_error_abs'])
-#     agg_res.loc[:, 'max_ohm_-_max_ent'] = agg_res.loc[:, 'max_ohm_>_max_ent'] * (agg_res['max_ohm_error_abs'] - agg_res['max_ent_error_abs'])
-#     agg_res.loc[:, 'max_ent_-_max_ohm'] = agg_res.loc[:, 'max_ent_>_max_ohm'] * (agg_res['max_ent_error_abs'] - agg_res['max_ohm_error_abs'])
-
-#     data_cols = [
-#         'sum_ohm_error_abs', 'mean_ohm_error_abs','max_ohm_error_abs',
-#         'sum_ent_error_abs', 'mean_ent_error_abs','max_ent_error_abs',
-#         'sum_ent_>_sum_ohm', 'max_ent_>_max_ohm',
-#         'sum_ohm_>_sum_ent', 'max_ohm_>_max_ent',
-#         'sum_ohm_-_sum_ent', 'max_ohm_-_max_ent',
-#         'sum_ent_-_sum_ohm', 'max_ent_-_max_ohm']
-    
-#     base_cols = ['structure', 'size']
-    
-#     cols = base_cols + data_cols
-
-#     def g(df):
-
-#         d = {}
-
-#         d['sum_ohm_error_abs_avg'] = df['sum_ohm_error_abs'].mean()
-#         d['mean_ohm_error_abs_avg'] = df['mean_ohm_error_abs'].mean()
-#         d['max_ohm_error_abs_avg'] = df['max_ohm_error_abs'].mean()
-#         d['sum_ent_error_abs_avg'] = df['sum_ent_error_abs'].mean()
-#         d['mean_ent_error_abs_avg'] = df['mean_ent_error_abs'].mean()
-#         d['max_ent_error_abs_avg'] = df['max_ent_error_abs'].mean()
-#         d['sum_ohm_error_abs_max'] = df['sum_ohm_error_abs'].max()
-#         d['mean_ohm_error_abs_max'] = df['mean_ohm_error_abs'].max()
-#         d['max_ohm_error_abs_max'] = df['max_ohm_error_abs'].max()
-#         d['sum_ent_error_abs_max'] = df['sum_ent_error_abs'].max()
-#         d['mean_ent_error_abs_max'] = df['mean_ent_error_abs'].max()
-#         d['max_ent_error_abs_max'] = df['max_ent_error_abs'].max()
-#         d['sum_(sum_ohm_>_sum_ent)'] = df['sum_ohm_>_sum_ent'].sum()
-#         d['sum_(sum_ent_>_sum_ohm)'] = df['sum_ent_>_sum_ohm'].sum()
-#         d['sum_(max_ohm_>_max_ent)'] = df['max_ohm_>_max_ent'].sum()
-#         d['sum_(max_ent_>_max_ohm)'] = df['max_ent_>_max_ohm'].sum()
-#         d['sum_(sum_ohm_-_sum_ent)'] = df['sum_ohm_-_sum_ent'].sum()
-#         d['sum_(sum_ent_-_sum_ohm)'] = df['sum_ent_-_sum_ohm'].sum()
-#         d['sum_(max_ohm_-_max_ent)'] = df['max_ohm_-_max_ent'].sum()
-#         d['sum_(max_ent_-_max_ohm)'] = df['max_ent_-_max_ohm'].sum()
-#         d['max_(sum_ohm_-_sum_ent)'] = df['sum_ohm_-_sum_ent'].max()
-#         d['max_(sum_ent_-_sum_ohm)'] = df['sum_ent_-_sum_ohm'].max()
-
-
-#         index = [
-#             'sum_ohm_error_abs_avg','mean_ohm_error_abs_avg','max_ohm_error_abs_avg',
-#             'sum_ent_error_abs_avg','mean_ent_error_abs_avg','max_ent_error_abs_avg',
-#             'sum_ohm_error_abs_max','mean_ohm_error_abs_max','max_ohm_error_abs_max',
-#             'sum_ent_error_abs_max','mean_ent_error_abs_max','max_ent_error_abs_max',
-#             'sum_(sum_ohm_>_sum_ent)','sum_(sum_ent_>_sum_ohm)',
-#             'sum_(max_ohm_>_max_ent)','sum_(max_ent_>_max_ohm)',
-#             'sum_(sum_ohm_-_sum_ent)','sum_(sum_ent_-_sum_ohm)',
-#             'sum_(max_ohm_-_max_ent)','sum_(max_ent_-_max_ohm)',
-#             'max_(sum_ohm_-_sum_ent)','max_(sum_ent_-_sum_ohm)'
-#         ]
-
-#         return pd.Series(d, index=index)
-
-
-#     table = agg_res[cols].groupby(by=base_cols, as_index=False).apply(g)
-
-#     table.loc[:, 'avg_gap_sum_abs_error_ent'] = table['sum_(sum_ohm_-_sum_ent)']/table['sum_(sum_ohm_>_sum_ent)'] 
-#     table.loc[:, 'avg_gap_sum_abs_error_ohm'] = table['sum_(sum_ent_-_sum_ohm)']/table['sum_(sum_ent_>_sum_ohm)']
-    
-
-#     new_cols = [
-#         'avg_sum_abs_error', 'max_sum_abs_error',
-#         'avg_mean_abs_error', 'max_mean_abs_error',
-#         'max_single_abs_error',
-#         'lower_sum_abs_error_count', 'lower_max_abs_error_count',
-#         'avg_gap_when_better', 'max_gap_when_better'
-#     ]
-
-#     ohm_cols =[
-#         'sum_ohm_error_abs_avg', 'sum_ohm_error_abs_max', 
-#         'mean_ohm_error_abs_avg', 'mean_ohm_error_abs_max',
-#         'max_ohm_error_abs_max',
-#         'sum_(sum_ent_>_sum_ohm)', 'sum_(max_ent_>_max_ohm)',
-#         'avg_gap_sum_abs_error_ohm', 'max_(sum_ent_-_sum_ohm)'
-#     ]
-
-#     ent_cols = [
-#         'sum_ent_error_abs_avg', 'sum_ent_error_abs_max', 
-#         'mean_ent_error_abs_avg', 'mean_ent_error_abs_max', 
-#         'max_ent_error_abs_max',
-#         'sum_(sum_ohm_>_sum_ent)', 'sum_(max_ohm_>_max_ent)',
-#         'avg_gap_sum_abs_error_ent' , 'max_(sum_ohm_-_sum_ent)'  
-#     ]
-
-#     ohm_table = table[ohm_cols].rename(columns=dict(zip(ohm_cols, new_cols)))
-#     ohm_table.loc[:, 'approximation'] = 'ohm'
-#     ent_table = table[ent_cols].rename(columns=dict(zip(ent_cols, new_cols)))
-#     ent_table.loc[:, 'approximation'] = 'ent'
-    
-    
-    
-    
-#     compare_table = pd.concat([ohm_table, ent_table])
-#     #compare_table =compare_table.pivot(columns='approximation')
-#     print(compare_table[['approximation','avg_sum_abs_error', 'avg_mean_abs_error','max_sum_abs_error']].pivot(columns='approximation'))
-#     print('-'*100)
-#     print(compare_table[['approximation','lower_sum_abs_error_count', 'lower_max_abs_error_count','avg_gap_when_better', 'max_gap_when_better']].pivot(columns='approximation'))
-
-
-# def comparison_table3(filename, approx_names):
-
-#     res_df = pd.read_csv(filename + '.csv')
-#     # res_df[~res_df['exact']]['ohm_error_abs'] = res_df[~res_df['exact']]['ohm_error_abs_sim']
-#     # res_df[~res_df['exact']]['ent_error_abs'] = res_df[~res_df['exact']]['ent_error_abs_sim']
-#     # for col in list(res_df.columns.values):
-#     #     print(col)
-#     base_cols = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'alph_dist', 'beta_dist', 'exact']
-#     data_col_names = ['_error_abs', '_error_abs_pct', '_error_abs_sim', '_error_abs_pct_sim']
-
-#     data_cols = [approx_name + data_name for approx_name, data_name in product(approx_names, data_col_names)] 
-
-#     cols = base_cols + data_cols
-
-#     def f(df):
-
-#         if df['exact'].sum() > 0:
-#             x = ''
-#         else:
-#             x = '_sim'
-
-#         index = []
-#         d = {}
-
-#         for approx in approx_names:
-#             d['sum_' + approx + '_error_abs'] = df[approx + '_error_abs' + x].sum()
-#             d['mean_' + approx + '_error_abs'] = df[approx + '_error_abs' + x].mean()
-#             d['max_' + approx + '_error_abs'] = df[approx + '_error_abs' + x].max()
-#             d['mean_' + approx + '_error_abs_pct'] = df[approx + '_error_abs_pct' + x].mean()
-#             d['max_' + approx + '_error_abs_pct'] = df[approx + '_error_abs_pct' + x].max()
-
-#             index = index + [
-#                 'sum_' + approx + '_error_abs',
-#                 'mean_' + approx + '_error_abs',
-#                 'mean_' + approx + '_error_abs_pct',
-#                 'max_' + approx + '_error_abs',
-#                 'max_' + approx + '_error_abs_pct'
-#                 ]
-
-
-#         return pd.Series(d, index=index)
-
-#     agg_res = res_df[cols].groupby(by=base_cols, as_index=False).apply(f).reset_index()
-
-#     data_cols = []
-
-#     for approx in approx_names:
-#         data_cols = data_cols + [
-#             'sum_' + approx + '_error_abs',
-#             'mean_' + approx + '_error_abs',
-#             'max_' + approx + '_error_abs',
-#             'mean_' + approx + '_error_abs_pct',
-#             'max_' + approx + '_error_abs_pct'
-#         ]
-    
-#     for approx_1, approx_2 in product(approx_names, approx_names):
-#         if approx_1 != approx_2:
-
-#             agg_res.loc[:, 'sum_' + approx_1 + '_>_sum_' + approx_2] = agg_res['sum_' + approx_1 + '_error_abs'] >= agg_res['sum_' + approx_2 + '_error_abs']   
-#             agg_res.loc[:, 'max_' + approx_1 + '_>_max_' + approx_2] = agg_res['max_' + approx_1 + '_error_abs'] >= agg_res['max_' + approx_2 + '_error_abs'] 
-#             agg_res.loc[:, 'sum_' + approx_1 + '_-_sum_' + approx_2] = agg_res.loc[:, 'sum_' + approx_1 + '_>_sum_' + approx_2 ] * (agg_res['sum_' + approx_1 + '_error_abs'] - agg_res['sum_' + approx_2 + '_error_abs'])
-#             agg_res.loc[:, 'max_' + approx_1 + '_-_max_' + approx_2] = agg_res.loc[:, 'max_' + approx_1 + '_>_max_' + approx_2 ] * (agg_res['max_' + approx_1 + '_error_abs'] - agg_res['max_' + approx_2 + '_error_abs'])
-
-#             data_cols = data_cols + [
-#                 'sum_' + approx_1 + '_>_sum_' + approx_2, 'sum_' + approx_2 + '_>_sum_' + approx_1,
-#                 'max_' + approx_1 + '_>_max_' + approx_2, 'max_' + approx_2 + '_>_max_' + approx_1,
-#                 'sum_' + approx_1 + '_-_sum_' + approx_2, 'sum_' + approx_2 + '_-_sum_' + approx_1,
-#                 'max_' + approx_1 + '_-_max_' + approx_2, 'max_' + approx_2 + '_-_max_' + approx_1
-#         ]
-   
-#     base_cols = ['density_level', 'beta_dist']
-    
-#     cols = base_cols + data_cols
-
-#     def g(df):
-
-#         index = []
-
-#         d = {}
-
-#         for approx in approx_names:
-
-#             d['sum_' + approx  + '_error_abs_avg'] = df['sum_' + approx + '_error_abs'].mean()
-#             d['mean_' + approx  + '_error_abs_avg'] = df['mean_' + approx + '_error_abs'].mean()
-#             d['max_' + approx  + '_error_abs_avg'] = df['max_' + approx + '_error_abs'].mean()
-
-
-#             d['sum_' + approx + '_error_abs_max'] = df['sum_' + approx + '_error_abs'].max()
-#             d['mean_' + approx + '_error_abs_max'] = df['mean_' + approx + '_error_abs'].max()
-#             d['max_' + approx + '_error_abs_max'] = df['max_' + approx + '_error_abs'].max()
-
-
-#             index = index + [
-#                 'sum_' + approx + '_error_abs_avg', 'mean_' + approx + '_error_abs_avg', 'max_' + approx + '_error_abs_avg',
-#                 'sum_' + approx + '_error_abs_max', 'mean_' + approx + '_error_abs_max', 'max_' + approx + '_error_abs_max'
-#             ]
-
-#         for approx_1, approx_2 in product(approx_names, approx_names):
-            
-#             if approx_1 != approx_2:
-
-#                 d['sum_(sum_' + approx_1 + '_>_sum_' + approx_2 +')'] = df['sum_' + approx_1 + '_>_sum_' + approx_2].sum()
-#                 d['sum_(max_' + approx_1 + '_>_max_' + approx_2 +')'] = df['max_' + approx_1 + '_>_max_' + approx_2].sum()
-#                 d['sum_(sum_' + approx_1 + '_-_sum_' + approx_2 +')'] = df['sum_' + approx_1 + '_-_sum_' + approx_2].sum()
-#                 d['sum_(max_' + approx_1 + '_-_max_' + approx_2 +')'] = df['max_' + approx_1 + '_-_max_' + approx_2].sum()
-#                 d['max_(sum_' + approx_1 + '_-_sum_' + approx_2 +')'] = df['sum_' + approx_1 + '_-_sum_' + approx_2].max()
-         
-#                 index = index + [
-#                     'sum_(sum_' + approx_1 + '_>_sum_' + approx_2 + ')',
-#                     'sum_(max_' + approx_1 + '_>_max_' + approx_2 + ')',
-#                     'sum_(sum_' + approx_1 + '_-_sum_' + approx_2 + ')',
-#                     'sum_(max_' + approx_1 + '_-_max_' + approx_2 + ')',
-#                     'max_(sum_' + approx_1 + '_-_sum_' + approx_2 + ')'
-#                 ]
-
-#         return pd.Series(d, index=index)
-
-
-#     table = agg_res[cols].groupby(by=base_cols, as_index=False).apply(g)
-
-#     # for approx_1, approx_2 in product(approx_names, approx_names):
-#     #     if approx_1 != approx_2:
-
-#     #         table.loc[:, 'avg_gap_sum_abs_error_' + approx_1 + '-' + approx_2] = table['sum_(sum_' + approx_1 + '_-_sum_' + approx_2 + ')']/table['sum_(sum_' + approx_1 + '_>_sum_' + approx_2 + ')'] 
-
-#     new_cols = [
-#         'avg_sum_abs_error', 'max_sum_abs_error',
-#         'avg_mean_abs_error', 'max_mean_abs_error',
-#         'max_single_abs_error',
-#         # 'lower_sum_abs_error_count', 'lower_max_abs_error_count',
-#         # 'avg_gap_when_better', 'max_gap_when_better'
-#     ]
-
-#     approx_tables = []
-
-#     for approx_1 in approx_names:
-
-#         approx_cols =[
-#             'sum_' + approx_1 + '_error_abs_avg', 'sum_' + approx_1 + '_error_abs_max', 
-#             'mean_' + approx_1 + '_error_abs_avg', 'mean_' + approx_1 + '_error_abs_max',
-#             'max_' + approx_1 + '_error_abs_max'
-#             ]
-        
-#         # for approx_2 in approx_names:
-#         #     if approx_1 != approx_2:
-#         #         approx_cols = approx_cols + [ 
-#         #                         'sum_(sum_ent_>_sum_ohm)', 'sum_(max_ent_>_max_ohm)',
-#         #                         'avg_gap_sum_abs_error_ohm', 'max_(sum_ent_-_sum_ohm)'
-#         #                     ]
-#         #         new_cols = new_cols + []
-
-#     # new_cols = [
-#     #     'avg_sum_abs_error', 'max_sum_abs_error',
-#     #     'avg_mean_abs_error', 'max_mean_abs_error',
-#     #     'max_single_abs_error',
-#     #     'lower_sum_abs_error_count', 'lower_max_abs_error_count',
-#     #     'avg_gap_when_better', 'max_gap_when_better'
-#     # ]
-
-#     # ohm_cols =[
-#     #     'sum_ohm_error_abs_avg', 'sum_ohm_error_abs_max', 
-#     #     'mean_ohm_error_abs_avg', 'mean_ohm_error_abs_max',
-#     #     'max_ohm_error_abs_max',
-#     #     'sum_(sum_ent_>_sum_ohm)', 'sum_(max_ent_>_max_ohm)',
-#     #     'avg_gap_sum_abs_error_ohm', 'max_(sum_ent_-_sum_ohm)'
-#     # ]
-
-#         approx_table = table[approx_cols].rename(columns=dict(zip(approx_cols, new_cols)))
-#         approx_table.loc[:, 'approximation'] = approx_1
-#         approx_tables.append(approx_table)
-    
-#     compare_table = pd.concat(approx_tables)
-#     #compare_table =compare_table.pivot(columns='approximation')
-#     print(compare_table[['approximation','avg_sum_abs_error', 'avg_mean_abs_error','max_sum_abs_error']].pivot(columns='approximation'))
-#     print('-'*100)
-#     # print(compare_table[['approximation','lower_sum_abs_error_count', 'lower_max_abs_error_count','avg_gap_when_better', 'max_gap_when_better']].pivot(columns='approximation'))
-
-
-def growing_chains_graph(filename='growing_chains_new'):
+def growing_chains_graph(filename='growing_chains_new2'):
     
     res_df = pd.read_csv(filename + '.csv')
 
@@ -1054,36 +578,37 @@ def growing_chains_graph(filename='growing_chains_new'):
     #     print(col)
     # print(res_df[res_df['n'] == 5])
 
-    # res_df_max = res_df[['timestamp', 'n','edge_density' ,'arc_type']].groupby(by=['timestamp','n','edge_density']).max()
-    print(res_df[['timestamp','n']].drop_duplicates())
+    # res_df_max = res_df[['timestamp','arc_type']].groupby(by=['timestamp'], as_index=False).max().rename(columns={'arc_type': 'k'})
+    # res_df = pd.merge(left=res_df, right=res_df_max, on='timestamp', how='left')
+    # for col in res_df.columns.values:
+    #     print(col)
 
     def f(df):
 
         d = {}
 
-        d['r'] = df['matching_rate'].mean()
-        d['sig_r'] = df['matching_rate'].std()
+        d['r'] = df['sim_matching_rates'].mean()
+        d['sig_r'] = df['sim_matching_rates'].std()
 
         index = ['r', 'sig_r']
 
         return pd.Series(d, index=index)
 
-    # res_df = res_df[['arc_type','n','k', 'matching_rate']].groupby(by=['n','k','arc_type']).apply(f).reset_index()
-    # res_df.loc[:, 'scv_r'] = (res_df['sig_r']/res_df['r'])**2
-    # res_df.loc[:, 'error_pct'] = res_df['r']*(res_df['n'] * res_df['k']) 
-    # res_df.loc[:, 'abs_error'] = np.abs(res_df['r'] - (1/(res_df['n'] * res_df['k']))) * res_df['k']
-
+    res_df = res_df[['arc_type','n','k', 'sim_matching_rates']].groupby(by=['n','k','arc_type'], as_index=False).apply(f).reset_index()
+    res_df.loc[:, 'scv_r'] = (res_df['sig_r']/res_df['r'])**2
+    res_df.loc[:, 'error_pct'] = res_df['r']*(res_df['n'] * res_df['k']) 
+    res_df.loc[:, 'abs_error'] = np.abs(res_df['r'] - (1/(res_df['n'] * res_df['k']))) * res_df['k']
     
-    # res_agg = res_df[['n','k','abs_error']].groupby(by=['n','k'], as_index=False).sum()
+    res_agg = res_df[['n','k','abs_error']].groupby(by=['n','k'], as_index=False).sum()
 
-    # print(res_df)
+    print(res_df)
 
-    # print(res_df[(1 == res_df['arc_type'] + 1)].sort_values(by=['k','n'])) 
-    # print(res_df[(1 == res_df['arc_type'] + 1)].sort_values(by=['n','k'])) 
-    # print(res_df[(res_df['k'] == res_df['arc_type'] + 1)]) 
-    # print(res_df[(res_df['k']-1)/2 == res_df['arc_type']])
+    print(res_df[(1 == res_df['arc_type'] + 1)].sort_values(by=['k','n'])) 
+    print(res_df[(1 == res_df['arc_type'] + 1)].sort_values(by=['n','k'])) 
+    print(res_df[(res_df['k'] == res_df['arc_type'] + 1)]) 
+    print(res_df[(res_df['k']-1)/2 == res_df['arc_type']])
 
-    # print(res_agg[res_agg['k'] == 3])
+    print(res_agg)
 
 
 def ims_table(filename):
@@ -1623,12 +1148,19 @@ def sbpss_graph4(filename='FZ_Kaplan_exp_sbpss_good_w_alis_sum'):
         'high': (.032, 0.0315, 0.02955)
     }
 
+    cap_density_level = {
+        'low': 'Low',
+        'medium': 'Medium',
+        'high': 'High'
+    }
+
+
     for key, grp in sum_res.groupby(by=['density_level', 'approximation'], as_index=False):
 
         density_level, approximation = key
         color = approx_colors[approximation]
         row = row_plt[density_level]
-        ax[row].set_title(density_level)
+        ax[row].set_title(cap_density_level[density_level])
         x = grp['rho']
 
         if approximation == 'rho_approx_alis':
@@ -2214,6 +1746,12 @@ def increasing_n_res(filename='increasing_n_system'):
     plt.show()
 
 
+
+    
+    df = pd.read_csv(filename + '.csv')
+
+    
+
 if __name__ == '__main__':
 
     np.set_printoptions(threshold=sys.maxsize, precision=5)
@@ -2224,9 +1762,9 @@ if __name__ == '__main__':
 
     # increasing_n_res()
     # ims_table('FZ_final_w_qp')
-    # sbpss_graph4()
+    sbpss_graph4()
 
-    comparison_table_grids()
+    # comparison_table_grids()
     # growing_chains_graph()
 
 

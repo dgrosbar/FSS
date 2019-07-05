@@ -139,7 +139,7 @@ def grids_exp(filename='grids_exp'):
                             res_df.to_csv(filename + '.csv', index=False)
 
 
-def grids_exp_for_parallel(filename='grids_exp_parallel_new', p=8):
+def grids_exp_for_parallel(filename='grids_exp_parallel_new3', p=1):
 
     jt_perm_dict = {9: list(jpermute(range(9)))}
     print_progress = True
@@ -147,7 +147,7 @@ def grids_exp_for_parallel(filename='grids_exp_parallel_new', p=8):
     pool = mp.Pool(processes=p)
     for structure in ['torus']:
 
-        for sqrt_m, d  in zip([9, 30], [2, 3]):
+        for sqrt_m, d  in zip([30], [3]):
 
             aux_data = {'size': str(sqrt_m) + 'x' + str(sqrt_m), 'arc_dist': d, 'structure': structure}
             exact = False
@@ -176,6 +176,58 @@ def grids_exp_for_parallel(filename='grids_exp_parallel_new', p=8):
                         k += 1
 
                 exps_res = pool.starmap(simulate_matching_sequance, exps)
+                exp_res_df = pd.concat([
+                    log_res_to_df(compatability_matrix, alpha, beta, result_dict=res_dict, aux_data={**aux_data, 'exp_no': k}) 
+                    for res_dict, (compatability_matrix, alpha, beta) , k in zip(exps_res, exps, exps_no)
+                ])
+                
+                if os.path.exists(filename + '.csv'):
+                    res_df = pd.read_csv(filename + '.csv')
+                    res_df = pd.concat([res_df, exp_res_df], axis=0)
+                    res_df.to_csv(filename + '.csv', index=False)
+                else:
+                    res_df = exp_res_df
+                    res_df.to_csv(filename + '.csv', index=False)
+
+
+def grids_exp_for_non_parallel(filename='grids_exp_parallel_new3', p=1):
+
+    jt_perm_dict = {9: list(jpermute(range(9)))}
+    print_progress = True
+
+
+    for structure in ['torus']:
+
+        for sqrt_m, d  in zip([30], [2]):
+
+            aux_data = {'size': str(sqrt_m) + 'x' + str(sqrt_m), 'arc_dist': d, 'structure': structure}
+            exact = False
+            m = sqrt_m**2
+            k = 0
+            while k < 30:
+                valid = False
+                exps = []
+                exps_no = []
+                while len(exps) < p:
+
+                    alpha = np.random.exponential(scale=1, size=sqrt_m**2) # obtain values for non normelized customer frecompatability_matrixuency       
+                    beta = np.random.exponential(scale=1, size=sqrt_m**2) # obtain values for non normelized server frecompatability_matrixuency
+                    alpha = alpha/alpha.sum()
+                    beta = beta/beta.sum()
+                    valid = False
+                    compatability_matrix, g = generate_grid_compatability_matrix(sqrt_m, d)
+                    valid, _ = verify_crp_condition(compatability_matrix, alpha, beta)
+                    
+                    if valid:
+                        arc_dist=d
+                        print(k-1, str(sqrt_m) + 'x' + str(sqrt_m), 'd=', arc_dist)
+                        print('-'*75)
+                        exps_no.append(k)
+                        exps.append([compatability_matrix, alpha, beta])
+                        k += 1
+
+                # exps_res = pool.starmap(simulate_matching_sequance, exps)
+                exps_res = simulate_matching_sequance(compatability_matrix, alpha, beta)
                 exp_res_df = pd.concat([
                     log_res_to_df(compatability_matrix, alpha, beta, result_dict=res_dict, aux_data={**aux_data, 'exp_no': k}) 
                     for res_dict, (compatability_matrix, alpha, beta) , k in zip(exps_res, exps, exps_no)
@@ -1148,6 +1200,29 @@ def go_back_and_approximate_sbpss(filename='erdos_renyi_exp4'):
             write_df_to_file('FZ_Kaplan_exp_sbpss2', sbpss_df)
 
 
+def go_back_and_approximate_grids_sbpss(p, filename='grid_exp_new_final'):
+
+    df = pd.read_csv(filename + '.csv')
+    newfilename = 'grids_sbpss2'
+
+
+    k = 0
+    exps = []
+    pool = mp.Pool(processes=3)
+    for n in [9]:#, 81, 900]:
+        for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
+            exps = []
+            while len(exps) < p:
+                exps.append([exp, timestamp])
+            print('no_of_exps:', len(exps), 'n:', n)
+            print('starting work with {} cpus'.format(p))
+            sbpss_df = pool.starmap(grid_sbpss, exps)
+            sbpss_df = pd.concat(sbpss_df, axis=0)
+            write_df_to_file('grid_sbpss', sbpss_df)
+        
+        
+
+
 def approximate_sbpss(exp, timestamp):
 
 
@@ -1295,32 +1370,33 @@ def go_back_and_approximate_sbpss_w_alis(filename='FZ_Kaplan_exp_sbpss_good2'):
                 exps = []   
 
 
-# def go_back_and_approximate_sbpss_w_alis(filename='FZ_Kaplan_exp_sbpss_good2'):
+def go_back_and_approximate_sbpss_w_alis(filename='FZ_Kaplan_exp_sbpss_good2'):
 
-#     df = pd.read_csv(filename + '.csv')
-#     p = 3
-#     pool = mp.Pool(processes=p)
+    df = pd.read_csv(filename + '.csv')
+    p = 3
+    pool = mp.Pool(processes=p)
 
-#     for density_level in ['high', 'medium', 'low']:
-#     exps = []
-#     for (timestamp, rho), exp in df[df['density_level'] == density_level].groupby(by=['timestamp', 'rho'], as_index=False):
-#         exps.append([exp, timestamp, rho])
-#         if len(exps) == p:
-#             print('no_of_exps:', len(exps), 'density_level:', density_level)
-#             print('starting work with {} cpus'.format(p))
-#             sbpss_dfs = pool.starmap(approximate_sbpss_w_alis, exps)
-#             sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-#             write_df_to_file('FZ_Kaplan_exp_sbpss_good_w_alis', sbpss_df)
-#             exps = []
-#     else:
-#         if len(exps) > 0:
-#             print('no_of_exps:', len(exps), 'density_level:', density_level)
-#             print('starting work with {} cpus'.format(p))
-#             sbpss_dfs = pool.starmap(approximate_sbpss_w_alis, exps)
-#             sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-#             write_df_to_file('FZ_Kaplan_exp_sbpss_good_w_alis', sbpss_df)
-#             exps = []   
+    for density_level in ['high', 'medium', 'low']:
+        exps = []
+        for (timestamp, rho), exp in df[df['density_level'] == density_level].groupby(by=['timestamp', 'rho'], as_index=False):
+            exps.append([exp, timestamp, rho])
+            if len(exps) == p:
+                print('no_of_exps:', len(exps), 'density_level:', density_level)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(approximate_sbpss_w_alis, exps)
+                sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_good_w_alis', sbpss_df)
+                exps = []
+        else:
+            if len(exps) > 0:
+                print('no_of_exps:', len(exps), 'density_level:', density_level)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(approximate_sbpss_w_alis, exps)
+                sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_good_w_alis', sbpss_df)
+                exps = []   
 
+  
 def approximate_sbpss_customer_dependent(exp, timestamp):
 
 
@@ -1713,9 +1789,9 @@ def increasing_n_system():
                 write_df_to_file('increasing_n_system', res_df)
 
 
-def go_back_and_approximate_sbpss_er():
+def grid_sbpss(exp, timestamp):
 
-    exp_data = exp[['m', 'n', 'size', 'structure', 'exp_no']].drop_duplicates()
+    exp_data = exp[['timestamp','m', 'n', 'size', 'structure', 'exp_no']].drop_duplicates()
     alpha_data = exp[['i', 'alpha']].drop_duplicates()
     beta_data = exp[['j', 'beta']].drop_duplicates()
     
@@ -1725,7 +1801,7 @@ def go_back_and_approximate_sbpss_er():
     structure = exp_data['structure'].iloc[0]
     exp_no = exp_data['exp_no'].iloc[0]
 
-    print('size:', size, 'structure:', structure, 'exp_no:', exp_no)
+
 
     alpha = np.zeros(m)
     beta = np.zeros(n)
@@ -1745,20 +1821,33 @@ def go_back_and_approximate_sbpss_er():
     pad_compatability_matrix = np.vstack([compatability_matrix, np.ones(n)])
     no_of_edges = len(nnz[0])
 
-    sbpss_df = []
+    sbpss_dfs = []
     exact = n <= 10
 
     for rho in [0.01] + [0.05] + [0.1*i for i in range(1, 10, 1)] + [.95, .99]:
 
+        st = time()
         lamda = alpha * rho
         mu = beta
         pad_lamda = np.append(alpha*rho, 1. - rho)
+        exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=False, prt=True)
+        heavy_traffic_approx_entropy =  entropy_approximation(compatability_matrix, lamda, mu, pad=True)
+        exp_res['mat']['heavy_approx'] = heavy_traffic_approx_entropy
+        exp_res['mat']['alis_approx'] = alis_approximation(compatability_matrix, alpha, beta, rho)
+        exp_res['mat']['rho_approx_alis'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['heavy_approx']
 
-        heavy_traffic_approx_entropy = entropy_approximation(pad_compatability_matrix, pad_lamda, mu)
-        heavy_traffic_approx_entropy = heavy_traffic_approx_entropy[:m, :]
-        low_traffic_approx_entropy = local_entropy(compatability_matrix, alpha * rho, beta)
-        alis_approx = alis_approximation(compatability_matrix, alpha, beta, rho)
-        exp_res = simulate_queueing_system(compatability_matrix, lamda, beta, s=np.ones(m), sims=30)
+        
+        print('ending - structure: ', structure, ' exp_no: ', exp_no, ' rho: ', rho, ' duration: ', time() - st)
+        print('pct_error_rho_entropy:'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['rho_approx_alis']).sum()/lamda.sum())
+
+        exp_res['aux']['exp_no'] = exp_no
+        exp_res['aux']['structure'] = structure
+        exp_res['aux']['size'] =  size
+        exp_res['aux']['rho'] = rho
+        sbpss_dfs.append(
+                log_res_to_df(compatability_matrix, alpha=alpha, beta=beta, lamda=lamda, s = None, mu=mu, result_dict=exp_res, timestamp=timestamp, aux_data=None)
+            )
+    sbpss_df = pd.concat(sbpss_dfs, axis=0)
 
     return sbpss_df
 
@@ -1772,7 +1861,7 @@ if __name__ == '__main__':
     pd.set_option('display.width', 10000)
 
     # growing_chains_exp()
-    grids_exp_for_parallel()
+    go_back_and_approximate_grids_sbpss(8)
     # increasing_n_system()
     # go_back_and_approximate_sbpss_customer_dependet()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')

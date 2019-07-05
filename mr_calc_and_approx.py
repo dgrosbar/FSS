@@ -915,13 +915,13 @@ def alis_approximation(compatability_matrix, alpha, beta, rho):
 	r, _ = p_to_r(p, alpha)
 
 	Q = compatability_matrix
-	for k in range(n):
-		for i in range(m):
-			for j in range(n):
-				if Q[i,j] == 1.:
-					ratio = p[k, j]/sum(p[k,h]*Q[i,h] for h in range(n))
-					h_ratio = (1/p[k, j])/sum(Q[i,h]/p[k,h] for h in range(n) if Q[i,h]>0)
-					print(k, i, j, ratio, h_ratio)
+	# for k in range(n):
+	# 	for i in range(m):
+	# 		for j in range(n):
+	# 			if Q[i,j] == 1.:
+	# 				ratio = p[k, j]/sum(p[k,h]*Q[i,h] for h in range(n))
+	# 				h_ratio = (1/p[k, j])/sum(Q[i,h]/p[k,h] for h in range(n) if Q[i,h]>0)
+	# 				print(k, i, j, ratio, h_ratio)
 
 	r = rho * r.sum(axis=0)
 

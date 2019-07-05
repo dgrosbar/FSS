@@ -59,9 +59,11 @@ def sp_unique(sp_matrix, axis=0):
         ret = ret.T        
     return ret
 
+
 def lexsort_row(A):
     ''' numpy lexsort of the rows, not used in sp_unique'''
     return A[np.lexsort(A.T[::-1])]
+
 
 def write_df_to_file(filename, df):
 
@@ -71,6 +73,7 @@ def write_df_to_file(filename, df):
     else:
         with open(filename + '.csv', 'w') as file:
             df.to_csv(file, index=False)
+
 
 def log_res_to_df(compatability_matrix, alpha=None, beta=None, lamda=None, s = None, mu=None, result_dict=None, timestamp=None, aux_data=None):
 
@@ -119,14 +122,33 @@ def log_res_to_df(compatability_matrix, alpha=None, beta=None, lamda=None, s = N
     res_df.loc[:, 'm'] = m
     res_df.loc[:, 'n'] = n
     
-    for key, val in aux_data.items():
-        res_df.loc[:, key] = val
+    if aux_data is not None:
+        for key, val in aux_data.items():
+            res_df.loc[:, key] = val
 
     return res_df
 
 
+def gaussian_pdf_2d(m, n, centers, normalize=False):
+
+    lims = (-3, 3)  # support of the PDF
+    xx, yy = np.meshgrid(np.linspace(lims[0], lims[1], m), np.linspace(lims[0], lims[1], n))
+    points = np.stack((xx, yy), axis=-1)
+    pdf = np.zeros((m,n))
+    for mean, weight in centers:  # Whatever your (i, j) is
+        covariance = np.random.uniform(0, 1, (2, 2))
+        covariance = np.dot(covariance, covariance.transpose()) + np.eye(2)
+        covariance = covariance/covariance.sum()
+        mean = (6.0*float(mean[0])/m - 3, 6.0*(float(mean[1])/n) - 3)
+        pdf += weight * stats.multivariate_normal.pdf(points, mean, covariance)
+    if normalize:
+        pdf = pdf*(1/pdf.sum())
+    return pdf
+
+
 def upload_blob(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to the bucket."""
+    # from google.cloud import storage
     storage_client = storage.Client()
     bucket = storage_client.get_bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)

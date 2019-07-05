@@ -504,6 +504,7 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None,  prt=False
     results['aux']['warm_up'] = warm_up
     results['aux']['seed'] = seed
 
+
     return results
 
 

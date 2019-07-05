@@ -2,7 +2,7 @@ import networkx as nx
 import numpy as np
 from math import log
 from scipy import sparse as sps
-from utilities import fast_choice, sp_unique
+from utilities import fast_choice, sp_unique, gaussian_pdf_2d
 from itertools import product
 
 
@@ -47,6 +47,8 @@ def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):
     g.add_edges_from(edges)
 
     compatability_matrix = nx.adjacency_matrix(g).todense().A
+
+
 
     return compatability_matrix, g
 
@@ -241,6 +243,24 @@ def verify_crp_condition(compatability_matrix, alpha, beta):
 
     else:
         return False, 'not_connected'
+
+
+def generate_grid_supply_demand(m, n):
+
+
+    num_of_centers_demand = int(0.5*((m*n)**0.5))
+    centers_d = [((uniform(0.2*m, 0.8*m), uniform(0.2*n, 0.8*n)), uniform(0, 1)) for _ in range(num_of_centers_demand)]
+
+    num_of_centers_supply = int(0.5*((m*n)**0.5))
+    centers_s = [((uniform(0.2*m, 0.8*m), uniform(0.2*n, 0.8*n)), uniform(0, 1)) for _ in range(num_of_centers_supply)]
+
+    lamda_d_pdf = gaussian_pdf_2d(m, n, centers_d, normalize=True)
+    lamda_d = np.array([lamda_d_pdf[node] for node in nodes])
+
+    lamda_s_pdf = alpha * gaussian_pdf_2d(m, n, centers_s, normalize=True) + (1 - alpha) * lamda_d_pdf
+    lamda_s = np.array([lamda_s_pdf[node] for node in nodes])
+
+    lamda = np.concatenate((lamda_d, lamda_s))
 
 
 
