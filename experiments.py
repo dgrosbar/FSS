@@ -1211,14 +1211,16 @@ def go_back_and_approximate_grids_sbpss(p, filename='grid_exp_new_final'):
     pool = mp.Pool(processes=p)
     for n in [81, 900]:
         for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
-            exps = []
-            while len(exps) < p:
+            if len(exps) < p-1:
                 exps.append([exp, timestamp])
-            print('no_of_exps:', len(exps), 'n:', n)
-            print('starting work with {} cpus'.format(p))
-            sbpss_df = pool.starmap(grid_sbpss, exps)
-            sbpss_df = pd.concat(sbpss_df, axis=0)
-            write_df_to_file('grid_sbpss', sbpss_df)
+            elif len(exps) == p-1:
+                exps.append([exp, timestamp])
+                print('no_of_exps:', len(exps), 'n:', n)
+                print('starting work with {} cpus'.format(p))
+                sbpss_df = pool.starmap(grid_sbpss, exps)
+                sbpss_df = pd.concat(sbpss_df, axis=0)
+                write_df_to_file('grid_sbpss', sbpss_df)
+                exps = []
         
         
 
@@ -1831,7 +1833,7 @@ def grid_sbpss(exp, timestamp):
         mu = beta
         pad_lamda = np.append(alpha*rho, 1. - rho)
         exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=False, prt=True)
-        heavy_traffic_approx_entropy =  entropy_approximation(compatability_matrix, lamda, mu, pad=True)
+        heavy_traffic_approx_entropy =  fast_entropy_approximation(compatability_matrix, lamda, mu, pad=True)
         exp_res['mat']['heavy_approx'] = heavy_traffic_approx_entropy
         exp_res['mat']['alis_approx'] = alis_approximation(compatability_matrix, alpha, beta, rho)
         exp_res['mat']['rho_approx_alis'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['heavy_approx']
@@ -1899,6 +1901,10 @@ if __name__ == '__main__':
     # compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
     # mu = beta
     # m , n = compatability_matrix.shape
+
+    # mrf = fast_entropy_approximation(compatability_matrix, alpha, beta)
+
+
 
     # res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt=True, sims=30, sim_len=None, seed=None, sim_name='sim', p=3)
 
