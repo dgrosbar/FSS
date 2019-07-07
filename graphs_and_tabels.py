@@ -597,7 +597,7 @@ def growing_chains_graph(filename='growing_chains_new2'):
     res_df = res_df[['arc_type','n','k', 'sim_matching_rates']].groupby(by=['n','k','arc_type'], as_index=False).apply(f).reset_index()
     res_df.loc[:, 'scv_r'] = (res_df['sig_r']/res_df['r'])**2
     res_df.loc[:, 'error_pct'] = res_df['r']*(res_df['n'] * res_df['k']) 
-    res_df.loc[:, 'abs_error'] = np.abs(res_df['r'] - (1/(res_df['n'] * res_df['k']))) * res_df['k']
+    res_df.loc[:, 'abs_error'] = np.abs(res_df['r'] - (1/(res_df['n'] * res_df['k']))) * res_df['n']
     
     res_agg = res_df[['n','k','abs_error']].groupby(by=['n','k'], as_index=False).sum()
 
@@ -608,8 +608,8 @@ def growing_chains_graph(filename='growing_chains_new2'):
     print(res_df[(res_df['k'] == res_df['arc_type'] + 1)]) 
     print(res_df[(res_df['k']-1)/2 == res_df['arc_type']])
 
-    print(res_agg)
-
+    print(res_agg.sort_values(by=['k','n']))
+    print(res_agg.sort_values(by=['n','k']))
 
 def ims_table(filename):
 
@@ -1762,7 +1762,7 @@ if __name__ == '__main__':
 
     # increasing_n_res()
     # ims_table('FZ_final_w_qp')
-    sbpss_graph4()
+    growing_chains_graph()
 
     # comparison_table_grids()
     # growing_chains_graph()

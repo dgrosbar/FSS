@@ -115,7 +115,7 @@ def log_res_to_df(compatability_matrix, alpha=None, beta=None, lamda=None, s = N
     
     res_df = pd.DataFrame.from_dict({**input_dict, **result_dict})
 
-    res_df.loc[:, 'timestamp'] = dt.datetime.now() 
+    res_df.loc[:, 'timestamp'] = dt.datetime.now() if timestamp is None else timestamp
     res_df.loc[:, 'max_edges'] = m * n
     res_df.loc[:, 'edge_count'] = edge_count
     res_df.loc[:, 'edge_density'] = edge_count/ (m*n)

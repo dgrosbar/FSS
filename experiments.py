@@ -296,8 +296,8 @@ def growing_chains_exp(filename='growing_chains_new2'):
     #jt = dict((v, [(x[0] , x[1]) for x in jpermute(range(v))]) for v in [5,7,9])
 
     # for k, n in [(3,5), (3,7),(5,7), (3, 9), (5, 9), (7,9), (3, 30), (5, 30), (7, 30), (9, 30), (11, 30), (3, 100), (5, 100), (7, 100), (9, 100), (11, 100)]:
-    for n in [5, 10, 15, 25, 50, 100, 150, 200]:
-        for k in [3, 5, 7, 9, 11, 15, 19, 23, 31, 39]:
+    for n in [100, 150, 200]:
+        for k in [45, 55 ,65, 75, 85, 95, 105]:
             if k <= n - 2 and (n,k) in list(product([50], [3, 5, 7, 9, 11, 15, 19, 23, 31])):
                 compatability_matrix = 1*np.array([[(0<=(j-i)<k) or (0<=(j+n-i)<k) for j in range(n)] for i in range(n)])
                 alpha = np.array([1./n]*n)
@@ -1200,16 +1200,16 @@ def go_back_and_approximate_sbpss(filename='erdos_renyi_exp4'):
             write_df_to_file('FZ_Kaplan_exp_sbpss2', sbpss_df)
 
 
-def go_back_and_approximate_grids_sbpss(p, filename='grid_exp_new_final'):
+def go_back_and_approximate_grids_sbpss(p, filename='grid_exp_new_final_undone'):
 
     df = pd.read_csv(filename + '.csv')
-    newfilename = 'grids_sbpss2'
+    newfilename = 'grids_sbpss'
 
 
     k = 0
     exps = []
     pool = mp.Pool(processes=p)
-    for n in [81, 900]:
+    for n in [900]:
         for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
             if len(exps) < p-1:
                 exps.append([exp, timestamp])
@@ -1223,8 +1223,6 @@ def go_back_and_approximate_grids_sbpss(p, filename='grid_exp_new_final'):
                 exps = []
         
         
-
-
 def approximate_sbpss(exp, timestamp):
 
 
@@ -1832,12 +1830,11 @@ def grid_sbpss(exp, timestamp):
         lamda = alpha * rho
         mu = beta
         pad_lamda = np.append(alpha*rho, 1. - rho)
-        exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=False, prt=True)
+        exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=True, prt=True)
         heavy_traffic_approx_entropy =  fast_entropy_approximation(compatability_matrix, lamda, mu, pad=True)
         exp_res['mat']['heavy_approx'] = heavy_traffic_approx_entropy
-        exp_res['mat']['alis_approx'] = alis_approximation(compatability_matrix, alpha, beta, rho)
+        exp_res['mat']['alis_approx'] = fast_alis_approximation(compatability_matrix, alpha, beta, rho)
         exp_res['mat']['rho_approx_alis'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['heavy_approx']
-
         
         print('ending - structure: ', structure, ' exp_no: ', exp_no, ' rho: ', rho, ' duration: ', time() - st)
         print('pct_error_rho_entropy:'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['rho_approx_alis']).sum()/lamda.sum())
@@ -1863,7 +1860,7 @@ if __name__ == '__main__':
     pd.set_option('display.width', 10000)
 
     # growing_chains_exp()
-    go_back_and_approximate_grids_sbpss(8)
+    go_back_and_approximate_grids_sbpss(4)
     # increasing_n_system()
     # go_back_and_approximate_sbpss_customer_dependet()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')
@@ -1892,17 +1889,37 @@ if __name__ == '__main__':
     # mre  = adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta)
 
     # n = 10
+    # m = 10
     # rho = 0.1
     # compatability_matrix = np.tril(np.ones((n, n)))
     # alpha = np.ones(n)/n
     # mu = np.ones(n)/n
     # beta = mu
 
-    # compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
-    # mu = beta
-    # m , n = compatability_matrix.shape
+    # # compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
+    # # mu = beta
+    # # m , n = compatability_matrix.shape
 
-    # mrf = fast_entropy_approximation(compatability_matrix, alpha, beta)
+    # # # mrf = fast_entropy_approximation(compatability_matrix, alpha, beta)
+    # s = time()
+    # for _ in range(100):
+    #     mr = alis_approximation(compatability_matrix, alpha, beta, 0.1)
+    # print(time()-s)
+
+    # s = time()
+    # for _ in range(100):
+    #     mrf = fast_alis_approximation(compatability_matrix, alpha, beta, 0.1)
+    # print(time()-s)
+    # # mrf = alis_approximation2(compatability_matrix, alpha, beta, 0.1)
+
+    # printarr(mrf)
+    # printarr(mrf.sum(axis=0))
+    # printarr(mrf.sum(axis=1))
+    # printarr(mr)
+    # printarr(mr.sum(axis=0))
+    # printarr(mr.sum(axis=1))
+
+    # print(np.abs(mrf - mr).sum()/mr.sum())
 
 
 
