@@ -1906,7 +1906,7 @@ def ot_spbss(exp, timestamp):
 
     dfs = []
 
-    exp_data = exp[['timestamp','m', 'n', 'exp_num']].drop_duplicates()
+    exp_data = exp[['timestamp','m', 'n', 'exp_num', 'density_level', 'beta_dist']].drop_duplicates()
     alpha_data = exp[['i', 'alpha']].drop_duplicates()
     beta_data = exp[['j', 'beta']].drop_duplicates()
     
@@ -1985,6 +1985,9 @@ def ot_spbss(exp, timestamp):
             sim_res_fcfs_alis['aux']['policy'] = 'fcfs_alis'
             sim_res_fcfs_alis['aux']['rho'] = rho
             sim_res_fcfs_alis['aux']['c_type'] = c_type
+            sim_res_fcfs_alis['aux']['density_level']=density_level
+            sim_res_fcfs_alis['aux']['beta_dist']=beta_dist
+            sim_res_fcfs_alis['aux']['exp_no']=exp_no
             df_fcfs_alis = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, result_dict=sim_res_fcfs_alis, timestamp=None, aux_data=None)
             dfs.append(df_fcfs_alis)
 
@@ -1996,12 +1999,15 @@ def ot_spbss(exp, timestamp):
             sim_res_w_only['aux']['policy'] = 'greedy'
             sim_res_w_only['aux']['rho'] = rho
             sim_res_w_only['aux']['c_type'] = c_type
+            sim_res_w_only['aux']['density_level']=density_level
+            sim_res_w_only['aux']['beta_dist']=beta_dist
+            sim_res_w_only['aux']['exp_no']=exp_no
             df_w_only = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, result_dict=sim_res_w_only, timestamp=None, aux_data=None)
             dfs.append(df_w_only)
             
             for gamma in [0.05 * i for i in range(1, 18, 1)]:
 
-                print('gamma: ', gamma)
+                print('density_level: ', density_level, 'beta_dist: ', beta_dist, 'exp_no: ', exp_no, 'gamma: ', gamma, 'rho: ', rho, 'c_type: ', c_type)
 
                 r_fcfs_alis_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=False)
                 r_fcfs_alis_weighted_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=True)
@@ -2029,6 +2035,9 @@ def ot_spbss(exp, timestamp):
                     sim_res_fcfs_alis_ot['aux']['policy'] = 'fcfs_ot' 
                     sim_res_fcfs_alis_ot['aux']['rho'] = rho
                     sim_res_fcfs_alis_ot['aux']['c_type'] = c_type
+                    sim_res_fcfs_alis_ot['aux']['density_level']=density_level
+                    sim_res_fcfs_alis_ot['aux']['beta_dist']=beta_dist
+                    sim_res_fcfs_alis_ot['aux']['exp_no']=exp_no
 
                     df_fcfs_alis_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, result_dict=sim_res_fcfs_alis_ot, timestamp=None, aux_data=None)
                     dfs.append(df_fcfs_alis_ot)
@@ -2041,6 +2050,9 @@ def ot_spbss(exp, timestamp):
                     sim_res_fcfs_alis_weighted_ot['aux']['policy'] = 'fcfs_weighted_ot'
                     sim_res_fcfs_alis_weighted_ot['aux']['rho'] = rho
                     sim_res_fcfs_alis_weighted_ot['aux']['c_type'] = c_type
+                    sim_res_fcfs_alis_weighted_ot['aux']['density_level']=density_level
+                    sim_res_fcfs_alis_weighted_ot['aux']['beta_dist']=beta_dist
+                    sim_res_fcfs_alis_weighted_ot['aux']['exp_no']=exp_no
                     df_fcfs_alis_weighted_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, result_dict=sim_res_fcfs_alis_weighted_ot, timestamp=None, aux_data=None)
                     dfs.append(df_fcfs_alis_weighted_ot)
 
