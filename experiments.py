@@ -1949,7 +1949,7 @@ def ot_spbss(exp, timestamp):
                         c[i,j] = 1 + abs(i - j)
                 c = c * compatability_matrix
 
-            printarr(c, 'org_c')
+            # printarr(c, 'org_c')
 
             lamda_pad = np.append(lamda, mu.sum() - lamda.sum())
             c_pad = np.vstack([c, np.zeros((1, n))])
@@ -1966,17 +1966,17 @@ def ot_spbss(exp, timestamp):
             max_ent = (-1*r_fcfs_alis * np.log(r_fcfs_alis, out=np.zeros_like(r_fcfs_alis), where= r_fcfs_alis != 0)).sum()
 
             ent_diff = max_ent - min_ent
-            print('ent_diff: ', ent_diff)
-            print('c_diff: ', c_diff)
+            # print('ent_diff: ', ent_diff)
+            # print('c_diff: ', c_diff)
 
             c = (ent_diff/c_diff) * c
 
-            printarr(c, 'new_c')
+            # printarr(c, 'new_c')
 
             
             q_fcfs_alis = r_fcfs_alis * (1./(mu - r_fcfs_alis.sum(axis=0)))
             q_fcfs_alis = q_fcfs_alis/q_fcfs_alis.sum(axis=0)
-            printarr(r_fcfs_alis, 'r_fcfs_alis')
+            # printarr(r_fcfs_alis, 'r_fcfs_alis')
             sim_res_fcfs_alis = simulate_queueing_system(compatability_matrix, lamda, mu, s)
             sim_res_fcfs_alis['mat']['c'] = c
             sim_res_fcfs_alis['mat']['w'] = compatability_matrix
