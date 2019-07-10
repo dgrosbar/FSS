@@ -1882,7 +1882,7 @@ def ot_sbpss_exp(filename ='FZ_final_w_qp'):
 
     for density_level in ['high', 'medium', 'low']:
         exps = []
-        for (timestamp, rho), exp in df[df['density_level'] == density_level].groupby(by=['timestamp'], as_index=False):
+        for timestamp, exp in df[df['density_level'] == density_level].groupby(by=['timestamp'], as_index=False):
             exps.append([exp, timestamp, rho])
             if len(exps) == p:
                 print('no_of_exps:', len(exps), 'density_level:', density_level)
