@@ -1874,7 +1874,7 @@ def go_back_and_do_ot_sbpss(filename='FZ_Kaplan_exp_sbpss_good2'):
                 exps = [] 
 
     
-def ot_sbpss_exp(filename ='FZ_final_w_qp')
+def ot_sbpss_exp(filename ='FZ_final_w_qp'):
 
     df = pd.read_csv(filename + '.csv')
     p = 8
