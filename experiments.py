@@ -2016,7 +2016,7 @@ def ot_spbss(exp, timestamp):
                 r_fcfs_alis_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=False)
                 r_fcfs_alis_weighted_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=True)
 
-                if r_fcfs_alis_ot is not None and r_fcfs_alis_ot is not None:
+                if r_fcfs_alis_ot is not None and r_fcfs_alis_weighted_ot is not None:
 
                     r_fcfs_alis_ot = r_fcfs_alis_ot[:m, :]
                     r_fcfs_alis_weighted_ot = r_fcfs_alis_weighted_ot[:m, :]
