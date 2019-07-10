@@ -1943,7 +1943,7 @@ def ot_spbss(exp, timestamp):
             if c_type == 'rand':
                 c = np.random.exponential(1, (m, n)) * compatability_matrix
             else:
-                c = zp.zeros((m, n))
+                c = np.zeros((m, n))
                 for i in range(m):
                     for j in range(n):
                         c[i,j] = 1 + abs(i - j)
