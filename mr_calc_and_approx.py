@@ -791,7 +791,7 @@ def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	return(np.dot(np.diag(lamda[: m - 1]), pi_hat[: m-1, :]))
 
 
-def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**8, epsilon=10**-6, prt=False, prtall=False):
+def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**9, max_time=600, epsilon=10**-6, prt=False, prtall=False):
 
 	# m_p_n_p_1, m_p_1_t_n = A.shape
 	# pi_k = np.zeros((m_p_1_t_n, ))
@@ -801,7 +801,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 	# lamda = np.zeros((m_p_n_p_1, ))
 	# prev_lamda = np.zeros((m_p_n_p_1, ))
 	# zeta = np.zeros((m_p_n_p_1, ))
-
+	start_time = time()
 
 	def f(pi):
 
@@ -834,12 +834,14 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 			print('optimality gap pct is: ', opt_gap_pct)
 			print('feasibility gap is: ', feas_gap)
 		if feas_gap > 3:
-			return False, True
+			return False, True, False
 		if opt_gap_pct < epsilon:
 			if feas_gap < epsilon:
-				return True, False
+				return True, False, False
+		if time() - start_time > max_time:
+			return False, False, True
 
-		return False, False
+		return False, False, False
 
 	ze = z * exp(-1.0)
 	v = np.amin(z[np.where(z > 0)])
@@ -940,17 +942,19 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 				pi_hat = tau * pi_k + (1.0 - tau) * pi_hat
 
 				if (i > 0 and i % check_every == 0):
-					converged, oob = check_stop(i, prt)
+					converged, oob, time_violation = check_stop(i, prt)
 					if converged:
 						flag=True
 						break
 					elif oob:
 						flag=False
 						print('oob feasibility gap halving step size')
-						L = L*2
+						L = L * 2
 						print('new L', L)
-	 
 						break
+					elif time_violation:
+						print('time exceed aborting algorithm')
+						return None, None
 
 				gap = b - A.dot(pi_k)
 				eta = lamda - (1.0/L) * gap

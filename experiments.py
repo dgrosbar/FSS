@@ -1880,7 +1880,7 @@ def ot_sbpss_exp(filename ='FZ_final_w_qp'):
     p = 8
     pool = mp.Pool(processes=p)
 
-    for density_level in ['high', 'medium', 'low']:
+    for density_level in ['low', 'medium']:
         exps = []
         for timestamp, exp in df[df['density_level'] == density_level].groupby(by=['timestamp'], as_index=False):
             exps.append([exp, timestamp])
