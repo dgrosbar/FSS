@@ -1913,7 +1913,7 @@ def ot_spbss(exp, timestamp):
     m = exp_data['m'].iloc[0]
     n = exp_data['n'].iloc[0]
     exp_no = exp_data['exp_num'].iloc[0]
-    graph_no = exp_data['grpah_no'].iloc[0]
+    graph_no = exp_data['graph_no'].iloc[0]
     density_level = exp_data['density_level'].iloc[0]
     beta_dist = exp_data['beta_dist'].iloc[0]
 
