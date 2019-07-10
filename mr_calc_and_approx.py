@@ -316,6 +316,7 @@ def update_prod_inv_beta_alpha_k_j(prod_inv_beta_alpha_k_j, inv_beta_alpha_new, 
 	prod_inv_beta_alpha_k_j[:swap_idx + 1] *= inv_beta_alpha_new/inv_beta_alpha_k_j
 	return prod_inv_beta_alpha_k_j
 
+
 def quadratic_approximation_cplex(compatability_matrix, alpha, beta, prt=False):
 
 	col_names = []
@@ -404,6 +405,86 @@ def quadratic_approximation_cplex(compatability_matrix, alpha, beta, prt=False):
 	return matching_rates
 
 
+def entropy_approximation_w_log(compatability_matrix, z, q, lamda, mu, check_every=10**2, max_iter=10**7, epsilon=10**-7, pad=False, ret_all=False):
+
+	k = 0
+	within_epsilon = True
+	converge = False
+		
+
+	matching_rates = z
+	printarr(matching_rates, 'initial')
+	for k in range(max_iter):
+
+		# printarr(lamda/((matching_rates * q).sum(axis=1)), 'lamda/((matching_rates * q).sum(axis=1))')
+
+
+		h_lam = np.log((compatability_matrix.transpose() * lamda/(matching_rates * q).sum(axis=1)).transpose(),out=np.zeros_like(compatability_matrix), where=(compatability_matrix != 0))
+		log_matching_rates = np.log(matching_rates, out=np.zeros_like(compatability_matrix), where=(compatability_matrix != 0))
+		log_matching_rates = log_matching_rates + h_lam * q
+		matching_rates = np.exp(log_matching_rates, out=np.zeros_like(compatability_matrix), where=(compatability_matrix != 0))
+		
+		h_mu = np.log(compatability_matrix * mu/(matching_rates * q).sum(axis=0), out=np.zeros_like(compatability_matrix), where=(compatability_matrix != 0))
+		log_matching_rates = np.log(matching_rates, out=np.zeros_like(compatability_matrix), where=(compatability_matrix != 0))
+		log_matching_rates = log_matching_rates + h_mu * q
+		matching_rates = np.exp(log_matching_rates, out=np.zeros_like(compatability_matrix), where=(compatability_matrix != 0))
+		# matching_rates = matching_rates * mu/(matching_rates * q).sum(axis=0)
+		# printarr(matching_rates, str(k))
+		if k > 0 and k % check_every == 0 or k == max_iter - 1:
+			cur_iter, gap_pct = (k,
+				max(
+					max(abs(mu - (matching_rates * q).sum(axis=0))/mu),
+					max(abs(lamda - (matching_rates * q).sum(axis=1))/lamda)
+					)
+				)
+
+			if gap_pct < epsilon:
+				converge = True
+				break
+
+	return matching_rates
+
+
+def entropy_approximation_w(compatability_matrix, z, q, lamda, mu, check_every=10**2, max_iter=10**7, epsilon=10**-7, pad=False, ret_all=False):
+
+	k = 0
+	within_epsilon = True
+	converge = False
+		
+
+	matching_rates = z
+	printarr(matching_rates, 'initial')
+	for k in range(max_iter):
+
+		# printarr(lamda/((matching_rates * q).sum(axis=1)), 'lamda/((matching_rates * q).sum(axis=1))')
+
+
+		h_lam = (compatability_matrix.transpose() * lamda/(matching_rates * q).sum(axis=1)).transpose()
+		# log_matching_rates = np.log(matching_rates, out=np.zeros_like(compatability_matrix), where=(compatability_matrix != 0))
+		matching_rates = matching_rates * np.power(h_lam, q)
+		# matching_rates = np.exp(log_matching_rates, out=np.zeros_like(compatability_matrix), where=(compatability_matrix != 0))
+		
+		h_mu = compatability_matrix * mu/(matching_rates * q).sum(axis=0)
+		# log_matching_rates = np.log(matching_rates, out=np.zeros_like(compatability_matrix), where=(compatability_matrix != 0))
+		matching_rates = matching_rates * np.power(h_mu, q)
+		# matching_rates = np.exp(log_matching_rates, out=np.zeros_like(compatability_matrix), where=(compatability_matrix != 0))
+		# matching_rates = matching_rates * mu/(matching_rates * q).sum(axis=0)
+		# printarr(matching_rates, str(k))
+		if k > 0 and k % check_every == 0 or k == max_iter - 1:
+			cur_iter, gap_pct = (k,
+				max(
+					max(abs(mu - (matching_rates * q).sum(axis=0))/mu),
+					max(abs(lamda - (matching_rates * q).sum(axis=1))/lamda)
+					)
+				)
+
+			if gap_pct < epsilon:
+				converge = True
+				break
+
+	return matching_rates
+
+
 def entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, max_iter=10**7, epsilon=10**-7, pad=False, ret_all=False):
 
 	k = 0
@@ -450,6 +531,7 @@ def entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, ma
 						max(abs(lamda - matching_rates.sum(axis=1))/lamda)
 						)
 					)
+
 				if gap_pct < epsilon:
 					converge = True
 					break
@@ -709,18 +791,17 @@ def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	return(np.dot(np.diag(lamda[: m - 1]), pi_hat[: m-1, :]))
 
 
-def fast_primal_dual_algorithm(A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**8, epsilon=10**-6, prt=True, prtall=False):
+def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**8, epsilon=10**-6, prt=False, prtall=False):
 
-	m_p_n_p_1, m_p_1_t_n = A.shape
-	pi_k = np.zeros((m_p_1_t_n, ))
-	pi_hat = np.zeros((m_p_1_t_n, ))
-	prev_pi_hat = np.zeros((m_p_1_t_n, ))
-	prev_gap = np.zeros((m_p_n_p_1,))
-	lamda = np.zeros((m_p_n_p_1, ))
-	prev_lamda = np.zeros((m_p_n_p_1, ))
-	zeta = np.zeros((m_p_n_p_1, ))
-	ze = z * exp(-1.0)
-	v = np.amin(z[np.where(z > 0)])
+	# m_p_n_p_1, m_p_1_t_n = A.shape
+	# pi_k = np.zeros((m_p_1_t_n, ))
+	# pi_hat = np.zeros((m_p_1_t_n, ))
+	# prev_pi_hat = np.zeros((m_p_1_t_n, ))
+	# prev_gap = np.zeros((m_p_n_p_1,))
+	# lamda = np.zeros((m_p_n_p_1, ))
+	# prev_lamda = np.zeros((m_p_n_p_1, ))
+	# zeta = np.zeros((m_p_n_p_1, ))
+
 
 	def f(pi):
 
@@ -760,98 +841,147 @@ def fast_primal_dual_algorithm(A, b, z, m, n, pi0=None, act_rows=None , check_ev
 
 		return False, False
 
+	ze = z * exp(-1.0)
+	v = np.amin(z[np.where(z > 0)])
+	L = min(((1.0/v) * (np.amax(np.abs(A[:m].sum(axis=1))) + np.amax(np.abs(A[m:].sum(axis=1))))), 10)
 
-	
-	L = ((1.0/v) * (np.amax(np.abs(A[:m].sum(axis=1))) + np.amax(np.abs(A[m:].sum(axis=1)))))
-
-	if prt:
+	if prt or True:
 		print('L', L)
 
 	flag = False
 
-	while not flag:
-		
-		m_p_n_p_1, m_p_1_t_n = A.shape
-		At = A.transpose()
-		pi_k = np.zeros((m_p_1_t_n, ))
-		pi_hat = np.zeros((m_p_1_t_n, ))
-		prev_pi_hat = np.zeros((m_p_1_t_n, ))
-		prev_gap = np.zeros((m_p_n_p_1,))
-		lamda = np.zeros((m_p_n_p_1, ))
-		prev_lamda = np.zeros((m_p_n_p_1, ))
-		zeta = np.zeros((m_p_n_p_1, ))
-		ze = z * exp(-1.0)
-		v = np.amin(z[np.where(z > 0)])
+	def_est = np.seterr(all='raise')
+	try:
+		while not flag:
 
-		for i in np.arange(max_iter):
-
-			alpha = (i + 1.0)/2.0
-			tau = 2.0/(i+3.0)
-
-			if i == 0 and prt:
-				print('starting fast primal dual gradient descent')
-				s = time()
-
-			pi_k = pi0 if i == 0 and pi0 is not None else ze*np.exp(At.dot(lamda))
 			
-		# 	if 0 < i < 60:
-		# 	    print('m: ', m)
-		# 	    print('n: ', n)
-		# 	    print('m + n + 1: ', m + n + 1, 'len(b): ', len(b))
+			
+			m_p_n_p_1, m_p_1_t_n = A.shape
+			At = A.transpose()
+			pi_k = np.zeros((m_p_1_t_n, ))
+			pi_hat = np.zeros((m_p_1_t_n, ))
+			prev_pi_hat = np.zeros((m_p_1_t_n, ))
+			prev_gap = np.zeros((m_p_n_p_1,))
+			lamda = np.zeros((m_p_n_p_1, ))
+			prev_lamda = np.zeros((m_p_n_p_1, ))
+			zeta = np.zeros((m_p_n_p_1, ))
+			ze = z * exp(-1.0)
+			v = np.amin(z[np.where(z > 0)])
 
-		# 	    print(i)
-		# 	    print('-------------------------------')
-		# 	    printarr(prev_pi_hat.reshape((m + 1, n)), 'prev_pi_hat')
-		# 	    printarr(pi_hat.reshape((m + 1, n)), 'pi_hat')
 
-		# 	    printarr(np.dot(A, prev_pi_hat)[m: ], 'prev_col_sum')
-		# 	    printarr(np.dot(A, pi_hat)[m: ], 'cur_col_sum')
-		# 	    printarr(np.dot(A, prev_pi_hat)[ :m], 'prev_row_sum')
-		# 	    printarr(np.dot(A, pi_hat)[ :m], 'cur_row_sum')
+
+			for i in np.arange(max_iter):
+
+				alpha = (i + 1.0)/2.0
+				tau = 2.0/(i+3.0)
+
+				if i == 0 and prt:
+					print('starting fast primal dual gradient descent')
+					s = time()
+
+					if i==0 and pi0 is not None:
+						pi_k = pi0
+						pi_hat = pi0
+						gap = b - A.dot(pi_k)
+						prev_gap = gap
+						# printarr(pi0, 'pi_0')
+						# printarr(pi_k, 'pi_k')
+					else:
+						pi_k = ze*np.exp(At.dot(lamda))
+					# pi_k = pi0 if i == 0 and pi0 is not None else ze*np.exp(At.dot(lamda))
+
 				
-		# 	    # printarr(b[m: ], 'req_col_sum')
-		# 	    # printarr(b[:m], 'req_row_sum')
+				# if 0 <= i < 10:
+				# 	print('m: ', m)
+				# 	print('n: ', n)
+				# 	print('m + n + 1: ', m + n + 1, 'len(b): ', len(b))
 
-		# 	    # printarr(prev_gap[m: ], 'prev_col_violation')
-		# 	    # printarr(gap[m: ], 'cur_col_violation')
+				# 	print(i)
+				# 	print('-------------------------------')
 
-		# 	    # printarr(prev_gap[ :m], 'prev_row_violation')
-		# 	    # printarr(gap[ :m], 'cur_row_violation')
+				# 	prev_pi_hat_mat = np.zeros((m+1, n))
+				# 	for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
+				# 		prev_pi_hat_mat[i,j] = prev_pi_hat[col]
+					
+				# 	printarr(prev_pi_hat_mat, 'prev_pi_hat')
 
-		# 	    printarr(lamda[m: ], 'lamda_cols')
-		# 	    printarr(prev_lamda[m: ], 'prev_lamda_cols')
+				# 	pi_hat_mat = np.zeros((m+1, n))
+				# 	for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
+				# 		pi_hat_mat[i,j] = pi_hat[col]
+					
+				# 	printarr(pi_hat_mat, 'pi_hat')
 
-		# 	    printarr(lamda[ :m], 'lamda_rows')
-		# 	    printarr(prev_lamda[ :m], 'prev_lamda_rows')
+				# 	printarr(np.dot(A, prev_pi_hat)[m: ], 'prev_col_sum')
+				# 	printarr(np.dot(A, pi_hat)[m: ], 'cur_col_sum')
+				# 	printarr(np.dot(A, prev_pi_hat)[ :m], 'prev_row_sum')
+				# 	printarr(np.dot(A, pi_hat)[ :m], 'cur_row_sum')
+					
+				# 	printarr(b[m: ], 'req_col_sum')
+				# 	printarr(b[:m], 'req_row_sum')
+
+				# 	printarr(prev_gap[m: ], 'prev_col_violation')
+				# 	printarr(gap[m: ], 'cur_col_violation')
+
+				# 	printarr(prev_gap[ :m], 'prev_row_violation')
+				# 	printarr(gap[ :m], 'cur_row_violation')
+
+				# 	printarr(lamda[m: ], 'lamda_cols')
+				# 	printarr(prev_lamda[m: ], 'prev_lamda_cols')
+
+				# 	printarr(lamda[ :m], 'lamda_rows')
+				# 	printarr(prev_lamda[ :m], 'prev_lamda_rows')
+		 
+				# 	prev_pi_hat = pi_hat
+				# 	prev_gap = b - A.dot(pi_hat)
+				# 	prev_lamda = lamda
+				
+				if i >0:
+					pi_k = ze * np.exp(-At.dot(lamda))
+				pi_hat = tau * pi_k + (1.0 - tau) * pi_hat
+
+				if (i > 0 and i % check_every == 0):
+					converged, oob = check_stop(i, prt)
+					if converged:
+						flag=True
+						break
+					elif oob:
+						flag=False
+						print('oob feasibility gap halving step size')
+						L = L*2
+						print('new L', L)
 	 
-		# 	    prev_pi_hat = pi_hat
-		# 	    prev_gap = b - A.dot(pi_hat)
-		# 	    prev_lamda = lamda
+						break
 
-			pi_k = ze * np.exp(-At.dot(lamda))
-			pi_hat = tau * pi_k + (1.0 - tau) * pi_hat
+				gap = b - A.dot(pi_k)
+				eta = lamda - (1.0/L) * gap
+				zeta = zeta - (alpha/L) * gap
+				lamda = (tau * zeta) + (1.0 - tau) * eta
 
-			if (i > 0 and i % check_every == 0):
-				converged, oob = check_stop(i, prt)
-				if converged:
-					flag=True
-					break
-				elif oob:
-					flag=False
-					print('oob feasibility gap halving step size')
-					L = L*2
-					break
+		if prt:
+			print('ended fast primal-dual algorithm after ' + str(i) + ' iterations')
+			print('run time:', time() - s, 'seconds')
+		_ = np.seterr({**def_est})
+		return pi_hat, lamda
+	except:
+		_ = np.seterr({**def_est})
+		return None, None
 
-			gap = b - A.dot(pi_k)
 
-			eta = lamda - (1.0/L) * gap
-			zeta = zeta - (alpha/L) * gap
-			lamda = (tau * zeta) + (1.0 - tau) * eta
+# def adaptive_triangles(A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**8, epsilon=10**-6, prt=False, prtall=False):
 
-	if prt:
-		print('ended fast primal-dual algorithm after ' + str(i) + ' iterations')
-		print('run time:', time() - s, 'seconds')
-	return pi_hat, lamda
+# 	phi
+
+# 	nr, nc = A.shape
+# 	L = 2.
+# 	alpha = 0
+# 	lamda = np.zeros(nr)
+# 	zeta = np.zeros(nr)
+# 	eta = np.zeros(nr)
+# 	for k in (max_iter):
+# 		M = L/2.
+# 		while True:
+
+# 			alpha = max() k
 
 
 def quadratic_approximation(compatability_matrix, alpha, beta, prt=False, pad=False):
@@ -1021,6 +1151,7 @@ def fast_alis_approximation(compatability_matrix, alpha, beta, rho):
 	r = rho * r.sum(axis=0)
 
 	return r
+
 	
 @jit(nopython=True, cache=True)
 def p_to_q(p, compatability_matrix, alpha, m, n):
@@ -1053,436 +1184,558 @@ def r_to_p(compatability_matrix, pp, qq, p, n):
 	return p
 
 
-# @jit(nopython=True, cache=True)
-# def pq_to_r_to_p(p, compatability_matrix, m, n):
+def convert_to_normal_form(c, z, w, q):
 
-# 		r = np.zeros((n, m, n))
-
-# 		for ell in range(n):
-
-# 			np.dot(np.dot(q[ell, :], compatability_matrix), p[ell, :].T)
-
-# 			for i, j in zip(*compatability_matrix.nonzero()):
-
-# 				r[y,i,j] = q[y, i] * p[y, j]
-
-# 		for z in range(1, n, 1):
-# 			for j in range(n):
-# 				p[z, j] = r[:z, :, j].sum()/r[:z, :, :].sum()
-
-
-# @jit(nopython=True, cache=True)
-# def p_r_loop(compatability_matrix, p, alpha, m, n, col_sums):
-
-# 	max_iter = 10**7
-# 	check_every = 10**2
-# 	epsilon = 10**-7
-# 	row_sums = np.ones(n)
-
-# 	r = np.zeros((n, m, n))
-# 	prev_p = p
-# 	m_n_ones = np.ones((m,n))
-# 	m_ones_thick = np.ones((2, m), dtype=np.float64)
-# 	m_ones= np.ones((1, m), dtype=np.float64)
-
-
-# 	for x in range(max_iter):
-
-# 		prev_p = p
-# 		q = (m_n_ones - np.dot(compatability_matrix, p.T)).T
-# 		for rw in range(1,n,1):
-# 			q[rw, :] = q[rw, :]*q[rw-1,:] 
-# 		c = 1. / (m_ones - q[-1, :])
-# 		q = np.vstack((m_ones_thick, q[:-1, :]))
-# 		q = q[1:]
-# 		q = q * c
-		
-# 		for y in range(n):
-# 			for i, j in zip(*compatability_matrix.nonzero()):
-# 				r[y,i,j] = q[y, i] * p[y, j]
-
-# 		for z in range(1, n, 1):
-# 			for j in range(n):
-# 				p[z, j] = r[:z, :, j].sum()/r[:z, :, :].sum()
-
-# 		for k in range(max_iter):
-
-# 			p_2 = (p.transpose() * row_sums/p.sum(axis=1)).transpose()
-# 			normalizer = col_sums/p_2.sum(axis=0)
-# 			p = p_2 * normalizer
-
-# 			if k > 0 and k % check_every == 0 or k == max_iter - 1:
-				
-# 				gap_pct_cols = (np.abs(col_sums - p.sum(axis=0))/col_sums).max()
-# 				gap_pct_rows = (np.abs(row_sums - p.sum(axis=1))/row_sums).max()
-# 				if gap_pct_cols < epsilon and gap_pct_rows < epsilon:
-# 					break
-
-# 		if np.abs(p - prev_p).sum() < 10**-9:
-# 			converge = True
-# 			break
-
-# 	if converge:
-# 		return p
-# 	else:
-# 		return None
-
-
-# @jit(nopython=True, cache=True)
-def p_to_r(p, alpha, compatability_matrix, m, n):
-
-	q = (1. - np.dot(compatability_matrix, p.T)).T
-	# printarr(q,'q')
-	q = np.cumprod(q, axis=0)
-	# printarr(q,'q')
-	c = 1. / (np.ones(m) - q[-1, :])
-	# printarr(c,'c')
-	q = np.vstack((np.ones((1, m)), q[:-1, :]))
-	# printarr(q,'q')
-	q = q * c
-	# printarr(q,'q')
-	try:
-		q = q * alpha
-	except:
-		print('q', q.shape)
-		print('alpha', alpha.shape)
-
-	# printarr(q,'q')
-	r = np.zeros((n, m, n))
-	for k in range(n):
-		for i,j in zip(*compatability_matrix.nonzero()):
-			r[k,i,j] = q[k, i] * p[k, j]
-
-	return r
-
-
-# def fast_alis_approximation(compatability_matrix, alpha, beta, rho):
-
-
-# 	m, n = compatability_matrix.shape
-
-# 	nnz = np.vstack((compatability_matrix.nonzero[0], compatability_matrix.nonzero[1]))
-
-# 	col_sums = n * (np.ones(n)/n * (1 - rho) + beta * rho)
-
-# 	# p = np.ones((n,n)) *(1/n)
-# 	p = np.vstack([beta for _ in range(n)])
-# 	s = time()
-# 	p = fast_matrix_scaling(p, np.ones(n), col_sums, m, n)
-# 	print('initial balance:', time() -s)
+	m, n  = q.shape
 	
-# 	def p_to_r(p, alpha):
+	c_w = np.divide(-1*c, w, out=np.zeros_like(q), where=(w != 0))
+	exp_c_w = np.exp(c_w, out=np.zeros_like(q), where=(q != 0))
+	z = z * w * exp_c_w
+	q = np.divide(q, w, out=np.zeros_like(q), where=(q != 0))
 
-# 		q = (1. - np.dot(compatability_matrix, p.T)).T
-# 		# printarr(q,'q')
-# 		q = np.cumprod(q, axis=0)
-# 		# printarr(q,'q')
-# 		c = 1. / (np.ones(m) - q[-1, :])
-# 		# printarr(c,'c')
-# 		q = np.vstack((np.ones((1, m)), q[:-1, :]))
-# 		# printarr(q,'q')
-# 		q = q * c
-# 		# printarr(q,'q')
-# 		try:
-# 			q = q * alpha
-# 		except:
-# 			print('q', q.shape)
-# 			print('alpha', alpha.shape)
-
-# 		# printarr(q,'q')
-# 		r = np.zeros((n, m, n))
-# 		for k in range(n):
-# 			for i,j in zip(*compatability_matrix.nonzero()):
-# 				r[k,i,j] = q[k, i] * p[k, j]
-
-# 		return r
-
-# 	iter_k = 0
-
-# 	s = time()
-# 	p_res = p_r_loop(compatability_matrix, p, alpha, m, n, col_sums)
-# 	print('r_p loop: ', time() - s)
-
-# 	if p_res is not None:
-# 		r = p_to_r(p_res, alpha)
-# 		r = rho * r.sum(axis=0)
-# 	else:
-# 		r = None
-
-# 	return r
+	return z, q
 
 
-# def fast_alis_approximation2(compatability_matrix, alpha, beta, rho):
-
-
-# 	m, n = compatability_matrix.shape
-
-# 	nnz = np.vstack((compatability_matrix.nonzero[0], compatability_matrix.nonzero[1]))
-
-# 	col_sums = n * (np.ones(n)/n * (1 - rho) + beta * rho)
-
-# 	# p = np.ones((n,n)) *(1/n)
-# 	p = np.vstack([beta for _ in range(n)])
-# 	s = time()
-# 	p = fast_matrix_scaling(p, np.ones(n), col_sums, m, n)
-# 	print('initial balance:', time() -s)
+def metrize_constraintes(q, row_sums, col_sums, z, pi_0=None, prt=False):
 	
-# 	def p_to_r(p, alpha):
-
-# 		q = (1. - np.dot(compatability_matrix, p.T)).T
-# 		# printarr(q,'q')
-# 		q = np.cumprod(q, axis=0)
-# 		# printarr(q,'q')
-# 		c = 1. / (np.ones(m) - q[-1, :])
-# 		# printarr(c,'c')
-# 		q = np.vstack((np.ones((1, m)), q[:-1, :]))
-# 		# printarr(q,'q')
-# 		q = q * c
-# 		# printarr(q,'q')
-# 		try:
-# 			q = q * alpha
-# 		except:
-# 			print('q', q.shape)
-# 			print('alpha', alpha.shape)
-
-# 		# printarr(q,'q')
-# 		r = np.zeros((n, m, n))
-# 		for k in range(n):
-# 			for i,j in zip(*compatability_matrix.nonzero()):
-# 				r[k,i,j] = q[k, i] * p[k, j]
-
-# 		return r
-
-# 	iter_k = 0
-
-# 	s = time()
-# 	p_res = p_r_loop(compatability_matrix, p, alpha, m, n, col_sums)
-# 	print('r_p loop: ', time() - s)
-
-# 	if p_res is not None:
-# 		r = p_to_r(p_res, alpha)
-# 		r = rho * r.sum(axis=0)
-# 	else:
-# 		r = None
-
-# 	return r
-
-
-# def alis_approximation2(compatability_matrix, alpha, beta, rho):
-
-# 	m, n = compatability_matrix.shape
-
-# 	adj_beta = np.ones(n)/n * (1 - rho) + beta * rho
-
-# 	# p = np.ones((n,n)) *(1/n)
-# 	p = np.vstack([beta for _ in range(n)])
-# 	s = time()
-# 	p = entropy_approximation(p, np.ones(n), n*adj_beta)
-
-# 	def p_to_r_to_p(p, alpha):
-
-# 		printarr(p, 'first_p_1')
-
-# 		q = (1. - np.dot(compatability_matrix, p.T)).T
-
-# 		# printarr(q, 'pre_q_1')
-# 		# printarr(q,'q')
-# 		q = np.cumprod(q, axis=0)
-
-# 		# printarr(q, 'q1')
-# 		# printarr(q,'q')
-# 		c = 1. / (np.ones(m) - q[-1, :])
-# 		# printarr(c,'c')
-# 		q = np.vstack((np.ones((1, m)), q[:-1, :]))
-# 		# printarr(q,'q')
-# 		q = q * c
-# 		# printarr(q,'q')
-# 		try:
-# 			q = q * alpha
-# 		except:
-# 			print('q', q.shape)
-# 			print('alpha', alpha.shape)
-
-# 		# printarr(q,'q')
-# 		r = np.zeros((n, m, n))
-# 		for k in range(n):
-# 			for i,j in zip(*compatability_matrix.nonzero()):
-# 				r[k,i,j] = q[k, i] * p[k, j]
-		
-# 		for k in range(1, n, 1):
-# 			for j in range(n):
-# 				p[k, j] = r[:k, :, j].sum()/r[:k, :, :].sum()
-
-# 		p = entropy_approximation(p, np.ones(n), n*adj_beta)
-
-# 		return p
-
-# 	def p_r_p(p, compatability_matrix, alpha, m, n):
-
-# 		printarr(p, 'first_p_2')
-
-# 		# q is an n x m 
-# 		q = np.ones((n, m)) - np.dot(compatability_matrix, p.T)
-		
-# 		# printarr(q, 'pre_q_2')
-
-# 		for ell in range(1, n, 1):
-# 			q[ell, :] = q[ell, :] * q[ell - 1, :] 
-
-# 		# printarr(q, 'q2')
-
-# 		c = 1. / (np.ones((1, m)) - q[-1, :])
-
-# 		q = np.vstack((np.ones((1, m)), q[:-1, :]))
-
-# 		q = q * c * alpha
-		
-# 		# r = q[..., None] * p[:, None, :] * compatability_matrix
-# 		r = np.zeros((n, m, n))
-
-# 		for k in range(n):
-# 			for i,j in zip(*compatability_matrix.nonzero()):
-# 				r[k,i,j] = q[k, i] * p[k, j]
-
-
-# 		for k in range(1, n, 1):
-# 			for j in range(n):
-# 				p[k, j] = r[:k, :, j].sum()/r[:k, :, :].sum()
-
-		
-# 		p = entropy_approximation(p, np.ones(n), n*adj_beta)
-# 		# r = r.sum(axis=1)
-# 		# r_ell = r[0]
-		
-# 		# for ell in range(1, n, 1):
-# 		# 	p[ell, :] = r_ell/r_ell.sum()
-# 		# 	r_ell = r_ell + r[ell]
-
-# 		return p
-
-# 	converge = False
-# 	iter_k = 0
-
-# 	s = time()
-
-# 	p_1 = p_to_r_to_p(p, alpha)
-# 	p_2 = p_r_p(p, compatability_matrix, alpha, m, n)
-# 	printarr(p_1, 'p1')
-# 	printarr(p_2, 'p2')
-
-# 	# while not converge and iter_k < 100000:
-
-# 	# 	prev_p = p 
-# 	# 	p = p_to_r_to_p(p, alpha)
-		
-# 	# 	# print(iter_k, np.abs(p - prev_p).sum())
-# 	# 	if np.abs(p - prev_p).sum() < 10**-9:
-# 	# 		converge = True
-
-# 	# 	iter_k += 1
-
-# 	# print('time to converge:',  time() - s, 'iterations:', iter_k)
-
-# 	# printarr(p, 'last p reg')
-# 	# print(p.sum(axis=0))
-# 	# print(p.sum(axis=1))
+	m, n  = q.shape
+	# print('q.shape: ', q.shape)
 	
-# 	# r = p_to_r(p, alpha, compatability_matrix, m, n)
+	k = m + n
+	l = len(q.nonzero()[0])
 
-# 	# r = rho * r.sum(axis=0)
+	# print('k,l: ', k, l)
 
-# 	# return r
+	new_z = []
+	rows = []
+	cols = []
+	data = []
+	if pi_0 is not None:
+		new_pi_0 = []
 
-# def alis_approximation_test(compatability_matrix, alpha, beta, rho):
+	for col, (i, j) in enumerate(zip(*q.nonzero())):
+			
+		if prt:
+				print((i, j),'-->', (i, i * n + j), (m + j, i * n + j))
 
+		rows.append(i)
+		cols.append(col)
+		data.append(q[i, j])
 
-# 	m, n = compatability_matrix.shape
+		rows.append(m + j)
+		cols.append(col)
+		data.append(q[i, j])
 
-# 	adj_beta = np.ones(n)/n * (1 - rho) + beta * rho
+		new_z.append(z[i,j])
 
-# 	# p = np.ones((n,n)) *(1/n)
-# 	p = np.vstack([beta for _ in range(n)])
-# 	s = time()
-# 	p = entropy_approximation(p, np.ones(n), n*adj_beta)
+		if pi_0 is not None:
+			new_pi_0.append(pi_0[i,j])
+
+	rows = np.array(rows)
+	cols = np.array(cols)
+	data = np.array(data)
 	
-# 	def p_to_r(p, alpha):
+	A = np.zeros((k, l))
+	A[rows, cols] = data
+	b = np.hstack([row_sums, col_sums])
+	new_z = np.array(new_z)
 
-# 		q = (1. - np.dot(compatability_matrix, p.T)).T
-# 		# printarr(q,'q')
-# 		q = np.cumprod(q, axis=0)
-# 		# printarr(q,'q')
-# 		c = 1. / (np.ones(m) - q[-1, :])
-# 		# printarr(c,'c')
-# 		q = np.vstack((np.ones((1, m)), q[:-1, :]))
-# 		# printarr(q,'q')
-# 		q = q * c
-# 		# printarr(q,'q')
-# 		try:
-# 			q = q * alpha
-# 		except:
-# 			print('q', q.shape)
-# 			print('alpha', alpha.shape)
+	if pi_0 is not None:
+		new_pi_0 = np.array(new_pi_0)
+		return A, b, new_z, new_pi_0
+	else:
+		return A, b, new_z, None
 
-# 		# printarr(q,'q')
-# 		r = np.zeros((n, m, n))
-# 		for k in range(n):
-# 			for i,j in zip(*compatability_matrix.nonzero()):
-# 				r[k,i,j] = q[k, i] * p[k, j]
-# 		# r = q[..., None] * p[:, None, :] * compatability_matrix
 
-# 		# for k in range(n):
-# 		# 	printarr(r[k, :,:], 'r[{}, :, :]'.format(k))
-# 		# for k in range(m):
-# 		# 	printarr(r[:, k,:], 'r[:, {}, :]'.format(k))
-# 		# 	printarr(r[:, k,:].sum(), 'r[:, {}, :].sum()'.format(k))
-# 		# for k in range(n):
-# 		# 	printarr(r[:, :,k], 'r[:, :, {}]'.format(k))
+def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=False):
+
+	m, n = compatability_matrix.shape
+	
+	c = np.vstack([c, np.zeros((1, n))])
+
+	if weighted:
+		w = np.vstack([(1. - rho) * np.ones(n) * compatability_matrix, rho * np.ones(n)])
+		w = (np.vstack([compatability_matrix, np.ones(n)]).sum()/w.sum()) * w
+	else:
+		w = np.vstack([compatability_matrix, np.ones(n)])
+	
+	w = ((1 - gamma)/gamma) * w
+
+	compatability_matrix = np.vstack([compatability_matrix, np.ones((1, n))])
+	
+	eta = lamda * s * rho
+	eta = np.append(eta, mu.sum() - eta.sum())
+	s = np.append(s, 1)
+	
+	z, q = convert_to_normal_form(c, compatability_matrix, w, compatability_matrix)
+
+	if weighted:
+		pi_0 = entropy_approximation(compatability_matrix, eta, mu)
+		pi_0 = pi_0 * w
+	else:
+		pi_0 = None
+
+
+
+	A, b, z , pi_0 = metrize_constraintes(q, eta, mu, z, pi_0)
+
+	eta_w, _ = fast_primal_dual_algorithm(compatability_matrix, A, b, z, m + 1, n, pi0=pi_0, act_rows=None , check_every=10**3, max_iter=10**8, epsilon=10**-6, prt=False, prtall=False)
+	if eta_w is not None:
+		m_n_eta_w = np.zeros((m + 1, n))
+		for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
+			m_n_eta_w[i,j] = eta_w[col]
+		eta_w = m_n_eta_w
+		# printarr(eta_w, 'eta_w')
+		# printarr(eta_w.sum(axis=0))
+		# printarr(eta_w.sum(axis=1))
+		# printarr(eta_w, 'eta_w')
+		eta = np.divide(eta_w, w, out=np.zeros_like(compatability_matrix), where= w!= 0)
+		# printarr(eta, 'eta')
+		# printarr(eta.sum(axis=1)/rho, 'row_sums')
+		# printarr(eta.sum(axis=0), 'col_sums')
+
+
+		r = np.divide(eta, np.dot(np.diag(s), compatability_matrix), out=np.zeros_like(compatability_matrix), where= w!= 0)
+		# printarr(r, 'r')
+		# printarr(r.sum(axis=1)/rho, 'row_sums')
+		# printarr(r.sum(axis=0), 'row_sums')
+
 		
-# 		return r, p[0, :]
-	
-# 	def r_to_p(r, p_one):
+		return r, w
+	else:
+		return None, None
 
-# 		p = np.zeros((n, n))
 
-# 		for k in range(1, n, 1):
-# 			for j in range(n):
-# 				p[k, j] = r[:k, :, j].sum()/r[:k, :, :].sum()
+def sinkhorn_knopp(M, a, b, compatability_matrix, reg, numItermax=1000, stopThr=1e-9, verbose=False, log=False, **kwargs):
+	"""
+	Solve the entropic regularization optimal transport problem and return the OT matrix
 
-# 		# printarr(p, 'p')
-# 		# printarr(p.sum(axis=1), 'p.sum(axis=1)')
+	The function solves the following optimization problem:
 
-# 		p = np.vstack((p_one, p[1:, :]))
+	.. math::
+		\gamma = arg\min_\gamma <\gamma,M>_F + reg\cdot\Omega(\gamma)
 
-# 		p = entropy_approximation(p, np.ones(n), n*adj_beta)
+		s.t. \gamma 1 = a
 
-# 		# printarr(p, 'p')
+			 \gamma^T 1= b
 
-# 		return p
+			 \gamma\geq 0
+	where :
 
-# 	converge = False
-# 	iter_k = 0
+	- M is the (ns,nt) metric cost matrix
+	- :math:`\Omega` is the entropic regularization term :math:`\Omega(\gamma)=\sum_{i,j} \gamma_{i,j}\log(\gamma_{i,j})`
+	- a and b are source and target weights (sum to 1)
 
-# 	s = time()
-# 	while not converge and iter_k < 100000:
+	The algorithm used for solving the problem is the Sinkhorn-Knopp matrix scaling algorithm as proposed in [2]_
 
-# 		prev_p = p 
-# 		r , p_one = p_to_r(p, alpha)
-# 		p = r_to_p(r, p_one)
-		
-# 		# print(iter_k, np.abs(p - prev_p).sum())
-# 		if np.abs(p - prev_p).sum() < 10**-9:
-# 			converge = True
 
-# 		iter_k += 1
+	Parameters
+	----------
+	a : np.ndarray (ns,)
+		samples weights in the source domain
+	b : np.ndarray (nt,) or np.ndarray (nt,nbb)
+		samples in the target domain, compute sinkhorn with multiple targets
+		and fixed M if b is a matrix (return OT loss + dual variables in log)
+	M : np.ndarray (ns,nt)
+		loss matrix
+	reg : float
+		Regularization term >0
+	numItermax : int, optional
+		Max number of iterations
+	stopThr : float, optional
+		Stop threshol on error (>0)
+	verbose : bool, optional
+		Print information along iterations
+	log : bool, optional
+		record log if True
 
-# 	print('time to converge:',  time() - s, 'iterations:', iter_k)
 
-# 	printarr(p, 'last p reg')
-# 	print(p.sum(axis=0))
-# 	print(p.sum(axis=1))
-	
-# 	r, _ = p_to_r(p, alpha)
+	Returns
+	-------
+	gamma : (ns x nt) ndarray
+		Optimal transportation matrix for the given parameters
+	log : dict
+		log dictionary return only if log==True in parameters
 
-# 	r = rho * r.sum(axis=0)
+	Examples
+	--------
 
-# 	return p
+	>>> import ot
+	>>> a=[.5,.5]
+	>>> b=[.5,.5]
+	>>> M=[[0.,1.],[1.,0.]]
+	>>> ot.sinkhorn(a,b,M,1)
+	array([[ 0.36552929,  0.13447071],
+		   [ 0.13447071,  0.36552929]])
+
+
+	References
+	----------
+
+	.. [2] M. Cuturi, Sinkhorn Distances : Lightspeed Computation of Optimal Transport, Advances in Neural Information Processing Systems (NIPS) 26, 2013
+
+
+	See Also
+	--------
+	ot.lp.emd : Unregularized OT
+	ot.optim.cg : General regularized OT
+
+	"""
+
+	a = np.asarray(a, dtype=np.float64)
+	b = np.asarray(b, dtype=np.float64)
+	M = np.asarray(M, dtype=np.float64)
+
+	if len(a) == 0:
+		a = np.ones((M.shape[0],), dtype=np.float64) / M.shape[0]
+	if len(b) == 0:
+		b = np.ones((M.shape[1],), dtype=np.float64) / M.shape[1]
+
+	# init data
+	Nini = len(a)
+	Nfin = len(b)
+
+	if len(b.shape) > 1:
+		nbb = b.shape[1]
+	else:
+		nbb = 0
+
+	if log:
+		log = {'err': []}
+
+	# we assume that no distances are null except those of the diagonal of
+	# distances
+	if nbb:
+		u = np.ones((Nini, nbb)) / Nini
+		v = np.ones((Nfin, nbb)) / Nfin
+	else:
+		u = np.ones(Nini) / Nini
+		v = np.ones(Nfin) / Nfin
+
+	# print(reg)
+
+	# Next 3 lines equivalent to K= np.exp(-M/reg), but faster to compute
+	K = np.empty(M.shape, dtype=M.dtype)
+	np.divide(M, -reg, out=K)
+	np.exp(K, out=K)
+	K = K * compatability_matrix
+
+	# print(np.min(K))
+	tmp2 = np.empty(b.shape, dtype=M.dtype)
+
+	Kp = (1 / a).reshape(-1, 1) * K
+	cpt = 0
+	err = 1
+	while (err > stopThr and cpt < numItermax):
+		uprev = u
+		vprev = v
+
+		KtransposeU = np.dot(K.T, u)
+		v = np.divide(b, KtransposeU)
+		u = 1. / np.dot(Kp, v)
+
+		if (np.any(KtransposeU == 0) or
+				np.any(np.isnan(u)) or np.any(np.isnan(v)) or
+				np.any(np.isinf(u)) or np.any(np.isinf(v))):
+			# we have reached the machine precision
+			# come back to previous solution and quit loop
+			print('Warning: numerical errors at iteration', cpt)
+			u = uprev
+			v = vprev
+			break
+		if cpt % 10 == 0:
+			# we can speed up the process by checking for the error only all
+			# the 10th iterations
+			if nbb:
+				err = np.sum((u - uprev)**2) / np.sum((u)**2) + \
+					np.sum((v - vprev)**2) / np.sum((v)**2)
+			else:
+				# compute right marginal tmp2= (diag(u)Kdiag(v))^T1
+				np.einsum('i,ij,j->j', u, K, v, out=tmp2)
+				err = np.linalg.norm(tmp2 - b)**2  # violation of marginal
+			if log:
+				log['err'].append(err)
+
+			if verbose:
+				if cpt % 200 == 0:
+					print(
+						'{:5s}|{:12s}'.format('It.', 'Err') + '\n' + '-' * 19)
+				print('{:5d}|{:8e}|'.format(cpt, err))
+		cpt = cpt + 1
+	if log:
+		log['u'] = u
+		log['v'] = v
+
+	if nbb:  # return only loss
+		res = np.einsum('ik,ij,jk,ij->k', u, K, v, M)
+		if log:
+			return res, log
+		else:
+			return res
+
+	else:  # return OT matrix
+
+		if log:
+			return u.reshape((-1, 1)) * K * v.reshape((1, -1)), log
+		else:
+			return u.reshape((-1, 1)) * K * v.reshape((1, -1))
+
+
+def sinkhorn_stabilized(M, a, b, compatability_matrix, reg, numItermax=1000, tau=1e3, stopThr=1e-9, warmstart=None, verbose=False, print_period=20, log=False, **kwargs):
+	"""
+	Solve the entropic regularization OT problem with log stabilization
+
+	The function solves the following optimization problem:
+
+	.. math::
+		\gamma = arg\min_\gamma <\gamma,M>_F + reg\cdot\Omega(\gamma)
+
+		s.t. \gamma 1 = a
+
+			 \gamma^T 1= b
+
+			 \gamma\geq 0
+	where :
+
+	- M is the (ns,nt) metric cost matrix
+	- :math:`\Omega` is the entropic regularization term :math:`\Omega(\gamma)=\sum_{i,j} \gamma_{i,j}\log(\gamma_{i,j})`
+	- a and b are source and target weights (sum to 1)
+
+	The algorithm used for solving the problem is the Sinkhorn-Knopp matrix
+	scaling algorithm as proposed in [2]_ but with the log stabilization
+	proposed in [10]_ an defined in [9]_ (Algo 3.1) .
+
+
+	Parameters
+	----------
+	a : np.ndarray (ns,)
+		samples weights in the source domain
+	b : np.ndarray (nt,)
+		samples in the target domain
+	M : np.ndarray (ns,nt)
+		loss matrix
+	reg : float
+		Regularization term >0
+	tau : float
+		thershold for max value in u or v for log scaling
+	warmstart : tible of vectors
+		if given then sarting values for alpha an beta log scalings
+	numItermax : int, optional
+		Max number of iterations
+	stopThr : float, optional
+		Stop threshol on error (>0)
+	verbose : bool, optional
+		Print information along iterations
+	log : bool, optional
+		record log if True
+
+
+	Returns
+	-------
+	gamma : (ns x nt) ndarray
+		Optimal transportation matrix for the given parameters
+	log : dict
+		log dictionary return only if log==True in parameters
+
+	Examples
+	--------
+
+	>>> import ot
+	>>> a=[.5,.5]
+	>>> b=[.5,.5]
+	>>> M=[[0.,1.],[1.,0.]]
+	>>> ot.bregman.sinkhorn_stabilized(a,b,M,1)
+	array([[ 0.36552929,  0.13447071],
+		   [ 0.13447071,  0.36552929]])
+
+
+	References
+	----------
+
+	.. [2] M. Cuturi, Sinkhorn Distances : Lightspeed Computation of Optimal Transport, Advances in Neural Information Processing Systems (NIPS) 26, 2013
+
+	.. [9] Schmitzer, B. (2016). Stabilized Sparse Scaling Algorithms for Entropy Regularized Transport Problems. arXiv preprint arXiv:1610.06519.
+
+	.. [10] Chizat, L., Peyré, G., Schmitzer, B., & Vialard, F. X. (2016). Scaling algorithms for unbalanced transport problems. arXiv preprint arXiv:1607.05816.
+
+
+	See Also
+	--------
+	ot.lp.emd : Unregularized OT
+	ot.optim.cg : General regularized OT
+
+	"""
+
+	a = np.asarray(a, dtype=np.float64)
+	b = np.asarray(b, dtype=np.float64)
+	M = np.asarray(M, dtype=np.float64)
+
+	if len(a) == 0:
+		a = np.ones((M.shape[0],), dtype=np.float64) / M.shape[0]
+	if len(b) == 0:
+		b = np.ones((M.shape[1],), dtype=np.float64) / M.shape[1]
+
+	# test if multiple target
+	if len(b.shape) > 1:
+		nbb = b.shape[1]
+		a = a[:, np.newaxis]
+	else:
+		nbb = 0
+
+	# init data
+	na = len(a)
+	nb = len(b)
+
+	cpt = 0
+	if log:
+		log = {'err': []}
+
+	# we assume that no distances are null except those of the diagonal of
+	# distances
+	if warmstart is None:
+		alpha, beta = np.zeros(na), np.zeros(nb)
+	else:
+		alpha, beta = warmstart
+
+	if nbb:
+		u, v = np.ones((na, nbb)) / na, np.ones((nb, nbb)) / nb
+	else:
+		u, v = np.ones(na) / na, np.ones(nb) / nb
+
+	def get_K(alpha, beta):
+		"""log space computation"""
+		return np.exp(-(M - alpha.reshape((na, 1)) - beta.reshape((1, nb))) / reg) * compatability_matrix
+
+	def get_Gamma(alpha, beta, u, v):
+		"""log space gamma computation"""
+		return np.exp(-(M - alpha.reshape((na, 1)) - beta.reshape((1, nb))) / reg + np.log(u.reshape((na, 1))) + np.log(v.reshape((1, nb)))) * compatability_matrix
+
+	# print(np.min(K))
+
+	K = get_K(alpha, beta)
+	transp = K
+	loop = 1
+	cpt = 0
+	err = 1
+	while loop:
+
+		uprev = u
+		vprev = v
+
+		# sinkhorn update
+		v = b / (np.dot(K.T, u) + 1e-16)
+		u = a / (np.dot(K, v) + 1e-16)
+
+		# remove numerical problems and store them in K
+		if np.abs(u).max() > tau or np.abs(v).max() > tau:
+			if nbb:
+				alpha, beta = alpha + reg * \
+					np.max(np.log(u), 1), beta + reg * np.max(np.log(v))
+			else:
+				alpha, beta = alpha + reg * np.log(u), beta + reg * np.log(v)
+				if nbb:
+					u, v = np.ones((na, nbb)) / na, np.ones((nb, nbb)) / nb
+				else:
+					u, v = np.ones(na) / na, np.ones(nb) / nb
+			K = get_K(alpha, beta)
+
+		if cpt % print_period == 0:
+			# we can speed up the process by checking for the error only all
+			# the 10th iterations
+			if nbb:
+				err = np.sum((u - uprev)**2) / np.sum((u)**2) + \
+					np.sum((v - vprev)**2) / np.sum((v)**2)
+			else:
+				transp = get_Gamma(alpha, beta, u, v)
+				err = np.linalg.norm((np.sum(transp, axis=0) - b))**2
+			if log:
+				log['err'].append(err)
+
+			if verbose:
+				if cpt % (print_period * 20) == 0:
+					print(
+						'{:5s}|{:12s}'.format('It.', 'Err') + '\n' + '-' * 19)
+				print('{:5d}|{:8e}|'.format(cpt, err))
+
+		if err <= stopThr:
+			loop = False
+
+		if cpt >= numItermax:
+			loop = False
+
+		if np.any(np.isnan(u)) or np.any(np.isnan(v)):
+			# we have reached the machine precision
+			# come back to previous solution and quit loop
+			print('Warning: numerical errors at iteration', cpt)
+			u = uprev
+			v = vprev
+			break
+
+		cpt = cpt + 1
+
+	# print('err=',err,' cpt=',cpt)
+	if log:
+		log['logu'] = alpha / reg + np.log(u)
+		log['logv'] = beta / reg + np.log(v)
+		log['alpha'] = alpha + reg * np.log(u)
+		log['beta'] = beta + reg * np.log(v)
+		log['warmstart'] = (log['alpha'], log['beta'])
+		if nbb:
+			res = np.zeros((nbb))
+			for i in range(nbb):
+				res[i] = np.sum(get_Gamma(alpha, beta, u[:, i], v[:, i]) * M)
+			return res, log
+
+		else:
+			return get_Gamma(alpha, beta, u, v), log
+	else:
+		if nbb:
+			res = np.zeros((nbb))
+			for i in range(nbb):
+				res[i] = np.sum(get_Gamma(alpha, beta, u[:, i], v[:, i]) * M)
+			return res
+		else:
+			return get_Gamma(alpha, beta, u, v)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

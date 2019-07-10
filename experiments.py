@@ -18,7 +18,7 @@ from generators import *
 from utilities import *
 from mr_calc_and_approx import *
 from graphs_and_tabels import *
-
+import gc
 
 BASE_EXAMPLES = {
 
@@ -1203,12 +1203,11 @@ def go_back_and_approximate_sbpss(filename='erdos_renyi_exp4'):
 def go_back_and_approximate_grids_sbpss(p, filename='grid_exp_new_final_undone'):
 
     df = pd.read_csv(filename + '.csv')
-    newfilename = 'grids_sbpss'
-
+    newfilename = 'grids_sbpss_fixed'
 
     k = 0
     exps = []
-    pool = mp.Pool(processes=p)
+    pool = mp.Pool(processes=p, maxtasksperchild=1)
     for n in [900]:
         for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
             if len(exps) < p-1:
@@ -1218,8 +1217,6 @@ def go_back_and_approximate_grids_sbpss(p, filename='grid_exp_new_final_undone')
                 print('no_of_exps:', len(exps), 'n:', n)
                 print('starting work with {} cpus'.format(p))
                 sbpss_df = pool.starmap(grid_sbpss, exps)
-                sbpss_df = pd.concat(sbpss_df, axis=0)
-                write_df_to_file('grid_sbpss', sbpss_df)
                 exps = []
         
         
@@ -1833,7 +1830,7 @@ def grid_sbpss(exp, timestamp):
         exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=True, prt=True)
         heavy_traffic_approx_entropy =  fast_entropy_approximation(compatability_matrix, lamda, mu, pad=True)
         exp_res['mat']['heavy_approx'] = heavy_traffic_approx_entropy
-        exp_res['mat']['alis_approx'] = fast_alis_approximation(compatability_matrix, alpha, beta, rho)
+        exp_res['mat']['alis_approx'] = np.zeros((m, n)) #fast_alis_approximation(compatability_matrix, alpha, beta, rho)
         exp_res['mat']['rho_approx_alis'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['heavy_approx']
         
         print('ending - structure: ', structure, ' exp_no: ', exp_no, ' rho: ', rho, ' duration: ', time() - st)
@@ -1843,13 +1840,224 @@ def grid_sbpss(exp, timestamp):
         exp_res['aux']['structure'] = structure
         exp_res['aux']['size'] =  size
         exp_res['aux']['rho'] = rho
-        sbpss_dfs.append(
-                log_res_to_df(compatability_matrix, alpha=alpha, beta=beta, lamda=lamda, s = None, mu=mu, result_dict=exp_res, timestamp=timestamp, aux_data=None)
-            )
-    sbpss_df = pd.concat(sbpss_dfs, axis=0)
+        exp_res['aux']['one'] = 1.0 
+        sbpss_df = log_res_to_df(compatability_matrix, alpha=alpha, beta=beta, lamda=lamda, s = None, mu=mu, result_dict=exp_res, timestamp=timestamp, aux_data=None)
+        write_df_to_file('grids_sbpss_fixed', sbpss_df)
+        gc.collect()
+    return 'done'
 
-    return sbpss_df
 
+def go_back_and_do_ot_sbpss(filename='FZ_Kaplan_exp_sbpss_good2'):
+
+    df = pd.read_csv(filename + '.csv')
+    p = 3
+    pool = mp.Pool(processes=p)
+
+    for density_level in ['high', 'medium', 'low']:
+        exps = []
+        for (timestamp, rho), exp in df[df['density_level'] == density_level].groupby(by=['timestamp', 'rho'], as_index=False):
+            exps.append([exp, timestamp, rho])
+            if len(exps) == p:
+                print('no_of_exps:', len(exps), 'density_level:', density_level)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(approximate_sbpss_w_alis, exps)
+                sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_good_w_alis', sbpss_df)
+                exps = []
+        else:
+            if len(exps) > 0:
+                print('no_of_exps:', len(exps), 'density_level:', density_level)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(approximate_sbpss_w_alis, exps)
+                sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_good_w_alis', sbpss_df)
+                exps = [] 
+
+    
+def ot_sbpss_exp(filename ='FZ_final_w_qp')
+
+    df = pd.read_csv(filename + '.csv')
+    p = 8
+    pool = mp.Pool(processes=p)
+
+    for density_level in ['high', 'medium', 'low']:
+        exps = []
+        for (timestamp, rho), exp in df[df['density_level'] == density_level].groupby(by=['timestamp'], as_index=False):
+            exps.append([exp, timestamp, rho])
+            if len(exps) == p:
+                print('no_of_exps:', len(exps), 'density_level:', density_level)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(ot_spbss, exps)
+                sbpss_df = pd.concat(sbpss_dfs, axis=0)
+                write_df_to_file('ot_sbpss_df', sbpss_df)
+                exps = []
+        else:
+            if len(exps) > 0:
+                print('no_of_exps:', len(exps), 'density_level:', density_level)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(ot_spbss, exps)
+                sbpss_df = pd.concat(sbpss_dfs, axis=0)
+                write_df_to_file('ot_sbpss_df', sbpss_df)
+                exps = []
+
+
+def ot_spbss(exp, timestamp):
+
+
+    dfs = []
+
+    exp_data = exp[['timestamp','m', 'n', 'exp_num']].drop_duplicates()
+    alpha_data = exp[['i', 'alpha']].drop_duplicates()
+    beta_data = exp[['j', 'beta']].drop_duplicates()
+    
+    m = exp_data['m'].iloc[0]
+    n = exp_data['n'].iloc[0]
+    exp_no = exp_data['exp_num'].iloc[0]
+
+    alpha = np.zeros(m)
+    beta = np.zeros(n)
+    compatability_matrix = np.zeros((m,n))
+
+    for k, row in alpha_data.iterrows():
+        alpha[int(row['i'])] = float(row['alpha'])
+
+    for k, row in beta_data.iterrows():
+        beta[int(row['j'])] = float(row['beta'])
+
+    for k, row in exp.iterrows():
+        compatability_matrix[int(row['i']), int(row['j'])] = 1.
+
+    nnz = compatability_matrix.nonzero()
+
+    edge_count = compatability_matrix.sum()
+
+    for c_type in ['dist', 'rand']:
+        for rho in [.6, .8, .9, .95]:
+
+            rho = 0.95
+
+            lamda = rho * alpha
+            mu = beta 
+            s = np.ones(m)
+
+            if c_type == 'rand':
+                c = np.random.exponential(1, (m, n)) * compatability_matrix
+            else:
+                c = zp.zeros((m, n))
+                for i in range(m):
+                    for j in range(n):
+                        c[i,j] = 1 + abs(i - j)
+                c = c * compatability_matrix
+
+            printarr(c, 'org_c')
+
+            lamda_pad = np.append(lamda, mu.sum() - lamda.sum())
+            c_pad = np.vstack([c, np.zeros((1, n))])
+            compatability_matrix_pad = np.vstack([compatability_matrix, np.ones((1, n))])
+
+            r_pad = sinkhorn_stabilized(c_pad, lamda_pad, mu, compatability_matrix_pad, 0.01)
+            min_c = (c_pad * r_pad).sum()
+            r_pad = sinkhorn_stabilized(-1*c_pad, lamda_pad, mu, compatability_matrix_pad, 0.01)
+            max_c = (c_pad * r_pad).sum()
+            c_diff = max_c - min_c
+            r_fcfs_alis = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
+
+            min_ent = (-1*lamda * np.log(lamda)).sum()
+            max_ent = (-1*r_fcfs_alis * np.log(r_fcfs_alis, out=np.zeros_like(r_fcfs_alis), where= r_fcfs_alis != 0)).sum()
+
+            ent_diff = max_ent - min_ent
+            print('ent_diff: ', ent_diff)
+            print('c_diff: ', c_diff)
+
+            c = (ent_diff/c_diff) * c
+
+            printarr(c, 'new_c')
+
+            
+            q_fcfs_alis = r_fcfs_alis * (1./(mu - r_fcfs_alis.sum(axis=0)))
+            q_fcfs_alis = q_fcfs_alis/q_fcfs_alis.sum(axis=0)
+            printarr(r_fcfs_alis, 'r_fcfs_alis')
+            sim_res_fcfs_alis = simulate_queueing_system(compatability_matrix, lamda, mu, s)
+            sim_res_fcfs_alis['mat']['c'] = c
+            sim_res_fcfs_alis['mat']['w'] = compatability_matrix
+            sim_res_fcfs_alis['mat']['q'] = q_fcfs_alis 
+            sim_res_fcfs_alis['aux']['gamma'] = 0
+            sim_res_fcfs_alis['aux']['policy'] = 'fcfs_alis'
+            sim_res_fcfs_alis['aux']['rho'] = rho
+            sim_res_fcfs_alis['aux']['c_type'] = c_type
+            df_fcfs_alis = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, result_dict=sim_res_fcfs_alis, timestamp=None, aux_data=None)
+            dfs.append(df_fcfs_alis)
+
+            sim_res_w_only = simulate_queueing_system(compatability_matrix, lamda, mu, s, np.divide(np.ones(c.shape), c, out=np.zeros_like(compatability_matrix), where = compatability_matrix != 0), only_w=True)
+            sim_res_w_only['mat']['c'] = c
+            sim_res_w_only['mat']['w'] = c
+            sim_res_w_only['mat']['q'] = 0 * compatability_matrix
+            sim_res_w_only['aux']['gamma'] = 1
+            sim_res_w_only['aux']['policy'] = 'greedy'
+            sim_res_w_only['aux']['rho'] = rho
+            sim_res_w_only['aux']['c_type'] = c_type
+            df_w_only = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, result_dict=sim_res_w_only, timestamp=None, aux_data=None)
+            dfs.append(df_w_only)
+            
+            for gamma in [0.05 * i for i in range(1, 18, 1)]:
+
+                print('gamma: ', gamma)
+
+                r_fcfs_alis_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=False)
+                r_fcfs_alis_weighted_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=True)
+
+                if r_fcfs_alis_ot is not None and r_fcfs_alis_ot is not None:
+
+                    r_fcfs_alis_ot = r_fcfs_alis_ot[:m, :]
+                    r_fcfs_alis_weighted_ot = r_fcfs_alis_weighted_ot[:m, :]
+
+                    q_fcfs_alis_ot = r_fcfs_alis_ot * (1./mu - r_fcfs_alis_ot.sum(axis=0))
+                    q_fcfs_alis_weighted_ot = r_fcfs_alis_weighted_ot * (1./mu - r_fcfs_alis_weighted_ot.sum(axis=0))
+
+
+                    q_fcfs_alis_ot = q_fcfs_alis_ot/q_fcfs_alis_ot.sum(axis=0)
+                    q_fcfs_alis_weighted_ot = q_fcfs_alis_weighted_ot/q_fcfs_alis_weighted_ot.sum(axis=0)
+
+                    w_fcfs_alis_ot = np.divide(q_fcfs_alis_ot, q_fcfs_alis, out=np.zeros_like(q_fcfs_alis), where=(q_fcfs_alis != 0))
+                    w_fcfs_alis_weighted_ot  = np.divide(q_fcfs_alis_weighted_ot, q_fcfs_alis, out=np.zeros_like(q_fcfs_alis), where=(q_fcfs_alis != 0))
+
+                    sim_res_fcfs_alis_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_alis_ot)
+                    sim_res_fcfs_alis_ot['mat']['c'] = c
+                    sim_res_fcfs_alis_ot['mat']['w'] = w_fcfs_alis_ot
+                    sim_res_fcfs_alis_ot['mat']['q'] = q_fcfs_alis_ot
+                    sim_res_fcfs_alis_ot['aux']['gamma'] = gamma
+                    sim_res_fcfs_alis_ot['aux']['policy'] = 'fcfs_ot' 
+                    sim_res_fcfs_alis_ot['aux']['rho'] = rho
+                    sim_res_fcfs_alis_ot['aux']['c_type'] = c_type
+
+                    df_fcfs_alis_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, result_dict=sim_res_fcfs_alis_ot, timestamp=None, aux_data=None)
+                    dfs.append(df_fcfs_alis_ot)
+                    
+                    sim_res_fcfs_alis_weighted_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_alis_weighted_ot)
+                    sim_res_fcfs_alis_weighted_ot['mat']['c'] = c
+                    sim_res_fcfs_alis_weighted_ot['mat']['w'] = w_fcfs_alis_weighted_ot
+                    sim_res_fcfs_alis_weighted_ot['mat']['q'] = q_fcfs_alis_weighted_ot
+                    sim_res_fcfs_alis_weighted_ot['aux']['gamma'] = gamma
+                    sim_res_fcfs_alis_weighted_ot['aux']['policy'] = 'fcfs_weighted_ot'
+                    sim_res_fcfs_alis_weighted_ot['aux']['rho'] = rho
+                    sim_res_fcfs_alis_weighted_ot['aux']['c_type'] = c_type
+                    df_fcfs_alis_weighted_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, result_dict=sim_res_fcfs_alis_weighted_ot, timestamp=None, aux_data=None)
+                    dfs.append(df_fcfs_alis_weighted_ot)
+
+    ot_sbpss_df = pd.concat(dfs, axis=0)
+
+    return ot_sbpss_df
+    # write_df_to_file()
+    # df.to_csv('ot_exp1.csv', index=False)
+    # df_i = df[['i','policy','gamma','sim_waiting_times', 'lamda']].drop_duplicates()
+    # df_i.loc[:, 'wt_x_r'] = df_i['lamda']*df_i['sim_waiting_times']
+    # df_wt = df_i[['policy','gamma','wt_x_r']].groupby(by=['policy','gamma'], as_index=False).sum().rename(columns={'wt_x_r': 'wt'})
+    # df.loc[:, 'r_c'] = df['sim_matching_rates'] * df['c']
+    # df_c = df[['policy', 'gamma', 'r_c']].groupby(by=['policy', 'gamma'], as_index=False).sum()
+    # df_res = pd.merge(left=df_wt, right=df_c, how='left', on=['policy', 'gamma'])
+    # print(df_res)
+
+# def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, only_w = False,prt=False, sims=30, sim_len=None, warm_up=None, seed=None, sim_name='sim', per_edge=1000, prt_all=False)
 
 if __name__ == '__main__':
 
@@ -1859,8 +2067,10 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
+    ot_sbpss_exp()
+
     # growing_chains_exp()
-    go_back_and_approximate_grids_sbpss(4)
+    # go_back_and_approximate_grids_sbpss(3)
     # increasing_n_system()
     # go_back_and_approximate_sbpss_customer_dependet()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')
@@ -1896,9 +2106,104 @@ if __name__ == '__main__':
     # mu = np.ones(n)/n
     # beta = mu
 
-    # # compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
-    # # mu = beta
-    # # m , n = compatability_matrix.shape
+    if False:
+        rho = 0.6
+        gamma = 0.5
+        compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
+        m , n = compatability_matrix.shape
+
+        compatability_matrix_pad = np.vstack([compatability_matrix, np.ones((1, n))])
+        
+        # c = np.arange(36).reshape((6,6))*compatability_matrix
+        c = -1*np.random.exponential(1, (6,6)) * compatability_matrix
+
+        c = c/c.sum() 
+
+        c_pad = np.vstack([c, np.zeros((1, n))])
+        printarr(c_pad, 'c_pad')
+
+
+        mu = beta
+        lamda = alpha
+        lamda_pad = np.append(rho*lamda, 1 - rho)
+        s = np.ones(m)
+
+        mr = entropy_approximation(compatability_matrix, lamda * rho, mu, pad=True)
+        # printarr(mr, 'mr')
+
+        # for i in range(1, 20, 1):
+
+        #     # exp_c = np.exp((-1/gamma)*c) * compatability_matrix
+        #     # mrot = entropy_approximation(exp_c, lamda*rho, mu, pad=True)
+        #     # mrot = entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=False)
+
+        #     gamma = 0.05 * i
+        #     mrot_sk = sinkhorn_stabilized(c_pad, lamda_pad, mu, compatability_matrix_pad, ((1 - gamma)/gamma))
+        #     if i == 1:
+        #         first_nn = mrot_sk
+        #     if i == 19:
+        #         last_nn = mrot_sk
+        #     print(gamma,' ', ((1 - gamma)/gamma) ,' value: ',(mrot_sk[:6, :]*c).sum())
+
+        # printarr(np.abs(first_nn[:6] - last_nn[:6]))
+        # print(np.abs(first_nn[:6] - last_nn[:6]).sum())
+        # print(((first_nn[:6, :]*c).sum() - (last_nn[:6, :]*c).sum())/(first_nn[:6, :]*c).sum())
+
+        # c = np.arange(36).reshape((6,6))*compatability_matrix
+
+        # c_pad = np.vstack([c, np.zeros((1, n))])
+
+        for i in range(1, 2, 1):
+
+            # exp_c = np.exp((-1/gamma)*c) * compatability_matrix
+            # mrot = entropy_approximation(exp_c, lamda*rho, mu, pad=True)
+            # mrot = entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=False)
+
+            gamma = 0.8 * i
+            # print((-gamma/(1-gamma)))
+            exp_c = np.exp((-gamma/(1-gamma))*c) * compatability_matrix
+            # mrot_sk = entropy_approximation(exp_c, lamda*rho, mu, pad=True)
+            mrot_sk, w = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=True)
+            q = np.divide(compatability_matrix_pad, w, out=np.zeros_like(compatability_matrix_pad), where=compatability_matrix_pad != 0)
+            printarr(mrot_sk[:6], 'mrot_sk')
+            # printarr(q, 'q')
+            # printarr(w, 'w')
+            # z = ((1-gamma)/gamma) * np.exp((-gamma/(1-gamma))*c_pad) * compatability_matrix_pad
+            # mrot_we = entropy_approximation_w_log(compatability_matrix_pad, z, q, lamda_pad, mu, pad=False)
+            # # mrot_sk = entropy_approximation_w(compatability_matrix_pad, z, q, lamda_pad, mu, pad=False)
+            # mrot_we = np.divide(mrot_we, w, out=np.zeros_like(mrot_we), where= mrot_we != 0)
+            # # mrot_sk = np.divide(mrot_sk, w, out=np.zeros_like(mrot_sk), where= mrot_sk != 0)
+
+            # printarr(mrot_we[:6], 'mrot_we_divided')
+
+            # printarr((mrot_we*q).sum(axis=0), '(mrot_we*q).sum(axis=0)')
+            # printarr(mu, 'mu')
+            # printarr((mrot_we*q).sum(axis=1), '(mrot_we*q).sum(axis=1)')
+            # printarr(lamda_pad, 'lamda_pad')
+            # mrot_sk = sinkhorn_stabilized(c_pad, lamda_pad, mu, compatability_matrix_pad, ((1 - gamma)/gamma))
+        #     if i == 1:
+        #         first = mrot_sk
+        #     if i == 19:
+        #         last = mrot_sk
+        #     print(gamma,' ', ((1 - gamma)/gamma) ,' value: ',(mrot_sk[:6, :]*c).sum())
+
+        # printarr(np.abs(first[:6] - last[:6]))
+        # print(np.abs(first[:6] - last[:6]).sum())
+        # print(((first[:6, :]*c).sum() - (last[:6, :]*c).sum())/(first[:6, :]*c).sum())
+
+        # printarr(np.abs(first_nn[:6] - first[:6]))
+        # print(np.abs(first_nn[:6] - first[:6]).sum())
+        # printarr(np.abs(last_nn[:6] - last[:6]))
+        # print(np.abs(last_nn[:6] - last[:6]).sum())
+
+    # for gamma in [0.1, 0.9]:
+    #     mrot = entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma)
+    #     printarr(mrot, 'mrot ' + str(gamma))
+    #     printarr(mrot.sum(axis=0))
+    #     printarr(mrot.sum(axis=1))
+    #     print('rates: ',mrot[:6, :].sum())
+    #     print('value: ',(mrot[:6, :]*c).sum())
+        # print('entropy: ', sum(mrot[i,j]*log(mrot[i,j]) for i,j in zip(*mrot[:6,:].nonzero())))
 
     # # # mrf = fast_entropy_approximation(compatability_matrix, alpha, beta)
     # s = time()

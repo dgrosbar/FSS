@@ -140,7 +140,6 @@ def simulate_matching_sequance(compatability_matrix, alpha, beta, prt=True, sims
 def create_queues(event_stream, customer_queues, server_queues, m, n, sim_len):
 
     
-
     for i in range(m):
         customer_queues[i].pop()
     for j in range(n):
@@ -411,7 +410,7 @@ def matching_sim_loop(customer_stream, server_stream, s_adj, m, n):
     return matching_rates
 
 
-def simulate_queueing_system(compatability_matrix, lamda, mu, s=None,  prt=False, sims=30, sim_len=None, warm_up=None, seed=None, sim_name='sim', per_edge=1000, prt_all=False):
+def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, only_w = False,prt=False, sims=30, sim_len=None, warm_up=None, seed=None, sim_name='sim', per_edge=1000, prt_all=False):
 
 
     m = len(lamda)  # m- number of servers
@@ -455,7 +454,12 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None,  prt=False
             np.random.seed(seed + k)
         
         event_stream = [(-1., -1, -1)]
-        matching_rates_k, waiting_k, idle_k = queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, s_adj, c_adj, m, n, warm_up, sim_len)
+        if w is None:
+            matching_rates_k, waiting_k, idle_k = queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, s_adj, c_adj, m, n, warm_up, sim_len)
+        elif only_w:
+            matching_rates_k, waiting_k, idle_k = queueing_sim_loop_with_only_w(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len)
+        else:
+            matching_rates_k, waiting_k, idle_k = queueing_sim_loop_with_w(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len)
 
         matching_rates.append(matching_rates_k)
 
@@ -542,7 +546,6 @@ def queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, s_adj, c_adj,
 
         event = heappop(event_stream)
 
-
         cur_time = event[0]
         i = event[1]
         j = event[2]
@@ -620,599 +623,218 @@ def queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, s_adj, c_adj,
     return matching_counter/(cur_time - record_stat_time), waiting_times, idle_times
 
 
-def ball_stacks(compatability_matrix, alpha, stacks, sim_len, warm_up):
+@jit(nopython=True, cache=True)
+def queueing_sim_loop_with_w(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len):
 
-    m, n = compatability_matrix.shape
-
-    s_adj = tuple(set(np.nonzero(compatability_matrix[:, j])[0]) for j in range(n))  # adjacency list for servers
-    c_adj = tuple(set(np.nonzero(compatability_matrix[i, :])[0]) for i in range(m)) 
-
-    matching_rates = np.zeros((m,n))
-
-    state = np.vstack([np.random.permutation(n) for _ in range(stacks)]).astype(int)
-
-    state = np.random.permutation(state.ravel()).reshape((stacks, n))
-
-    for k in range(sim_len):
-
-        # print('state')
-        # printarr(state)
-
-        unmatched = True
-        i = np.random.choice(n, p=alpha)
-
-        while unmatched:
-            
-            stack = np.random.randint(0, stacks)
-            # print('customer: ', i, ' stack: ', stack)
-            for idx in range(n):
-                if state[stack, idx] in c_adj[i]:
-                    j = state[stack, idx]
-                    unmatched = False
-                    # print('matched customer: ', i, 'with server: ', j)
-                    if k > warm_up:
-                        matching_rates[i, j] = matching_rates[i, j] + 1 
-                    if idx < n-1:
-                        state[stack, idx:n-1] = state[stack, idx + 1:n]
-                        state[stack, -1] = j
-                    break
-
-    return matching_rates/matching_rates.sum()
-
-
-def ball_stacks2(compatability_matrix, alpha, stacks, sim_len, warm_up, start=None):
-
-    m, n = compatability_matrix.shape
-
-    s_adj = tuple(set(np.nonzero(compatability_matrix[:, j])[0]) for j in range(n))  # adjacency list for servers
-    c_adj = tuple(set(np.nonzero(compatability_matrix[i, :])[0]) for i in range(m)) 
-
-    matching_rates = np.zeros((m,n))
-
-    if start is None:
-        state = np.vstack([np.random.permutation(n) for _ in range(stacks)]).astype(int)
-        state = np.random.permutation(state.ravel()).reshape((n, stacks))
-        state = np.vstack(((state == j).sum(axis=1) for j in range(n)))
-    elif start == 'uniform':
-        state = np.ones((n,n)) * (stacks//n)
-
-    else:
-        state = np.eye(n) * stacks
-
-
-
-    # printarr(state, 'initial state is:')
-
-    sum_state = np.zeros((n,n))
-    sum_state_sq = np.zeros((n,n))
-
-    matches = 0
-    ss = time()
-    for k in range(sim_len):
-
-        if k % 100000 == 0:
-            print('at iteration {} after {}'.format(k, time() - ss))
-        # print('state at time {}'.format(k))
-        # printarr(state, 'state')
-        if k > warm_up:
-            sum_state += state
-            sum_state_sq += state * state
-        # printarr(sum_state,'mean_state')
-        # printarr(sum_state_sq,'mean_state_sq')
-
-        matched = False
-        i = np.random.choice(n, p=alpha)
-        # print('customer: ', i)
-        while not matched:
-            for l in range(n):
-                j = np.random.choice(n , p=state[l, :]/stacks)
-                
-                # print('at layer {} server choosen is {}'.format(l, j))
-                
-                if j in c_adj[i]:
-
-                    # print('match customer {} with server {} at level {}'.format(i,j,l))
-                    if k > warm_up:
-                        matching_rates[i, j] += 1
-                    # if k%100 == 0 and k > warm_up:
-                    
-                    
-                    state[l, j] -= 1
-                    # print('server {} is removed form layer {}'.format(j, l))
-                    if l < n-1:
-
-                        up = [(np.random.choice(n, p=state[h,:]/stacks), h) for h in range(n-1, l, -1)]
-                        # for v,h in up:
-                            # print('one server {} is moving up from level {} to level {}'.format(v, h, h-1))
-                        
-                        for v,h in up:
-
-                            state[h, v] -= 1
-                            state[h-1, v] += 1
-
-                    # print('server {} is added to layer {}'.format(j, n-1))
-                    state[n-1, j] += 1
-                    matched=True
-                    break
-    w = sim_len - warm_up
-    mean_state = sum_state/w
-    mean_state_stdev = ((sum_state_sq - (sum_state*sum_state)/w)/(w -1))**0.5
-
-    return matching_rates/matching_rates.sum(), mean_state, mean_state_stdev
-
-
-def ball_stacks3(compatability_matrix, lamda, mu, stacks, sim_len, warm_up, s=None):
-
-    m, n = compatability_matrix.shape
-
-    if s is None:
-        s = np.ones(n)
-    s_adj = tuple(set(np.nonzero(compatability_matrix[:, j])[0]) for j in range(n))  # adjacency list for servers
-    c_adj = tuple(set(np.nonzero(compatability_matrix[i, :])[0]) for i in range(m)) 
-
-    matching_rates = np.zeros((m,n))
-
-    state = np.vstack([np.random.permutation(n) for _ in range(stacks)]).astype(int)
-
-    state = np.random.permutation(state.ravel()).reshape((n, stacks))
-
-    state = np.vstack(((state == j).sum(axis=1) for j in range(n)))
-    state = np.hstack((state, np.zeros((n, n))))
-
-    sum_state = np.zeros((n,2*n))
-    sum_state_sq = np.zeros((n,2*n))
-
-    lost = np.zeros(m)
-
+    matching_counter = np.zeros((m,n))
+    idle_times = np.zeros((n, 3))
+    waiting_times = np.zeros((m, 3))
+    server_states = np.zeros(n, dtype=np.int8)
+    server_idled_at = np.zeros(n, dtype=np.float64)
     interarrival = 1./lamda
+    # service_time_idx = np.zeros((m, n), dtype=np.int32)
+    matches = 0
+    arrivals = 0
+    record = False
+    record_stat_time = 0
 
-    event_stream = []    
+    heapify(event_stream)
+    heappop(event_stream)
 
     for i in range(m):
-        hq.heappush(event_stream, (np.random.exponential(interarrival[i]), i, -1))
+        heapify(customer_queues[i])
+        heappop(customer_queues[i])
 
-    matches = 0
-    ss = time()
+    for i in range(m):
+        heappush(event_stream, (np.random.exponential(interarrival[i]), i, -1))
 
-    while matches < sim_len:
+    while arrivals < sim_len:
 
-        event = hq.heappop(event_stream)
+        event = heappop(event_stream)
+
         cur_time = event[0]
         i = event[1]
         j = event[2]
 
-
         if j == -1:
 
-            matched = False
+            arrivals = arrivals + 1
 
-        # print('customer: ', i)
-            for _ in range(100):
+            if customer_queues[i]:
+                customer_queues[i].append(cur_time)
 
-                for l in range(n):
-
-                    j = np.random.choice(2*n, p=state[l, :]/stacks)
-                    
-                    if j in c_adj[i]:
-
-                        # print('match customer {} with server {} at level {}'.format(i,j,l))
-                        matches += 1
-                        if matches > warm_up:
-                            matching_rates[i, j] += 1
-                            sum_state += state
-                            sum_state_sq += state * state
-                        # if k%100 == 0 and k > warm_up:
-                        
-                        state[l, j] -= 1
-                        state[l, n + j] += 1
-                        service_time = np.random.exponential(s[i]/mu[j])
-                        hq.heappush(event_stream, (cur_time + service_time, i, j))
-                        
-                        if matches % 10000 == 0:
-                            print('at iteration {} after {}'.format(matches, time() - ss))
-                        
-                        # print('state at time {}'.format(k))
-                        # printarr(state, 'state')
-                        # printarr(sum_state,'mean_state')
-                        # printarr(sum_state_sq,'mean_state_sq')
-
-                        # print('server {} is removed form layer {}'.format(j, l))
-                        break
-                        
             else:
-                lost[i] +=1
 
-            hq.heappush(event_stream, (cur_time + np.random.exponential(interarrival[i]), i, -1))
+                j = -1
+                longest_idle_time = 0
 
-        else:
-            
-            l = np.random.choice(n , p=state[:, n + j]/state[:, n + j].sum())
-            
+                for s_j in c_adj[i]:
+                    if server_states[s_j] == 0:
+                        s_j_weighted_idle_time = w[i, s_j] * (cur_time - server_idled_at[s_j])
+                        if s_j_weighted_idle_time > longest_idle_time:
+                            j = s_j
+                            longest_idle_time =  s_j_weighted_idle_time
 
-            if l < n-1:
+                if j >= 0:
 
-                up = [(np.random.choice(2*n, p=state[h, :]/stacks), h) for h in range(n-1, l, -1)]
-                # for v,h in up:
-                    # print('one server {} is moving up from level {} to level {}'.format(v, h, h-1))
+                    matches = matches + 1
+                    if matches > warm_up:
+                        if not record:
+                            record = True
+                            record_stat_time = cur_time
+                        matching_counter[i, j] = matching_counter[i, j] + 1
+                        waiting_times[i] = waiting_times[i] + np.array([1, 0, 0])
+                        idle_time = cur_time - server_idled_at[j]
+                        idle_times[j, :] = idle_times[j, :] + np.array([1, idle_time, idle_time**2])
+                    
+                    server_states[j] = 1
+                    service_time = np.random.exponential(s[i]/mu[j])
+                    heappush(event_stream, (cur_time + service_time, i, j))
                 
-                for v,h in up:
+                else:
+                    customer_queues[i].append(cur_time)
 
-                    state[h, v] -= 1
-                    state[h-1, v] += 1
-
-            state[l, n + j] -= 1
-            state[n-1, j] += 1
-
-            # print('server {} is added to layer {}'.format(j, n-1))
+            heappush(event_stream, (cur_time + np.random.exponential(interarrival[i]), i, -1))
         
-    w = sim_len - warm_up
-    mean_state = sum_state/w
-    mean_state_stdev = ((sum_state_sq - (sum_state*sum_state)/w)/(w -1))**0.5
+        else:
 
-    print(lost)
+            i = -1
+            longest_waiting_time = 0
 
-    return matching_rates/matching_rates.sum(), mean_state, mean_state_stdev
+            for c_i in s_adj[j]:
+                if customer_queues[c_i]:
+                    c_i_weighted_waiting_time =  w[c_i, j] * (cur_time - customer_queues[c_i][0])
+                    if c_i_weighted_waiting_time > longest_waiting_time:
+                        i = c_i
+                        longest_waiting_time = c_i_weighted_waiting_time
+
+            if i >= 0:
+
+                arrival_time = heappop(customer_queues[i])
+
+                matches = matches + 1
+                if matches > warm_up:
+                    if not record:
+                        record = True
+                        record_stat_time = cur_time
+                    matching_counter[i, j] = matching_counter[i,j] + 1
+                    waiting_time = cur_time - arrival_time
+                    waiting_times[i, :] = waiting_times[i, :] + np.array([1, waiting_time, waiting_time**2])
+
+                service_time = np.random.exponential(s[i]/mu[j])
+                heappush(event_stream, (cur_time + service_time, i, j))
             
+            else:
+                server_states[j] = 0
+                server_idled_at[j] = cur_time
 
+    return matching_counter/(cur_time - record_stat_time), waiting_times, idle_times
 
-def ball_stacks4(compatability_matrix, lamda, mu, bpl, sim_len, warm_up, s=None):
+@jit(nopython=True, cache=True)
+def queueing_sim_loop_with_only_w(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len):
 
-    m, n = compatability_matrix.shape
-
-    matching_rates = np.zeros((m, n))
-
-    if s is None:
-        s = np.ones(n)
-    s_adj = tuple(set(np.nonzero(compatability_matrix[:, j])[0]) for j in range(n))  # adjacency list for servers
-    c_adj = tuple(set(np.nonzero(compatability_matrix[i, :])[0]) for i in range(m))
-
-    servers = [j for j in range(n) for _ in range(bpl)]
-    server_ids = [j_id for _ in range(n) for j_id in range(bpl)]
-    # print(servers)
-    # print(server_ids)
-
-    levels = [l for l in range(n) for _ in range(bpl)]
-    lev_loc = [l_id for _ in range(n) for l_id in range(bpl)]
-    # print(levels)
-    # print(lev_loc)
-
-    servers = list(zip(servers, server_ids))
-    locations = np.random.permutation(list(zip(levels, lev_loc)))
-
-    server_states = dict()
-    layer_states = dict((l, dict()) for l in range(n))
-
-    for (j, j_id), (l, l_id)  in zip(servers, locations):
-        # print((j, j_id), (l, l_id))
-        server_states[j, j_id] = (l, l_id, -1)
-        layer_states[l][l_id] = (j, j_id, -1)
-    #     for l, layer in layer_states.items():
-    #         print(l, ': ', [loc for loc in layer])
-    # for l, layer in layer_states.items():
-    #     print(l, ': ', [loc for loc in layer])
-
-    lost = np.zeros(m)
-
+    matching_counter = np.zeros((m,n))
+    idle_times = np.zeros((n, 3))
+    waiting_times = np.zeros((m, 3))
+    server_states = np.zeros(n, dtype=np.int8)
+    server_idled_at = np.zeros(n, dtype=np.float64)
     interarrival = 1./lamda
+    # service_time_idx = np.zeros((m, n), dtype=np.int32)
+    matches = 0
+    arrivals = 0
+    record = False
+    record_stat_time = 0
 
-    event_stream = []    
+    heapify(event_stream)
+    heappop(event_stream)
 
     for i in range(m):
-        hq.heappush(event_stream, (np.random.exponential(interarrival[i]), i, (-1, -1)))
+        heapify(customer_queues[i])
+        heappop(customer_queues[i])
 
-    matches = 0
-    ss = time()
+    for i in range(m):
+        heappush(event_stream, (np.random.exponential(interarrival[i]), i, -1))
 
-    while matches < sim_len:
+    while arrivals < sim_len:
 
-        event = hq.heappop(event_stream)
-        print(event)
+        event = heappop(event_stream)
+
         cur_time = event[0]
         i = event[1]
-        j, j_id = event[2]
+        j = event[2]
 
         if j == -1:
 
-            matched = False
+            arrivals = arrivals + 1
 
-            for _ in range(10):
+            if customer_queues[i]:
+                customer_queues[i].append(cur_time)
 
-                for l in range(n):
-
-                    l_id = np.random.randint(bpl)
-                    j, j_id, j_state = layer_states[l][l_id]
-                    
-                    print('customer {} at layer {} got server {}, {} at state {} at location {}'.format(i, l, j, j_id, j_state, l_id))
-                    if j in c_adj[i]:
-                        if j_state == -1:
-                            matched = True
-                            print('match customer {} with server {} at level {}'.format(i,j,l))
-                            matches += 1
-                            if matches > warm_up:
-                                matching_rates[i, j] += 1
-
-                            j_in, j_in_id, j_in_state = j, j_id, i
-
-                            for k in range(n-1, l, -1):
-
-                                k_id = np.random.randint(bpl)
-                                j_out, j_out_id, j_out_state = layer_states[k][k_id]
-
-                                layer_states[k][k_id] = (j_in, j_in_id, j_in_state)
-                                server_states[j_in, j_in_id] = (k, k_id, j_in_state)
-
-                                j_in, j_in_id, j_in_state = j_out, j_out_id, j_out_state
-
-                            
-                            layer_states[l][l_id] = (j, j_id, i)
-                            server_states[j, j_id] = (l, l_id, i)
-
-                            service_time = np.random.exponential(s[i]/mu[j])
-                            print(service_time)
-                            print('server {} {} will finish serving customer {} at time {}'.format(j, j_id, i, cur_time + service_time,))
-                            hq.heappush(event_stream, (cur_time + service_time, -1, (j, j_id)))
-                            if matches % 10000 == 0:
-                                print('at iteration {} after {}'.format(matches, time() - ss))
-                        
-                        # print('state at time {}'.format(k))
-                        # printarr(state, 'state')
-                        # printarr(sum_state,'mean_state')
-                        # printarr(sum_state_sq,'mean_state_sq')
-
-                        # print('server {} is removed form layer {}'.format(j, l))
-                            break
-                if matched:
-                    break
-                        
             else:
-                lost[i] +=1
 
-            hq.heappush(event_stream, (cur_time + np.random.exponential(interarrival[i]), i, (-1, -1)))
+                j = -1
+                longest_idle_time = 0
 
-        else:
-            
-            l, l_id, j_state = server_states[j, j_id]
-            server_states[j, j_id] = (l, l_id, -1)
-            layer_states[l, l_id] = (j, j_id, -1)
+                for s_j in c_adj[i]:
+                    if server_states[s_j] == 0:
+                        s_j_weighted_idle_time = w[i, s_j]
+                        if s_j_weighted_idle_time > longest_idle_time:
+                            j = s_j
+                            longest_idle_time =  s_j_weighted_idle_time
 
-            # print('server {} is added to layer {}'.format(j, n-1))
-        
-    # w = sim_len - warm_up
-    # mean_state = sum_state/w
-    # mean_state_stdev = ((sum_state_sq - (sum_state*sum_state)/w)/(w -1))**0.5
+                if j >= 0:
 
-    print(lost)
-
-    return matching_rates/matching_rates.sum()
-
-
-def ball_stacks5(compatability_matrix, lamda, mu, bpl, sim_len, warm_up, s=None):
-
-    m, n = compatability_matrix.shape
-
-    matching_rates = np.zeros((m, n))
-
-    if s is None:
-        s = np.ones(n)
-    s_adj = tuple(set(np.nonzero(compatability_matrix[:, j])[0]) for j in range(n))  # adjacency list for servers
-    c_adj = tuple(set(np.nonzero(compatability_matrix[i, :])[0]) for i in range(m))
-
-    servers = [j for j in range(n) for _ in range(bpl)]
-    server_ids = [j_id for _ in range(n) for j_id in range(bpl)]
-    # print(servers)
-    # print(server_ids)
-
-    levels = [l for l in range(n) for _ in range(bpl)]
-    lev_loc = [l_id for _ in range(n) for l_id in range(bpl)]
-    # print(levels)
-    # print(lev_loc)
-
-    servers = list(zip(servers, server_ids))
-    locations = np.random.permutation(list(zip(levels, lev_loc)))
-
-    server_states = dict()
-    layer_states = dict((l, dict()) for l in range(n))
-
-    for (j, j_id), (l, l_id)  in zip(servers, locations):
-        # print((j, j_id), (l, l_id))
-        server_states[j, j_id] = (l, l_id, -1)
-        layer_states[l][l_id] = (j, j_id, -1)
-    #     for l, layer in layer_states.items():
-    #         print(l, ': ', [loc for loc in layer])
-    # for l, layer in layer_states.items():
-    #     print(l, ': ', [loc for loc in layer])
-
-    lost = np.zeros(m)
-
-    interarrival = 1./lamda
-
-    event_stream = []    
-
-    for i in range(m):
-        hq.heappush(event_stream, (np.random.exponential(interarrival[i]), i, (-1, -1)))
-
-    matches = 0
-    ss = time()
-
-    while matches < sim_len:
-
-        event = hq.heappop(event_stream)
-        print(event)
-        cur_time = event[0]
-        i = event[1]
-        j, j_id = event[2]
-
-        if j == -1:
-
-            matched = False
-
-            for _ in range(10):
-
-                for l in range(n):
-
-                    l_id = np.random.randint(bpl)
-                    j, j_id, j_state = layer_states[l][l_id]
+                    matches = matches + 1
+                    if matches > warm_up:
+                        if not record:
+                            record = True
+                            record_stat_time = cur_time
+                        matching_counter[i, j] = matching_counter[i, j] + 1
+                        waiting_times[i] = waiting_times[i] + np.array([1, 0, 0])
+                        idle_time = cur_time - server_idled_at[j]
+                        idle_times[j, :] = idle_times[j, :] + np.array([1, idle_time, idle_time**2])
                     
-                    print('customer {} at layer {} got server {}, {} at state {} at location {}'.format(i, l, j, j_id, j_state, l_id))
-                    if j in c_adj[i]:
-                        if j_state == -1:
-                            matched = True
-                            print('match customer {} with server {} at level {}'.format(i,j,l))
-                            matches += 1
-                            if matches > warm_up:
-                                matching_rates[i, j] += 1
+                    server_states[j] = 1
+                    service_time = np.random.exponential(s[i]/mu[j])
+                    heappush(event_stream, (cur_time + service_time, i, j))
+                
+                else:
+                    customer_queues[i].append(cur_time)
 
-                            j_in, j_in_id, j_in_state = j, j_id, i
+            heappush(event_stream, (cur_time + np.random.exponential(interarrival[i]), i, -1))
+        
+        else:
 
-                            for k in range(n-1, l, -1):
+            i = -1
+            longest_waiting_time = 0
 
-                                k_id = np.random.randint(bpl)
-                                j_out, j_out_id, j_out_state = layer_states[k][k_id]
+            for c_i in s_adj[j]:
+                if customer_queues[c_i]:
+                    c_i_weighted_waiting_time =  w[c_i, j]
+                    if c_i_weighted_waiting_time > longest_waiting_time:
+                        i = c_i
+                        longest_waiting_time = c_i_weighted_waiting_time
 
-                                layer_states[k][k_id] = (j_in, j_in_id, j_in_state)
-                                server_states[j_in, j_in_id] = (k, k_id, j_in_state)
+            if i >= 0:
 
-                                j_in, j_in_id, j_in_state = j_out, j_out_id, j_out_state
+                arrival_time = heappop(customer_queues[i])
 
-                            
-                            layer_states[l][l_id] = (j, j_id, i)
-                            server_states[j, j_id] = (l, l_id, i)
+                matches = matches + 1
+                if matches > warm_up:
+                    if not record:
+                        record = True
+                        record_stat_time = cur_time
+                    matching_counter[i, j] = matching_counter[i,j] + 1
+                    waiting_time = cur_time - arrival_time
+                    waiting_times[i, :] = waiting_times[i, :] + np.array([1, waiting_time, waiting_time**2])
 
-                            service_time = np.random.exponential(s[i]/mu[j])
-                            print(service_time)
-                            print('server {} {} will finish serving customer {} at time {}'.format(j, j_id, i, cur_time + service_time,))
-                            hq.heappush(event_stream, (cur_time + service_time, -1, (j, j_id)))
-                            if matches % 10000 == 0:
-                                print('at iteration {} after {}'.format(matches, time() - ss))
-                        
-                        # print('state at time {}'.format(k))
-                        # printarr(state, 'state')
-                        # printarr(sum_state,'mean_state')
-                        # printarr(sum_state_sq,'mean_state_sq')
-
-                        # print('server {} is removed form layer {}'.format(j, l))
-                            break
-                if matched:
-                    break
-                        
+                service_time = np.random.exponential(s[i]/mu[j])
+                heappush(event_stream, (cur_time + service_time, i, j))
+            
             else:
-                lost[i] +=1
+                server_states[j] = 0
+                server_idled_at[j] = cur_time
 
-            hq.heappush(event_stream, (cur_time + np.random.exponential(interarrival[i]), i, (-1, -1)))
-
-        else:
-            
-            l, l_id, j_state = server_states[j, j_id]
-            server_states[j, j_id] = (l, l_id, -1)
-            layer_states[l, l_id] = (j, j_id, -1)
-
-            # print('server {} is added to layer {}'.format(j, n-1))
-        
-    # w = sim_len - warm_up
-    # mean_state = sum_state/w
-    # mean_state_stdev = ((sum_state_sq - (sum_state*sum_state)/w)/(w -1))**0.5
-
-    print(lost)
-
-    return matching_rates/matching_rates.sum()
+    return matching_counter/(cur_time - record_stat_time), waiting_times, idle_times
 
 
-
-
-
-# @jit(nopython=True, cache=True)
-# def queueing_sim_loop_old(customer_queues, event_stream, service_times, s_adj, c_adj, m, n, warm_up):
-
-#     matching_counter = np.zeros((m,n))
-#     idle_times = np.zeros((n, 3))
-#     waiting_times = np.zeros((m, 3))
-#     server_states = np.zeros(n, dtype=np.int8)
-#     server_idled_at = np.zeros(n, dtype=np.float64)
-#     service_time_idx = np.zeros((m, n), dtype=np.int32)
-#     matches = 0
-#     record = False
-#     record_stat_time = 0
-
-#     for i in range(m):
-#         heapify(customer_queues[i])
-#         heappop(customer_queues[i])
-
-#     heapify(event_stream)
-
-#     while event_stream:
-
-#         event = heappop(event_stream)
-
-
-#         cur_time = event[0]
-#         i = event[1]
-#         j = event[2]
-
-#         if j == -1:
-
-#             if customer_queues[i]:
-#                 customer_queues[i].append(cur_time)
-
-#             else:
-
-#                 j = -1
-#                 idled_time = cur_time
-
-#                 for s_j in c_adj[i]:
-#                     if server_states[s_j] == 0:
-#                         if server_idled_at[s_j] < idled_time:
-#                             j = s_j
-#                             idled_time = server_idled_at[s_j]
-
-#                 if j >= 0:
-
-#                     matches = matches + 1
-#                     if matches > warm_up:
-#                         if not record:
-#                             record = True
-#                             record_stat_time = cur_time
-#                         matching_counter[i, j] = matching_counter[i, j] + 1
-#                         waiting_times[i] = waiting_times[i] + np.array([1, 0, 0])
-#                         idle_time = cur_time - idled_time
-#                         idle_times[j, :] = idle_times[j, :] + np.array([1, idle_time, idle_time**2])
-                    
-#                     server_states[j] = 1
-#                     service_time = service_times[service_time_idx[i, j], i, j]
-#                     service_time_idx[i, j] = service_time_idx[i, j] + 1
-
-#                     heappush(event_stream, (cur_time + service_time, i, j))
-#                 else:
-#                     customer_queues[i].append(cur_time)
-#         else:
-
-#             i = -1
-#             time = cur_time
-
-#             for c_i in s_adj[j]:
-#                 if customer_queues[c_i]:
-#                     if customer_queues[c_i][0] < time:
-#                         i = c_i
-#                         time = customer_queues[c_i][0]
-
-#             if i >= 0:
-
-
-#                 arrival_time = heappop(customer_queues[i])
-
-#                 matches = matches + 1
-#                 if matches > warm_up:
-#                     if not record:
-#                         record = True
-#                         record_stat_time = cur_time
-#                     matching_counter[i, j] = matching_counter[i,j] + 1
-#                     waiting_time = cur_time - arrival_time
-#                     waiting_times[i, :] = waiting_times[i, :] + np.array([1, waiting_time, waiting_time**2])
-#                 service_time = service_times[service_time_idx[i, j], i, j]
-#                 service_time_idx[i, j] = service_time_idx[i, j] + 1
-
-#                 heappush(event_stream, (cur_time + service_time, i, j))
-#             else:
-#                 server_states[j] = 0
-#                 server_idled_at[j] = cur_time
-#     print(matching_counter.sum())
-#     return matching_counter/(cur_time - record_stat_time), waiting_times, idle_times
