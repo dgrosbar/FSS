@@ -963,7 +963,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 		_ = np.seterr({**def_est})
 		return pi_hat, lamda
 	except:
-		_ = np.seterr({**def_est})
+		_ = np.seterr(**def_est)
 		return None, None
 
 
