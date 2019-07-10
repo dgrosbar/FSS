@@ -1889,7 +1889,7 @@ def ot_sbpss_exp(filename ='FZ_final_w_qp'):
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(ot_spbss, exps)
                 sbpss_df = pd.concat(sbpss_dfs, axis=0)
-                write_df_to_file('ot_sbpss_df', sbpss_df)
+                write_df_to_file('ot_sbpss_df_test', sbpss_df)
                 exps = []
         else:
             if len(exps) > 0:
@@ -1897,7 +1897,7 @@ def ot_sbpss_exp(filename ='FZ_final_w_qp'):
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(ot_spbss, exps)
                 sbpss_df = pd.concat(sbpss_dfs, axis=0)
-                write_df_to_file('ot_sbpss_df', sbpss_df)
+                write_df_to_file('ot_sbpss_df_test', sbpss_df)
                 exps = []
 
 
@@ -1935,8 +1935,6 @@ def ot_spbss(exp, timestamp):
 
     for c_type in ['dist', 'rand']:
         for rho in [.6, .8, .9, .95]:
-
-            rho = 0.95
 
             lamda = rho * alpha
             mu = beta 
@@ -2015,6 +2013,8 @@ def ot_spbss(exp, timestamp):
                 r_fcfs_alis_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=False)
                 r_fcfs_alis_weighted_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=True)
 
+                printarr(r_fcfs_alis_ot, 'r_fcfs_alis_ot')
+                printarr(r_fcfs_alis_weighted_ot, 'r_fcfs_alis_weighted_ot')
                 if r_fcfs_alis_ot is not None and r_fcfs_alis_ot is not None:
 
                     r_fcfs_alis_ot = r_fcfs_alis_ot[:m, :]
@@ -2062,15 +2062,7 @@ def ot_spbss(exp, timestamp):
     ot_sbpss_df = pd.concat(dfs, axis=0)
 
     return ot_sbpss_df
-    # write_df_to_file()
-    # df.to_csv('ot_exp1.csv', index=False)
-    # df_i = df[['i','policy','gamma','sim_waiting_times', 'lamda']].drop_duplicates()
-    # df_i.loc[:, 'wt_x_r'] = df_i['lamda']*df_i['sim_waiting_times']
-    # df_wt = df_i[['policy','gamma','wt_x_r']].groupby(by=['policy','gamma'], as_index=False).sum().rename(columns={'wt_x_r': 'wt'})
-    # df.loc[:, 'r_c'] = df['sim_matching_rates'] * df['c']
-    # df_c = df[['policy', 'gamma', 'r_c']].groupby(by=['policy', 'gamma'], as_index=False).sum()
-    # df_res = pd.merge(left=df_wt, right=df_c, how='left', on=['policy', 'gamma'])
-    # print(df_res)
+
 
 # def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, only_w = False,prt=False, sims=30, sim_len=None, warm_up=None, seed=None, sim_name='sim', per_edge=1000, prt_all=False)
 

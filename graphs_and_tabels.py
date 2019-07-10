@@ -1750,7 +1750,24 @@ def increasing_n_res(filename='increasing_n_system'):
     
     df = pd.read_csv(filename + '.csv')
 
-    
+
+def ot_graph(filename='ot_sbpss_df'):
+
+    base_cols = ['density_level', 'exp_no', 'beta_dist', 'c_type', 'rho', 'gamma', 'policy']
+
+    df= pd.read_csv(filename + '.csv')
+    for col in df.columns.values:
+        print(col)
+
+    print(df[['gamma']].drop_duplicates())
+    df_i = df[['i', 'lamda', 'sim_waiting_times'] + base_cols].drop_duplicates()
+    df_i.loc[:, 'wt_x_r'] = df_i['lamda']*df_i['sim_waiting_times']
+    df_wt = df_i[base_cols +['wt_x_r']].groupby(by=base_cols, as_index=False).sum().rename(columns={'wt_x_r': 'wt'})
+    df.loc[:, 'r_c'] = df['sim_matching_rates'] * df['c']
+    df_c = df[base_cols + ['r_c']].groupby(by=base_cols, as_index=False).sum()
+    df_res = pd.merge(left=df_wt, right=df_c, how='left', on=base_cols)
+    print(df_res)
+   
 
 if __name__ == '__main__':
 
@@ -1762,7 +1779,7 @@ if __name__ == '__main__':
 
     # increasing_n_res()
     # ims_table('FZ_final_w_qp')
-    growing_chains_graph()
+    ot_graph()
 
     # comparison_table_grids()
     # growing_chains_graph()

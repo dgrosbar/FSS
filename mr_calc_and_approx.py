@@ -964,10 +964,11 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 		if prt:
 			print('ended fast primal-dual algorithm after ' + str(i) + ' iterations')
 			print('run time:', time() - s, 'seconds')
-		_ = np.seterr({**def_est})
+		_ = np.seterr(**def_est)
 		return pi_hat, lamda
 	except:
 		_ = np.seterr(**def_est)
+		print('encountered numerical issuse aborting')
 		return None, None
 
 
@@ -1279,11 +1280,9 @@ def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 
 	else:
 		pi_0 = None
 
-
-
 	A, b, z , pi_0 = metrize_constraintes(q, eta, mu, z, pi_0)
 
-	eta_w, _ = fast_primal_dual_algorithm(compatability_matrix, A, b, z, m + 1, n, pi0=pi_0, act_rows=None , check_every=10**3, max_iter=10**8, epsilon=10**-6, prt=False, prtall=False)
+	eta_w, _ = fast_primal_dual_algorithm(compatability_matrix, A, b, z, m + 1, n, pi0=pi_0, act_rows=None , check_every=10**3, max_iter=10**8, epsilon=10**-6, prt=True, prtall=False)
 	if eta_w is not None:
 		m_n_eta_w = np.zeros((m + 1, n))
 		for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
