@@ -4,6 +4,8 @@ from math import floor
 from scipy import sparse as sps
 import os
 import datetime as dt
+import numba
+
 
 def printcols(df):
 	
@@ -31,6 +33,7 @@ def fast_choice(arr, size, shuffle=False):
     if shuffle:
         np.random.shuffle(idx)
     return [arr[x] for x in idx]
+
 
 def sp_unique(sp_matrix, axis=0):
     ''' Returns a sparse matrix with the unique rows (axis=0)
@@ -75,12 +78,15 @@ def write_df_to_file(filename, df):
             df.to_csv(file, index=False)
 
 
-def log_res_to_df(compatability_matrix, alpha=None, beta=None, lamda=None, s = None, mu=None, result_dict=None, timestamp=None, aux_data=None):
+def log_res_to_df(compatability_matrix, alpha=None, beta=None, lamda=None, s = None, mu=None, result_dict=None, timestamp=None, add_aux_data=None):
 
     if timestamp is None:
         timestamp = dt.datetime.now() 
     m, n = compatability_matrix.shape
     nnz = compatability_matrix.nonzero()
+
+    if s is None:
+        s = np.ones(m)
 
     def prep_data_for_df(data, data_struc):
 
@@ -122,8 +128,8 @@ def log_res_to_df(compatability_matrix, alpha=None, beta=None, lamda=None, s = N
     res_df.loc[:, 'm'] = m
     res_df.loc[:, 'n'] = n
     
-    if aux_data is not None:
-        for key, val in aux_data.items():
+    if add_aux_data is not None:
+        for key, val in add_aux_data.items():
             res_df.loc[:, key] = val
 
     return res_df
@@ -156,4 +162,6 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
     print('File {} uploaded to {}.'.format(
         source_file_name,
         destination_blob_name))
+
+
 

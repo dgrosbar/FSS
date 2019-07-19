@@ -791,7 +791,7 @@ def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	return(np.dot(np.diag(lamda[: m - 1]), pi_hat[: m-1, :]))
 
 
-def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**9, max_time=600, epsilon=10**-6, prt=False, prtall=False):
+def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**7, max_time=600, epsilon=10**-6, prt=False, prtall=False):
 
 	# m_p_n_p_1, m_p_1_t_n = A.shape
 	# pi_k = np.zeros((m_p_1_t_n, ))
@@ -972,23 +972,6 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 		return None, None
 
 
-# def adaptive_triangles(A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**8, epsilon=10**-6, prt=False, prtall=False):
-
-# 	phi
-
-# 	nr, nc = A.shape
-# 	L = 2.
-# 	alpha = 0
-# 	lamda = np.zeros(nr)
-# 	zeta = np.zeros(nr)
-# 	eta = np.zeros(nr)
-# 	for k in (max_iter):
-# 		M = L/2.
-# 		while True:
-
-# 			alpha = max() k
-
-
 def quadratic_approximation(compatability_matrix, alpha, beta, prt=False, pad=False):
 
 	if pad:
@@ -1125,7 +1108,7 @@ def alis_approximation(compatability_matrix, alpha, beta, rho):
 	return r
 
 
-def fast_alis_approximation(compatability_matrix, alpha, beta, rho):
+def fast_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=10, max_time=600):
 
 
 	m, n = compatability_matrix.shape
@@ -1133,22 +1116,26 @@ def fast_alis_approximation(compatability_matrix, alpha, beta, rho):
 	col_sums = n * (np.ones(n)/n * (1 - rho) + beta * rho)
 
 	p = np.vstack([beta for _ in range(n)])
-
 	p = fast_matrix_scaling(p, np.ones(n), col_sums, m, n)
-	s = time()
 
 	converge = False
-	iter_k = 1
+	timed_out = False
 
-	while not converge:
+	iter_k = 1
+	start_time = time()
+
+	while not converge and not timed_out:
 		prev_p = p
 		q = p_to_q(p, compatability_matrix, alpha, m, n)
 		qq = q[..., None] 
 		pp = p[:, None, :]
 		p = r_to_p(compatability_matrix, pp, qq, p, n)
 		p = fast_matrix_scaling(p, np.ones(n), col_sums, m, n)
-		if np.abs(prev_p - p).sum() < 10**-9:
-			converge = True
+		if iter_k > 0 and iter_k % check_every == 0:
+			if np.abs(prev_p - p).sum() < 10**-6:
+				converge = True
+			if time() - start_time > max_time:
+				timed_out = True
 		iter_k = iter_k + 1
 
 	q = p_to_q(p, compatability_matrix, alpha, m, n)
@@ -1161,7 +1148,7 @@ def fast_alis_approximation(compatability_matrix, alpha, beta, rho):
 @jit(nopython=True, cache=True)
 def p_to_q(p, compatability_matrix, alpha, m, n):
 
-	# q is an n x m 
+
 	q = (np.ones((n, m)) - np.dot(compatability_matrix, p.T)).T
 	
 	for ell in range(1, n, 1):
@@ -1263,8 +1250,8 @@ def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 
 		w = (np.vstack([compatability_matrix, np.ones(n)]).sum()/w.sum()) * w
 	else:
 		w = np.vstack([compatability_matrix, np.ones(n)])
-	
-	w = ((1 - gamma)/gamma) * w
+	if gamma > 0:
+		w = ((1 - gamma)/gamma) * w
 
 	compatability_matrix = np.vstack([compatability_matrix, np.ones((1, n))])
 	
@@ -1288,22 +1275,9 @@ def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 
 		for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
 			m_n_eta_w[i,j] = eta_w[col]
 		eta_w = m_n_eta_w
-		# printarr(eta_w, 'eta_w')
-		# printarr(eta_w.sum(axis=0))
-		# printarr(eta_w.sum(axis=1))
-		# printarr(eta_w, 'eta_w')
 		eta = np.divide(eta_w, w, out=np.zeros_like(compatability_matrix), where= w!= 0)
-		# printarr(eta, 'eta')
-		# printarr(eta.sum(axis=1)/rho, 'row_sums')
-		# printarr(eta.sum(axis=0), 'col_sums')
-
-
 		r = np.divide(eta, np.dot(np.diag(s), compatability_matrix), out=np.zeros_like(compatability_matrix), where= w!= 0)
-		# printarr(r, 'r')
-		# printarr(r.sum(axis=1)/rho, 'row_sums')
-		# printarr(r.sum(axis=0), 'row_sums')
 
-		
 		return r, w
 	else:
 		return None, None

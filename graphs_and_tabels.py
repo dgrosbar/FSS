@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import sys
 from itertools import product
 from utilities import printarr, printcols
+from math import exp
 
 
 def comparison_graph(filename):
@@ -611,6 +612,7 @@ def growing_chains_graph(filename='growing_chains_new2'):
     print(res_agg.sort_values(by=['k','n']))
     print(res_agg.sort_values(by=['n','k']))
 
+
 def ims_table(filename):
 
 
@@ -1188,12 +1190,15 @@ def sbpss_graph4(filename='FZ_Kaplan_exp_sbpss_good_w_alis_sum'):
             ax[row].plot(x, [ims_errors[density_level][1]]*len(x), color='black', linewidth=1, linestyle='-.', label='QP Error for IMS')
             ax[row].plot(x, [ims_errors[density_level][2]]*len(x), color='green', linewidth=1, linestyle='-', label='MaxEnt Error for IMS')
 
-    ax[0].set_ylabel('Sum of Absoulte Errors / Sum of Arrival Rates ', fontsize=12)
-    fig.suptitle('Graph Density', fontsize=16)
+    ax[0].set_ylabel('Sum of Absoulte Errors / Sum of Arrival Rates ', fontsize=16)
+    fig.suptitle('Graph Density', fontsize=24)
     for i in range(3):
-        ax[i].set_xlabel('utilization', fontsize=12)
+        ax[i].set_xlabel('utilization', fontsize=16)
         ax[i].set_xlim(0, 1)
-        ax[i].set_ylim(0, .5)
+        ax[i].set_ylim(0.001, .5)
+
+    plt.rc('xtick',labelsize=14)
+    plt.rc('ytick',labelsize=14)
 
     handles,labels = ax[0].get_legend_handles_labels()
 
@@ -1751,23 +1756,126 @@ def increasing_n_res(filename='increasing_n_system'):
     df = pd.read_csv(filename + '.csv')
 
 
-def ot_graph(filename='ot_sbpss_df'):
+# def ot_graph(filename='ot_sbpss_res'):
 
-    base_cols = ['density_level', 'exp_no', 'beta_dist', 'c_type', 'rho', 'gamma', 'policy']
+#     base_cols = ['density_level', 'exp_no', 'beta_dist', 'c_type', 'rho', 'policy','gamma']
+
+#     df= pd.read_csv(filename + '.csv')
+#     # for col in df.columns.values:
+#     #     print(col)
+
+#     # print(df[['gamma']].drop_duplicates())
+#     # df_i = df[['i', 'lamda', '','sim_waiting_times'] + base_cols].drop_duplicates()
+#     # df_i.loc[:, 'wt_x_r'] = df_i['lamda']*df_i['sim_waiting_times']
+#     # df_wt = df_i[base_cols +['wt_x_r']].groupby(by=base_cols, as_index=False).sum().rename(columns={'wt_x_r': 'wt'})
+#     # df.loc[:, 'r_c'] = df['sim_matching_rates'] * df['c']
+#     # df_c = df[base_cols + ['r_c']].groupby(by=base_cols, as_index=False).sum()
+#     # df_res = pd.merge(left=df_wt, right=df_c, how='left', on=base_cols)
+#     print(df.sort_values(by=base_cols))
+   
+def ot_graph(filename='ot_sbpss_res', dl='low', exp_no=12, beta_dist='exponential', c_type='dist', rho=0.9, log_scale=False, rhos=None):
 
     df= pd.read_csv(filename + '.csv')
-    for col in df.columns.values:
-        print(col)
+    dl = 'low'
+    exp_no = 12
+    beta_dist = 'exponential'
+    c_type = 'dist'
+    rhos = [0.9] if rhos is  None else rhos
 
-    print(df[['gamma']].drop_duplicates())
-    df_i = df[['i', 'lamda', 'sim_waiting_times'] + base_cols].drop_duplicates()
-    df_i.loc[:, 'wt_x_r'] = df_i['lamda']*df_i['sim_waiting_times']
-    df_wt = df_i[base_cols +['wt_x_r']].groupby(by=base_cols, as_index=False).sum().rename(columns={'wt_x_r': 'wt'})
-    df.loc[:, 'r_c'] = df['sim_matching_rates'] * df['c']
-    df_c = df[base_cols + ['r_c']].groupby(by=base_cols, as_index=False).sum()
-    df_res = pd.merge(left=df_wt, right=df_c, how='left', on=base_cols)
-    print(df_res)
-   
+    base_cols = ['density_level', 'graph_no', 'exp_no', 'beta_dist', 'c_type', 'rho', 'policy','gamma']
+    fig, ax = plt.subplots(1, 1)
+
+    # for col in df.columns.values:
+    #     print(col)
+    df = df[df['density_level'] == dl]
+    df = df[df['exp_no'] == exp_no]
+    df = df[df['beta_dist'] == beta_dist]
+    df = df[df['c_type'] == c_type]
+    df = pd.concat([df[df['rho'] == rho] for rho in rhos])
+
+    colors = {'fcfs_ot': 'red', 'fcfs_weighted_ot': 'blue', 'greedy': 'black', 'fcfs_alis': 'black'}
+
+    if log_scale:
+
+        max_wt = np.log(max(df[df['policy'] != 'greedy']['wt']))
+        min_wt = np.log(min(df[df['policy'] != 'greedy']['wt']))
+        min_c = min(np.log(df[df['policy'] == 'greedy']['r_c']))
+
+    else: 
+
+        max_wt = max(df[df['policy'] != 'greedy']['wt'])
+        min_wt = min(df[df['policy'] != 'greedy']['wt'])
+        min_c = min(df[df['policy'] == 'greedy']['r_c'])
+
+    for (policy, rho), exp in df.groupby(by=['policy', 'rho'], as_index=False):
+
+        if rho in [0.9]:
+            if policy != 'greedy':
+                if log_scale:
+                    x = list(np.log(exp['wt']))
+                    y = list(np.log(exp['r_c']))
+                else:
+                    x = list(exp['wt'])
+                    y = list(exp['r_c'])
+                ax.scatter(x, y, color = colors[policy])
+                if rho == 0.6:
+                    ax.plot(x, y,  label=policy)
+                else:
+                    ax.plot(x, y, color = colors[policy])
+
+                for i, txt  in enumerate(exp['gamma']):
+                    if i % 1 == 0:
+                        ax.annotate("%.2f" % txt, (x[i], y[i]))
+
+            if policy == 'greedy' and rho ==0.6:
+                ax.plot([min_wt, max_wt],[min_c, min_c] , label='greedy cost', linestyle = '--',color = colors[policy])
+
+
+            ax.set_xlabel('log(Waiting Time)', fontsize=16)
+            ax.set_ylabel('log(Cost)', fontsize=16)
+
+    ax.set_xlim(min_wt-1, max_wt+1)
+
+
+
+    plt.legend()
+
+    plt.show()
+    # print(df[['gamma']].drop_duplicates())
+    # df_i = df[['i', 'lamda', '','sim_waiting_times'] + base_cols].drop_duplicates()
+    # df_i.loc[:, 'wt_x_r'] = df_i['lamda']*df_i['sim_waiting_times']
+    # df_wt = df_i[base_cols +['wt_x_r']].groupby(by=base_cols, as_index=False).sum().rename(columns={'wt_x_r': 'wt'})
+    # df.loc[:, 'r_c'] = df['sim_matching_rates'] * df['c']
+    # df_c = df[base_cols + ['r_c']].groupby(by=base_cols, as_index=False).sum()
+    # df_res = pd.merge(left=df_wt, right=df_c, how='left', on=base_cols)
+    # print(df.sort_values(by=base_cols))
+
+def batching_window():
+
+
+    x = np.array(range(70))
+    y = np.array([0.2 + 1-exp(-i*0.1) for i in range(70)])
+    fig, ax = plt.subplots(1, 1)
+
+    ax.plot(x, y, linewidth=3, color='black')
+    ax.plot(x, [1.22]*70, linewidth=1, color='black', linestyle='--')
+
+    ax.set_xlabel('Batching Window Size', fontsize=16)
+    ax.set_ylabel('Revenue Rate', fontsize=16)
+
+    ax.set_xticks([0, 69])
+    ax.set_xticklabels(['0', 'T'], fontsize=16)
+    ax.set_yticks([0, 1.22])
+    ax.set_yticklabels(['', ''], fontsize=16)
+
+    ax.text(0.01, 0.1, 'Non Idling Policy', fontsize=14, horizontalalignment='left')
+    ax.text(45, 1.23, 'Optimal Transport', fontsize=14, horizontalalignment='center')
+    ax.set_ylim(0, 1.5)
+    ax.set_xlim(-1, 71)
+
+    plt.show()
+
+
 
 if __name__ == '__main__':
 
@@ -1777,6 +1885,7 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
+    # batching_window()
     # increasing_n_res()
     # ims_table('FZ_final_w_qp')
     ot_graph()

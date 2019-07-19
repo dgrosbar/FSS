@@ -25,8 +25,8 @@ def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):
 
     def dist_mod_k(ix, iy, jx, jy, k,  p=1):
 
-        dx = min((np.abs(ix - jx)), (np.abs(ix + k - jx)))
-        dy = min((np.abs(iy - jy)), (np.abs(iy + k - jy)))
+        dx = min(np.abs(ix - jx), np.abs(ix + k - jx), np.abs(jx + k - ix))
+        dy = min(np.abs(iy - jy), np.abs(iy + k - jy), np.abs(jy + k - iy))
 
         return (dx**p + dy**p)**(1./p)
 
@@ -41,8 +41,11 @@ def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):
 
     edges = set(
         ((ix, iy), (jx, jy)) 
-        for ((ix, iy), (jx, jy)) in product(nodes,nodes)
+        for ((ix, iy), (jx, jy)) in product(nodes, nodes)
         if dist_func(ix, iy, jx, jy, m) <=d )
+    
+    # for ((ix, iy), (jx, jy)) in product(nodes, nodes):
+    #     print((ix, iy), (jx, jy), min(np.abs(ix - jx), np.abs(ix + m - jx), np.abs(jx + m - ix)), min(np.abs(iy - jy), np.abs(iy + m - jy), np.abs(jy + m - iy)) ,dist_func(ix, iy, jx, jy, m))
 
     g.add_edges_from(edges)
 

@@ -147,16 +147,19 @@ def grids_exp_for_parallel(filename='grids_exp_parallel_new3', p=1):
     pool = mp.Pool(processes=p)
     for structure in ['torus']:
 
-        for sqrt_m, d  in zip([30], [3]):
+        for sqrt_m, d  in zip([30, 9, 3], [3, 2, 1]):
 
             aux_data = {'size': str(sqrt_m) + 'x' + str(sqrt_m), 'arc_dist': d, 'structure': structure}
             exact = False
             m = sqrt_m**2
             k = 0
+            
             while k < 30:
+            
                 valid = False
                 exps = []
                 exps_no = []
+            
                 while len(exps) < p:
 
                     alpha = np.random.exponential(scale=1, size=sqrt_m**2) # obtain values for non normelized customer frecompatability_matrixuency       
@@ -1210,14 +1213,16 @@ def go_back_and_approximate_grids_sbpss(p, filename='grid_exp_new_final_undone')
     pool = mp.Pool(processes=p, maxtasksperchild=1)
     for n in [900]:
         for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
-            if len(exps) < p-1:
-                exps.append([exp, timestamp])
-            elif len(exps) == p-1:
-                exps.append([exp, timestamp])
-                print('no_of_exps:', len(exps), 'n:', n)
-                print('starting work with {} cpus'.format(p))
-                sbpss_df = pool.starmap(grid_sbpss, exps)
-                exps = []
+            grid_sbpss(exp, timestamp)
+            break
+            # if len(exps) < p-1:
+            #     exps.append([exp, timestamp])
+            # elif len(exps) == p-1:
+            #     exps.append([exp, timestamp])
+            #     print('no_of_exps:', len(exps), 'n:', n)
+            #     print('starting work with {} cpus'.format(p))
+            #     sbpss_df = pool.starmap(grid_sbpss, exps)
+            #     exps = []
         
         
 def approximate_sbpss(exp, timestamp):
@@ -1798,8 +1803,6 @@ def grid_sbpss(exp, timestamp):
     structure = exp_data['structure'].iloc[0]
     exp_no = exp_data['exp_no'].iloc[0]
 
-
-
     alpha = np.zeros(m)
     beta = np.zeros(n)
     compatability_matrix = np.zeros((m,n))
@@ -1842,7 +1845,7 @@ def grid_sbpss(exp, timestamp):
         exp_res['aux']['rho'] = rho
         exp_res['aux']['one'] = 1.0 
         sbpss_df = log_res_to_df(compatability_matrix, alpha=alpha, beta=beta, lamda=lamda, s = None, mu=mu, result_dict=exp_res, timestamp=timestamp, aux_data=None)
-        write_df_to_file('grids_sbpss_fixed', sbpss_df)
+        write_df_to_file('grids_sbpss_fixed_test_sim2', sbpss_df)
         gc.collect()
     return 'done'
 
@@ -2077,10 +2080,20 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    ot_sbpss_exp()
+    # ot_sbpss_exp()
 
+    # run_assignmet(1000, 10**6)
     # growing_chains_exp()
-    # go_back_and_approximate_grids_sbpss(3)
+    # n = 12
+    # k = 5
+    # cm, _ = generate_grid_compatability_matrix(n, k)
+
+    # printarr(cm.sum(axis=0).reshape((n,n)))
+    # printarr(cm.sum(axis=1).reshape((n,n)))
+
+    # print(cm.shape)
+
+    go_back_and_approximate_grids_sbpss(3)
     # increasing_n_system()
     # go_back_and_approximate_sbpss_customer_dependet()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')
@@ -2116,6 +2129,19 @@ if __name__ == '__main__':
     # mu = np.ones(n)/n
     # beta = mu
 
+    # rho = 1
+    # compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
+    # m , n = compatability_matrix.shape
+    # lamda = alpha
+    # mu = beta
+    # sim_len = 2*10**6
+    # warm_up = 1*10**6
+    # res = simulate_sparse_queueing_system(compatability_matrix, lamda, mu)
+
+    # printarr(res['mat']['sim_matching_rates'], 'sim_mr')
+    # mre  = adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta)
+    # printarr(mre, 'exact_mr')
+
     if False:
         rho = 0.6
         gamma = 0.5
@@ -2139,6 +2165,7 @@ if __name__ == '__main__':
         s = np.ones(m)
 
         mr = entropy_approximation(compatability_matrix, lamda * rho, mu, pad=True)
+        
         # printarr(mr, 'mr')
 
         # for i in range(1, 20, 1):
@@ -2176,6 +2203,7 @@ if __name__ == '__main__':
             mrot_sk, w = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=True)
             q = np.divide(compatability_matrix_pad, w, out=np.zeros_like(compatability_matrix_pad), where=compatability_matrix_pad != 0)
             printarr(mrot_sk[:6], 'mrot_sk')
+            
             # printarr(q, 'q')
             # printarr(w, 'w')
             # z = ((1-gamma)/gamma) * np.exp((-gamma/(1-gamma))*c_pad) * compatability_matrix_pad
