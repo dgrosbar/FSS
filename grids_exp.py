@@ -96,7 +96,7 @@ def grids_exp_for_parallel(filename, p=3):
     
     for structure in ['torus']:
 
-        for sqrt_m, d  in zip([3], [1]): #zip([30, 9, 3], [3, 2, 1]):
+        for sqrt_m, d  in zip([30, 9, 3], [3, 2, 1]):
 
             aux_exp_data = {'size': str(sqrt_m) + 'x' + str(sqrt_m), 'arc_dist': d, 'structure': structure}
             exact = False
@@ -152,7 +152,7 @@ def sbpss_exp(compatability_matrix, alpha, beta, timestamp=None, aux_exp_data=No
     res_df = []
 
 
-    for rho in [0.1, 0.2]:#[0.1*i for i in range(1, 10, 1)] + [.95, .99, 1]:
+    for rho in [0.1*i for i in range(1, 10, 1)] + [.95, .99, 1]:
 
         st = time()
         lamda = alpha * rho
@@ -160,9 +160,9 @@ def sbpss_exp(compatability_matrix, alpha, beta, timestamp=None, aux_exp_data=No
         pad_lamda = np.append(alpha*rho, 1. - rho)
 
         if rho == 1:
-            exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt_all=False, prt=True)
+            exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt_all=True, prt=True)
         else:
-            exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=False, prt=True)
+            exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=True, prt=True)
         
         fcfs_approx = fast_entropy_approximation(compatability_matrix, lamda, mu, pad=(rho < 1))
         q_fcfs = fcfs_approx * (1./mu - fcfs_approx.sum(axis=0))
@@ -229,7 +229,7 @@ def spbss_ot_exp(compatability_matrix, alpha, beta, timestamp=None, aux_exp_data
 
     for c_type in ['dist', 'rand']:
 
-        for rho in [.6,]:# .8, .9, .95]:
+        for rho in [.6, .8, .9, .95]:
 
             lamda = rho * alpha
             mu = beta 
@@ -265,17 +265,16 @@ def spbss_ot_exp(compatability_matrix, alpha, beta, timestamp=None, aux_exp_data
             ent_diff = max_ent - min_ent
             c = (ent_diff/c_diff) * c
 
-            print(c.shape, compatability_matrix.shape)
          
             w_greedy = np.divide(np.ones(c.shape), c, out=np.zeros_like(c), where=(c != 0))
-            sim_res_greedy = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_greedy, w_only=True)
+            sim_res_greedy = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_greedy, w_only=True,  prt_all=True, prt=True)
             sim_res_greedy = log_ot_data(sim_res_greedy, c, c , 0 * compatability_matrix, 1, 'greedy', rho, c_type)
 
             df_greedy = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_greedy, timestamp, aux_exp_data)
             write_df_to_file(filename, df_greedy)
             
-            # for gamma in [0.05 * i for i in range(1, 18, 1)]:
-            for gamma in [0.1 ,0.2]:#* i for i in range(1, 10, 1)]:
+            for gamma in [0.1 * i for i in range(1, 10, 1)]:
+            # for gamma in [0.1] + [0.2 * i for i in range(1, 5, 1)]:
 
                 print('gamma:', gamma, ' rho:', rho, ' c_type:', c_type, aux_exp_data['structure'], ' exp_no: ', aux_exp_data['exp_no'])
 
@@ -293,7 +292,7 @@ def spbss_ot_exp(compatability_matrix, alpha, beta, timestamp=None, aux_exp_data
                     q_fcfs_ot = q_fcfs_ot/q_fcfs_ot.sum(axis=0)
                     w_fcfs_ot = np.divide(q_fcfs_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
 
-                    sim_res_fcfs_alis_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_ot, prt_all=False, prt=True)
+                    sim_res_fcfs_alis_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_ot, prt_all=True, prt=True)
                     sim_res_fcfs_alis_ot = log_ot_data(sim_res_fcfs_alis_ot, c, w_fcfs_ot , q_fcfs_ot, gamma, 'fcfs_alis_ot', rho, c_type)
                     df_fcfs_alis_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_ot, timestamp, aux_exp_data)
                     write_df_to_file(filename, df_fcfs_alis_ot)
@@ -303,7 +302,7 @@ def spbss_ot_exp(compatability_matrix, alpha, beta, timestamp=None, aux_exp_data
                     q_fcfs_weighted_ot = q_fcfs_weighted_ot/q_fcfs_weighted_ot.sum(axis=0)
                     w_fcfs_weighted_ot  = np.divide(q_fcfs_weighted_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
 
-                    sim_res_fcfs_alis_weighted_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted_ot, prt_all=False, prt=True)
+                    sim_res_fcfs_alis_weighted_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted_ot, prt_all=True, prt=True)
                     sim_res_fcfs_alis_weighted_ot = log_ot_data(sim_res_fcfs_alis_weighted_ot, c, w_fcfs_weighted_ot,  q_fcfs_weighted_ot, gamma, 'weighted_fcfs_alis_ot', rho, c_type,)
                     df_fcfs_alis_weighted_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_weighted_ot, timestamp, aux_exp_data)
                     write_df_to_file(filename, df_fcfs_alis_weighted_ot)

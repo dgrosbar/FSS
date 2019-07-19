@@ -18,7 +18,7 @@ from numba import types
 from numba.typed import Dict, List
 
 
-def simulate_matching_sequance(compatability_matrix, alpha, beta, prt=True, prt_all=False,sims=30, sim_len=None, seed=None,  p=None, per_edge=1000):
+def simulate_matching_sequance(compatability_matrix, alpha, beta, prt=True, prt_all=False,sims=30, sim_len=None, seed=None,  p=None, per_edge=500):
 
     m = len(alpha)  # m- number of servers
     n = len(beta)  # n - number of customers 
@@ -180,7 +180,7 @@ def matching_sim_loop(customer_queues, server_queues, cum_alpha, cum_beta, s_adj
     return matching_counter/matching_counter.sum()
 
 
-def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_only=False, prt=False, sims=30, sim_len=None, warm_up=None, seed=None, per_edge=1000, prt_all=False, p=None):
+def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_only=False, prt=False, sims=30, sim_len=None, warm_up=None, seed=None, per_edge=500, prt_all=False, p=None):
 
 
     m = len(lamda)  # m- number of servers
