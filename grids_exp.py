@@ -151,7 +151,7 @@ def grids_exp_for_parallel(p=30):
             pool.join()
 
 
-def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss', ot_filename='new_grid_sbpss_ot'):
+def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='new_grid_sbpss_ot3'):
 
     compatability_matrix, g = generate_grid_compatability_matrix(sqrt_m, d)
     m, n = compatability_matrix.shape
