@@ -791,7 +791,7 @@ def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	return(np.dot(np.diag(lamda[: m - 1]), pi_hat[: m-1, :]))
 
 
-def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**7, max_time=600, epsilon=10**-6, prt=False, prtall=False):
+def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**8, max_time=600, epsilon=10**-6, prt=False, prtall=False):
 
 	# m_p_n_p_1, m_p_1_t_n = A.shape
 	# pi_k = np.zeros((m_p_1_t_n, ))
@@ -856,8 +856,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 	try:
 		while not flag:
 
-			
-			
+		
 			m_p_n_p_1, m_p_1_t_n = A.shape
 			At = A.transpose()
 			pi_k = np.zeros((m_p_1_t_n, ))
@@ -869,8 +868,6 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 			zeta = np.zeros((m_p_n_p_1, ))
 			ze = z * exp(-1.0)
 			v = np.amin(z[np.where(z > 0)])
-
-
 
 			for i in np.arange(max_iter):
 

@@ -87,7 +87,7 @@ BASE_EXAMPLES = {
 }
 
 
-def grids_exp_for_parallel(filename, p=3):
+def grids_exp_for_parallel(p=30):
 
     jt_perm_dict = {9: list(jpermute(range(9)))}
     print_progress = True
@@ -124,7 +124,7 @@ def grids_exp_for_parallel(filename, p=3):
                         print(k-1, str(sqrt_m) + 'x' + str(sqrt_m), 'd=', arc_dist)
                         print('-'*75)
                         aux_exp_data['exp_no'] = k
-                        exps.append([compatability_matrix, alpha, beta, dt.datetime.now(), copy(aux_exp_data), 'new_grid_sbpss'])
+                        exps.append([compatability_matrix, alpha, beta, dt.datetime.now(), copy(aux_exp_data), 'new_grid_sbpss2'])
                         exps_ot.append([compatability_matrix, alpha, beta, dt.datetime.now(), copy(aux_exp_data), 'new_grid_sbpss_ot'])
                         k += 1
                 pool = mp.Pool(processes=p)
@@ -152,7 +152,7 @@ def sbpss_exp(compatability_matrix, alpha, beta, timestamp=None, aux_exp_data=No
     res_df = []
 
 
-    for rho in [0.1*i for i in range(1, 10, 1)] + [.95, .99, 1]:
+    for rho in [0.6, 0.7, 0.8, 0.9] + [.95, .99, 1] + [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
 
         st = time()
         lamda = alpha * rho
@@ -186,19 +186,20 @@ def sbpss_exp(compatability_matrix, alpha, beta, timestamp=None, aux_exp_data=No
         if rho >= 0.6 and rho < 1:
             
             r_fcfs_weighted, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 0, weighted=True)
-            r_fcfs_weighted = r_fcfs_weighted[:m, :]
-            q_fcfs_weighted = r_fcfs_weighted * (1./mu - r_fcfs_weighted.sum(axis=0))
-            q_fcfs_weighted = q_fcfs_weighted/q_fcfs_weighted.sum(axis=0)
-            w_fcfs_weighted  = np.divide(q_fcfs_weighted, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
-            w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted)
+            if r_fcfs_weighted is not None:
+                r_fcfs_weighted = r_fcfs_weighted[:m, :]
+                q_fcfs_weighted = r_fcfs_weighted * (1./mu - r_fcfs_weighted.sum(axis=0))
+                q_fcfs_weighted = q_fcfs_weighted/q_fcfs_weighted.sum(axis=0)
+                w_fcfs_weighted  = np.divide(q_fcfs_weighted, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
+                w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted)
 
-            w_exp_res['mat']['fcfs_approx'] = r_fcfs_weighted
-            w_exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
-            w_exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * w_exp_res['mat']['alis_approx'] + (rho) * w_exp_res['mat']['fcfs_approx']
+                w_exp_res['mat']['fcfs_approx'] = r_fcfs_weighted
+                w_exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
+                w_exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * w_exp_res['mat']['alis_approx'] + (rho) * w_exp_res['mat']['fcfs_approx']
 
-            w_exp_res['aux']['rho'] = rho
-            w_exp_res['aux']['gamma'] = 0
-            w_exp_res['aux']['policy'] = 'weighted_fcfs_alis'
+                w_exp_res['aux']['rho'] = rho
+                w_exp_res['aux']['gamma'] = 0
+                w_exp_res['aux']['policy'] = 'weighted_fcfs_alis'
 
         print('ending - structure: ', aux_exp_data['structure'], ' exp_no: ', aux_exp_data['exp_no'], ' rho: ', rho, ' duration: ', time() - st)
         print('pct_error_fcfs_alis_approx:'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['fcfs_alis_approx']).sum()/lamda.sum())
@@ -319,4 +320,4 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    grids_exp_for_parallel(3)
+    grids_exp_for_parallel(30)
