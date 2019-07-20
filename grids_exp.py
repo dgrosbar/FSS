@@ -200,7 +200,6 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
         if rho < 1:
             fcfs_approx = fcfs_approx[:m]
         
-        exp_res['mat']['fcfs_approx'] = fcfs_approx
         try:
             alis_approx = fast_alis_approximation(1. * compatability_matrix, alpha, beta, rho) if m < 900 else np.zeros((m, n))
         except:
@@ -211,7 +210,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
         else:
             exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=True, prt=True)
         
-
+        exp_res['mat']['fcfs_approx'] = fcfs_approx
         exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
         exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['fcfs_approx']
         
