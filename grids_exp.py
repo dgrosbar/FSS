@@ -156,7 +156,6 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
     compatability_matrix, g = generate_grid_compatability_matrix(sqrt_m, d)
     m, n = compatability_matrix.shape
 
-
     valid = False
     np.random.seed(k)
     v = np.random.randint(1, 10**6)
@@ -186,9 +185,12 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
     no_of_edges = len(nnz[0])    
     exact = n <= 10
 
+
+
     for rho in [0.6, 0.7, 0.8, 0.9] + [.95, .99, 1] + [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
 
         st = time()
+
         lamda = alpha * rho
         mu = beta
         pad_lamda = np.append(alpha*rho, 1. - rho)
@@ -196,6 +198,27 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
         fcfs_approx = fast_entropy_approximation(compatability_matrix, lamda, mu, pad=(rho < 1))
         q_fcfs = fcfs_approx * (1./mu - fcfs_approx.sum(axis=0))
         q_fcfs = q_fcfs/q_fcfs.sum(axis=0)
+
+        if rho >= 0.6 and rho < 1:
+            
+            r_fcfs_weighted, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 0, weighted=True)
+            if r_fcfs_weighted is not None:
+                r_fcfs_weighted = r_fcfs_weighted[:m, :]
+                q_fcfs_weighted = r_fcfs_weighted * (1./mu - r_fcfs_weighted.sum(axis=0))
+                q_fcfs_weighted = q_fcfs_weighted/q_fcfs_weighted.sum(axis=0)
+                w_fcfs_weighted  = np.divide(q_fcfs_weighted, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
+                w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted)
+
+                w_exp_res['mat']['fcfs_approx'] = r_fcfs_weighted
+                w_exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
+                w_exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * w_exp_res['mat']['alis_approx'] + (rho) * w_exp_res['mat']['fcfs_approx']
+
+                w_exp_res['aux']['rho'] = rho
+                w_exp_res['aux']['gamma'] = 0
+                w_exp_res['aux']['policy'] = 'weighted_fcfs_alis'
+
+                sbpss_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, w_exp_res, timestamp, aux_exp_data)
+                write_df_to_file(filename, sbpss_df)
         
         if rho < 1:
             fcfs_approx = fcfs_approx[:m]
@@ -220,27 +243,6 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
 
         sbpss_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, exp_res, timestamp, aux_exp_data)
         write_df_to_file(filename, sbpss_df)
-
-        if rho >= 0.6 and rho < 1:
-            
-            r_fcfs_weighted, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 0, weighted=True)
-            if r_fcfs_weighted is not None:
-                r_fcfs_weighted = r_fcfs_weighted[:m, :]
-                q_fcfs_weighted = r_fcfs_weighted * (1./mu - r_fcfs_weighted.sum(axis=0))
-                q_fcfs_weighted = q_fcfs_weighted/q_fcfs_weighted.sum(axis=0)
-                w_fcfs_weighted  = np.divide(q_fcfs_weighted, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
-                w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted)
-
-                w_exp_res['mat']['fcfs_approx'] = r_fcfs_weighted
-                w_exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
-                w_exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * w_exp_res['mat']['alis_approx'] + (rho) * w_exp_res['mat']['fcfs_approx']
-
-                w_exp_res['aux']['rho'] = rho
-                w_exp_res['aux']['gamma'] = 0
-                w_exp_res['aux']['policy'] = 'weighted_fcfs_alis'
-
-                sbpss_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, w_exp_res, timestamp, aux_exp_data)
-                write_df_to_file(filename, sbpss_df)
 
         print('ending - structure: ', aux_exp_data['structure'], ' exp_no: ', aux_exp_data['exp_no'], ' rho: ', rho, ' duration: ', time() - st)
         print('pct_error_fcfs_alis_approx:'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['fcfs_alis_approx']).sum()/lamda.sum())
@@ -527,4 +529,4 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    grids_exp_for_parallel(30)
+    grids_exp_for_parallel(3)

@@ -791,16 +791,8 @@ def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	return(np.dot(np.diag(lamda[: m - 1]), pi_hat[: m-1, :]))
 
 
-def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**7, max_time=600, epsilon=10**-6, prt=False, prtall=False):
+def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**7, max_time=600, epsilon=10**-6, prt=True, prtall=True):
 
-	# m_p_n_p_1, m_p_1_t_n = A.shape
-	# pi_k = np.zeros((m_p_1_t_n, ))
-	# pi_hat = np.zeros((m_p_1_t_n, ))
-	# prev_pi_hat = np.zeros((m_p_1_t_n, ))
-	# prev_gap = np.zeros((m_p_n_p_1,))
-	# lamda = np.zeros((m_p_n_p_1, ))
-	# prev_lamda = np.zeros((m_p_n_p_1, ))
-	# zeta = np.zeros((m_p_n_p_1, ))
 	start_time = time()
 
 	def f(pi):
@@ -883,8 +875,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 						pi_hat = pi0
 						gap = b - A.dot(pi_k)
 						prev_gap = gap
-						# printarr(pi0, 'pi_0')
-						# printarr(pi_k, 'pi_k')
+
 					else:
 						pi_k = ze*np.exp(At.dot(lamda))
 					# pi_k = pi0 if i == 0 and pi0 is not None else ze*np.exp(At.dot(lamda))
@@ -1266,6 +1257,10 @@ def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 
 		pi_0 = None
 
 	A, b, z , pi_0 = metrize_constraintes(q, eta, mu, z, pi_0)
+
+	if A.shape[0] > 10**3:
+		print(A.shape[0], 'x',  A.shape[1], ' matrix going sparse')
+		A = sps.csr_matrix(A)
 
 	eta_w, _ = fast_primal_dual_algorithm(compatability_matrix, A, b, z, m + 1, n, pi0=pi_0, act_rows=None , check_every=10**3, max_iter=10**8, epsilon=10**-6, prt=True, prtall=False)
 	if eta_w is not None:
