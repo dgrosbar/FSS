@@ -791,7 +791,7 @@ def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	return(np.dot(np.diag(lamda[: m - 1]), pi_hat[: m-1, :]))
 
 
-def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**8, max_time=600, epsilon=10**-6, prt=False, prtall=False):
+def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**7, max_time=600, epsilon=10**-6, prt=False, prtall=False):
 
 	# m_p_n_p_1, m_p_1_t_n = A.shape
 	# pi_k = np.zeros((m_p_1_t_n, ))
@@ -845,7 +845,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 
 	ze = z * exp(-1.0)
 	v = np.amin(z[np.where(z > 0)])
-	L = min(((1.0/v) * (np.amax(np.abs(A[:m].sum(axis=1))) + np.amax(np.abs(A[m:].sum(axis=1))))), 10)
+	L = min(((1.0/v) * (np.amax(np.abs(A[:m].sum(axis=1))) + np.amax(np.abs(A[m:].sum(axis=1))))), 3)
 
 	if prt or True:
 		print('L', L)
@@ -1136,7 +1136,9 @@ def fast_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=
 		iter_k = iter_k + 1
 
 	q = p_to_q(p, compatability_matrix, alpha, m, n)
-	r = p[:, None, :] * q[..., None] * compatability_matrix
+
+	r = p[:, None, :] * q[..., None] 
+	r = r * compatability_matrix
 	r = rho * r.sum(axis=0)
 
 	return r
@@ -1144,7 +1146,6 @@ def fast_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=
 	
 @jit(nopython=True, cache=True)
 def p_to_q(p, compatability_matrix, alpha, m, n):
-
 
 	q = (np.ones((n, m)) - np.dot(compatability_matrix, p.T)).T
 	
@@ -1162,10 +1163,10 @@ def p_to_q(p, compatability_matrix, alpha, m, n):
 @jit(nopython=True, cache=True)
 def r_to_p(compatability_matrix, pp, qq, p, n):
 
-	r = qq * pp * compatability_matrix
+	r = qq * pp
+	r = r * compatability_matrix
 	r = r.sum(axis=1)
 	r_ell = r[0]
-	
 	for ell in range(1, n, 1):
 		p[ell, :] = r_ell/r_ell.sum()
 		r_ell = r_ell + r[ell]
