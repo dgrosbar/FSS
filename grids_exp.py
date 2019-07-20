@@ -193,11 +193,6 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
         mu = beta
         pad_lamda = np.append(alpha*rho, 1. - rho)
 
-        if rho == 1:
-            exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt_all=True, prt=True)
-        else:
-            exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=True, prt=True)
-        
         fcfs_approx = fast_entropy_approximation(compatability_matrix, lamda, mu, pad=(rho < 1))
         q_fcfs = fcfs_approx * (1./mu - fcfs_approx.sum(axis=0))
         q_fcfs = q_fcfs/q_fcfs.sum(axis=0)
@@ -207,9 +202,16 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
         
         exp_res['mat']['fcfs_approx'] = fcfs_approx
         try:
-            alis_approx = fast_alis_approximation(1. * compatability_matrix, alpha, beta, rho)
+            alis_approx = fast_alis_approximation(1. * compatability_matrix, alpha, beta, rho) if m < 900 else np.zeros((m, n))
         except:
             alis_approx = np.zeros((m, n))
+
+        if rho == 1:
+            exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt_all=True, prt=True)
+        else:
+            exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=True, prt=True)
+        
+
         exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
         exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['fcfs_approx']
         
