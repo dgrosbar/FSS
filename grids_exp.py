@@ -196,6 +196,12 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
         pad_lamda = np.append(alpha*rho, 1. - rho)
 
         fcfs_approx = fast_entropy_approximation(compatability_matrix, lamda, mu, pad=(rho < 1))
+        if rho < 1:
+            fcfs_approx = fcfs_approx[:m]
+        try:
+            alis_approx = fast_alis_approximation(1. * compatability_matrix, alpha, beta, rho) if m < 900 else np.zeros((m, n))
+        except:
+            alis_approx = np.zeros((m, n))
         q_fcfs = fcfs_approx * (1./mu - fcfs_approx.sum(axis=0))
         q_fcfs = q_fcfs/q_fcfs.sum(axis=0)
 
@@ -207,7 +213,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
                 q_fcfs_weighted = r_fcfs_weighted * (1./mu - r_fcfs_weighted.sum(axis=0))
                 q_fcfs_weighted = q_fcfs_weighted/q_fcfs_weighted.sum(axis=0)
                 w_fcfs_weighted  = np.divide(q_fcfs_weighted, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
-                w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted)
+                w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted, prt_all=True, prt=True)
 
                 w_exp_res['mat']['fcfs_approx'] = r_fcfs_weighted
                 w_exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
@@ -220,13 +226,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
                 sbpss_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, w_exp_res, timestamp, aux_exp_data)
                 write_df_to_file(filename, sbpss_df)
         
-        if rho < 1:
-            fcfs_approx = fcfs_approx[:m]
-        
-        try:
-            alis_approx = fast_alis_approximation(1. * compatability_matrix, alpha, beta, rho) if m < 900 else np.zeros((m, n))
-        except:
-            alis_approx = np.zeros((m, n))
+
 
         if rho == 1:
             exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt_all=True, prt=True)
