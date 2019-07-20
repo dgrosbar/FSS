@@ -167,8 +167,6 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
         beta = np.random.exponential(scale=1, size=sqrt_m**2) # obtain values for non normelized server frecquency
         alpha = alpha/alpha.sum()
         beta = beta/beta.sum()
-        print(k, ':', alpha[0])
-        print(k, ':', beta[0])
         valid = False
         valid, _ = verify_crp_condition(compatability_matrix, alpha, beta)
 
