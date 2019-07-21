@@ -26,8 +26,8 @@ def erdos_renyi_exp_for_parallel(p=30):
 
     jt_perm_dict = {9: list(jpermute(range(9)))}
     print_progress = True
-    for structure in ['torus']:
-        for m in [1000, 100, 10]:
+    for structure in ['erdos_renyi']:
+        for m in [100, 1000]:
             if p > 1:
                 exps = [list(tup) for tup in zip([m]*p, range(1, p+1, 1), [structure]*p)]
                 pool = mp.Pool(processes=p)
@@ -232,8 +232,6 @@ def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss', ot_filename='erdos_
 
     return None
    
-
-
 
 
 if __name__ == '__main__':
