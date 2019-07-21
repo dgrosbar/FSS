@@ -1260,7 +1260,7 @@ def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 
 
 	A, b, z , pi_0 = metrize_constraintes(q, eta, mu, z, pi_0)
 
-	if A.shape[0] > 10**3:
+	if A.shape[0] > 10:
 		print(A.shape[0], 'x',  A.shape[1], ' matrix going sparse')
 		A = sps.csr_matrix(A)
 
