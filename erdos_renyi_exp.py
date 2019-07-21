@@ -134,7 +134,7 @@ def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss', ot_filename='erdos_
         
         gc.collect()
 
-    def log_ot_data(res, c, w , q, gamma, policy, rho, c_type):
+    def log_ot_data(res, c, w , q, gamma, policy, rho, c_typ, c_min, c_max):
 
         res['mat']['c'] = c
         res['mat']['w'] = w
@@ -143,6 +143,8 @@ def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss', ot_filename='erdos_
         res['aux']['policy'] = policy
         res['aux']['rho'] = rho
         res['aux']['c_type'] = c_type
+        res['aux']['c_min'] = c_min
+        res['aux']['c_max'] = c_max
 
         return res
 
@@ -169,10 +171,10 @@ def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss', ot_filename='erdos_
             compatability_matrix_pad = np.vstack([compatability_matrix, np.ones((1, n))])
 
             r_pad = sinkhorn_stabilized(c_pad, lamda_pad, mu, compatability_matrix_pad, 0.01)
-            min_c = (c_pad * r_pad).sum()
+            c_min = (c_pad * r_pad).sum()
             r_pad = sinkhorn_stabilized(-1*c_pad, lamda_pad, mu, compatability_matrix_pad, 0.01)
-            max_c = (c_pad * r_pad).sum()
-            c_diff = max_c - min_c
+            c_max = (c_pad * r_pad).sum()
+            c_diff = c_max - c_min
 
             r_fcfs = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
             q_fcfs = r_fcfs * (1./(mu - r_fcfs.sum(axis=0)))
@@ -183,14 +185,15 @@ def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss', ot_filename='erdos_
 
             ent_diff = max_ent - min_ent
             c = (ent_diff/c_diff) * c
+            c_max = (ent_diff/c_diff)*c_max
+            c_min = (ent_diff/c_diff)*c_min
 
-         
             w_greedy = np.divide(np.ones(c.shape), c, out=np.zeros_like(c), where=(c != 0))
             sim_res_greedy = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_greedy, w_only=True,  prt_all=True, prt=True)
             sim_res_greedy = log_ot_data(sim_res_greedy, c, c , 0 * compatability_matrix, 1, 'greedy', rho, c_type)
 
             df_greedy = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_greedy, timestamp, aux_exp_data)
-            write_df_to_file(filename, df_greedy)
+            write_df_to_file(ot_filename, df_greedy)
             
             for gamma in [0.1 * i for i in range(1, 10, 1)]:
 
@@ -211,9 +214,9 @@ def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss', ot_filename='erdos_
                     w_fcfs_ot = np.divide(q_fcfs_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
 
                     sim_res_fcfs_alis_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_ot, prt_all=True, prt=True)
-                    sim_res_fcfs_alis_ot = log_ot_data(sim_res_fcfs_alis_ot, c, w_fcfs_ot , q_fcfs_ot, gamma, 'fcfs_alis_ot', rho, c_type)
+                    sim_res_fcfs_alis_ot = log_ot_data(sim_res_fcfs_alis_ot, c, w_fcfs_ot , q_fcfs_ot, gamma, 'fcfs_alis_ot', rho, c_type, c_min, c_max)
                     df_fcfs_alis_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_ot, timestamp, aux_exp_data)
-                    write_df_to_file(filename, df_fcfs_alis_ot)
+                    write_df_to_file(ot_filename, df_fcfs_alis_ot)
 
                     r_fcfs_weighted_ot = r_fcfs_weighted_ot[:m, :]
                     q_fcfs_weighted_ot = r_fcfs_weighted_ot * (1./mu - r_fcfs_weighted_ot.sum(axis=0))
@@ -221,7 +224,7 @@ def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss', ot_filename='erdos_
                     w_fcfs_weighted_ot  = np.divide(q_fcfs_weighted_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
 
                     sim_res_fcfs_alis_weighted_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted_ot, prt_all=True, prt=True)
-                    sim_res_fcfs_alis_weighted_ot = log_ot_data(sim_res_fcfs_alis_weighted_ot, c, w_fcfs_weighted_ot,  q_fcfs_weighted_ot, gamma, 'weighted_fcfs_alis_ot', rho, c_type,)
+                    sim_res_fcfs_alis_weighted_ot = log_ot_data(sim_res_fcfs_alis_weighted_ot, c, w_fcfs_weighted_ot,  q_fcfs_weighted_ot, gamma, 'weighted_fcfs_alis_ot', rho, c_type, c_min, c_max)
                     df_fcfs_alis_weighted_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_weighted_ot, timestamp, aux_exp_data)
                     write_df_to_file(ot_filename, df_fcfs_alis_weighted_ot)
     
