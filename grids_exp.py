@@ -185,8 +185,6 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
     no_of_edges = len(nnz[0])    
     exact = n <= 10
 
-
-
     for rho in [0.6, 0.7, 0.8, 0.9] + [.95, .99, 1] + [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
 
         st = time()
@@ -529,4 +527,4 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    grids_exp_for_parallel(30)
+    grids_exp_for_parallel(3)

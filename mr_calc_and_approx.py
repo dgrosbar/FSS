@@ -561,6 +561,8 @@ def fast_entropy_approximation(compatability_matrix, lamda, mu, check_every=10**
 	converge = False
 	compatability_matrix = compatability_matrix.astype(int)
 	m, n = compatability_matrix.shape
+	if sps.isspmatrix(compatability_matrix):
+		compatability_matrix = compatability_matrix.todense().A
 
 	if pad:
 
