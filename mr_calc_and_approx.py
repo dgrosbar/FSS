@@ -839,7 +839,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 
 	ze = z * exp(-1.0)
 	v = np.amin(z[np.where(z > 0)])
-	L = min(((1.0/v) * (np.amax(np.abs(A[:m].sum(axis=1))) + np.amax(np.abs(A[m:].sum(axis=1))))), 3)
+	L = 3 #min(((1.0/v) * (np.amax(np.abs(A[:m].sum(axis=1))) + np.amax(np.abs(A[m:].sum(axis=1))))), 3)
 
 	if prt or True:
 		print('L', L)
