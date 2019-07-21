@@ -190,7 +190,7 @@ def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss', ot_filename='erdos_
 
             w_greedy = np.divide(np.ones(c.shape), c, out=np.zeros_like(c), where=(c != 0))
             sim_res_greedy = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_greedy, w_only=True,  prt_all=True, prt=True)
-            sim_res_greedy = log_ot_data(sim_res_greedy, c, c , 0 * compatability_matrix, 1, 'greedy', rho, c_type)
+            sim_res_greedy = log_ot_data(sim_res_greedy, c, c , 0 * compatability_matrix, 1, 'greedy', rho, c_type, c_min, c_max)
 
             df_greedy = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_greedy, timestamp, aux_exp_data)
             write_df_to_file(ot_filename, df_greedy)
