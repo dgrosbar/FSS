@@ -527,4 +527,4 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    grids_exp_for_parallel(3)
+    grids_exp_for_parallel(30)
