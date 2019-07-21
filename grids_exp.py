@@ -185,6 +185,99 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
     no_of_edges = len(nnz[0])    
     exact = n <= 10
 
+    def log_ot_data(res, c, w , q, gamma, policy, rho, c_type):
+
+        res['mat']['c'] = c
+        res['mat']['w'] = w
+        res['mat']['q'] = q 
+        res['aux']['gamma'] = gamma
+        res['aux']['policy'] = policy
+        res['aux']['rho'] = rho
+        res['aux']['c_type'] = c_type
+
+        return res
+
+    for c_type in ['dist', 'rand']:
+
+        for rho in [.6, .8, .9, .95]:
+
+            lamda = rho * alpha
+            mu = beta 
+            s = np.ones(m)
+
+            if c_type == 'rand':
+                c = np.random.exponential(1, (m, n)) * compatability_matrix
+            else:
+                c = np.zeros((m, n))
+                for i in range(m):
+                    for j in range(n):
+                        c[i,j] = 1 + abs(i - j)
+                c = c * compatability_matrix
+                c = c/c.sum()
+
+            lamda_pad = np.append(lamda, mu.sum() - lamda.sum())
+            c_pad = np.vstack([c, np.zeros((1, n))])
+            compatability_matrix_pad = np.vstack([compatability_matrix, np.ones((1, n))])
+
+            r_pad = sinkhorn_stabilized(c_pad, lamda_pad, mu, compatability_matrix_pad, 0.01)
+            min_c = (c_pad * r_pad).sum()
+            r_pad = sinkhorn_stabilized(-1*c_pad, lamda_pad, mu, compatability_matrix_pad, 0.01)
+            max_c = (c_pad * r_pad).sum()
+            c_diff = max_c - min_c
+
+            r_fcfs = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
+            q_fcfs = r_fcfs * (1./(mu - r_fcfs.sum(axis=0)))
+            q_fcfs = q_fcfs/q_fcfs.sum(axis=0)
+
+            min_ent = (-1 * lamda * np.log(lamda)).sum()
+            max_ent = (-1 * r_fcfs * np.log(r_fcfs, out=np.zeros_like(r_fcfs), where=(r_fcfs != 0))).sum()
+
+            ent_diff = max_ent - min_ent
+            c = (ent_diff/c_diff) * c
+
+            w_greedy = np.divide(np.ones(c.shape), c, out=np.zeros_like(c), where=(c != 0))
+            sim_res_greedy = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_greedy, w_only=True,  prt_all=True, prt=True)
+            sim_res_greedy = log_ot_data(sim_res_greedy, c, c , 0 * compatability_matrix, 1, 'greedy', rho, c_type)
+
+            df_greedy = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_greedy, timestamp, aux_exp_data)
+            write_df_to_file(filename, df_greedy)
+            
+            for gamma in [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.05]:
+
+                print('gamma:', gamma, ' rho:', rho, ' c_type:', c_type, aux_exp_data['structure'], ' exp_no: ', aux_exp_data['exp_no'])
+
+                r_fcfs_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=False)
+                if r_fcfs_ot is None:
+                    print('failed')
+                r_fcfs_weighted_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=True)
+                if r_fcfs_weighted_ot is None:
+                    print('failed2')
+
+                if r_fcfs_ot is not None and r_fcfs_weighted_ot is not None:
+
+                    r_fcfs_ot = r_fcfs_ot[:m, :]
+                    q_fcfs_ot = r_fcfs_ot * (1./mu - r_fcfs_ot.sum(axis=0))
+                    q_fcfs_ot = q_fcfs_ot/q_fcfs_ot.sum(axis=0)
+                    w_fcfs_ot = np.divide(q_fcfs_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
+
+                    sim_res_fcfs_alis_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_ot, prt_all=True, prt=True)
+                    sim_res_fcfs_alis_ot = log_ot_data(sim_res_fcfs_alis_ot, c, w_fcfs_ot , q_fcfs_ot, gamma, 'fcfs_alis_ot', rho, c_type)
+                    df_fcfs_alis_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_ot, timestamp, aux_exp_data)
+                    write_df_to_file(filename, df_fcfs_alis_ot)
+
+                    r_fcfs_weighted_ot = r_fcfs_weighted_ot[:m, :]
+                    q_fcfs_weighted_ot = r_fcfs_weighted_ot * (1./mu - r_fcfs_weighted_ot.sum(axis=0))
+                    q_fcfs_weighted_ot = q_fcfs_weighted_ot/q_fcfs_weighted_ot.sum(axis=0)
+                    w_fcfs_weighted_ot  = np.divide(q_fcfs_weighted_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
+
+                    sim_res_fcfs_alis_weighted_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted_ot, prt_all=True, prt=True)
+                    sim_res_fcfs_alis_weighted_ot = log_ot_data(sim_res_fcfs_alis_weighted_ot, c, w_fcfs_weighted_ot,  q_fcfs_weighted_ot, gamma, 'weighted_fcfs_alis_ot', rho, c_type,)
+                    df_fcfs_alis_weighted_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_weighted_ot, timestamp, aux_exp_data)
+                    write_df_to_file(ot_filename, df_fcfs_alis_weighted_ot)
+    
+    gc.collect()
+
+
     for rho in [0.6, 0.7, 0.8, 0.9] + [.95, .99, 1] + [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
 
         st = time()
@@ -246,99 +339,6 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
         print('pct_error_fcfs_alis_approx:'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['fcfs_alis_approx']).sum()/lamda.sum())
         
         gc.collect()
-
-    def log_ot_data(res, c, w , q, gamma, policy, rho, c_type):
-
-        res['mat']['c'] = c
-        res['mat']['w'] = w
-        res['mat']['q'] = q 
-        res['aux']['gamma'] = gamma
-        res['aux']['policy'] = policy
-        res['aux']['rho'] = rho
-        res['aux']['c_type'] = c_type
-
-        return res
-
-    for c_type in ['dist', 'rand']:
-
-        for rho in [.6, .8, .9, .95]:
-
-            lamda = rho * alpha
-            mu = beta 
-            s = np.ones(m)
-
-            if c_type == 'rand':
-                c = np.random.exponential(1, (m, n)) * compatability_matrix
-            else:
-                c = np.zeros((m, n))
-                for i in range(m):
-                    for j in range(n):
-                        c[i,j] = 1 + abs(i - j)
-                c = c * compatability_matrix
-                c = c/c.sum()
-
-            lamda_pad = np.append(lamda, mu.sum() - lamda.sum())
-            c_pad = np.vstack([c, np.zeros((1, n))])
-            compatability_matrix_pad = np.vstack([compatability_matrix, np.ones((1, n))])
-
-            r_pad = sinkhorn_stabilized(c_pad, lamda_pad, mu, compatability_matrix_pad, 0.01)
-            min_c = (c_pad * r_pad).sum()
-            r_pad = sinkhorn_stabilized(-1*c_pad, lamda_pad, mu, compatability_matrix_pad, 0.01)
-            max_c = (c_pad * r_pad).sum()
-            c_diff = max_c - min_c
-
-            r_fcfs = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
-            q_fcfs = r_fcfs * (1./(mu - r_fcfs.sum(axis=0)))
-            q_fcfs = q_fcfs/q_fcfs.sum(axis=0)
-
-            min_ent = (-1 * lamda * np.log(lamda)).sum()
-            max_ent = (-1 * r_fcfs * np.log(r_fcfs, out=np.zeros_like(r_fcfs), where=(r_fcfs != 0))).sum()
-
-            ent_diff = max_ent - min_ent
-            c = (ent_diff/c_diff) * c
-
-         
-            w_greedy = np.divide(np.ones(c.shape), c, out=np.zeros_like(c), where=(c != 0))
-            sim_res_greedy = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_greedy, w_only=True,  prt_all=True, prt=True)
-            sim_res_greedy = log_ot_data(sim_res_greedy, c, c , 0 * compatability_matrix, 1, 'greedy', rho, c_type)
-
-            df_greedy = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_greedy, timestamp, aux_exp_data)
-            write_df_to_file(filename, df_greedy)
-            
-            for gamma in [0.1 * i for i in range(1, 10, 1)]:
-
-                print('gamma:', gamma, ' rho:', rho, ' c_type:', c_type, aux_exp_data['structure'], ' exp_no: ', aux_exp_data['exp_no'])
-
-                r_fcfs_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=False)
-                if r_fcfs_ot is None:
-                    print('failed')
-                r_fcfs_weighted_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=True)
-                if r_fcfs_weighted_ot is None:
-                    print('failed2')
-
-                if r_fcfs_ot is not None and r_fcfs_weighted_ot is not None:
-
-                    r_fcfs_ot = r_fcfs_ot[:m, :]
-                    q_fcfs_ot = r_fcfs_ot * (1./mu - r_fcfs_ot.sum(axis=0))
-                    q_fcfs_ot = q_fcfs_ot/q_fcfs_ot.sum(axis=0)
-                    w_fcfs_ot = np.divide(q_fcfs_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
-
-                    sim_res_fcfs_alis_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_ot, prt_all=True, prt=True)
-                    sim_res_fcfs_alis_ot = log_ot_data(sim_res_fcfs_alis_ot, c, w_fcfs_ot , q_fcfs_ot, gamma, 'fcfs_alis_ot', rho, c_type)
-                    df_fcfs_alis_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_ot, timestamp, aux_exp_data)
-                    write_df_to_file(filename, df_fcfs_alis_ot)
-
-                    r_fcfs_weighted_ot = r_fcfs_weighted_ot[:m, :]
-                    q_fcfs_weighted_ot = r_fcfs_weighted_ot * (1./mu - r_fcfs_weighted_ot.sum(axis=0))
-                    q_fcfs_weighted_ot = q_fcfs_weighted_ot/q_fcfs_weighted_ot.sum(axis=0)
-                    w_fcfs_weighted_ot  = np.divide(q_fcfs_weighted_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
-
-                    sim_res_fcfs_alis_weighted_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted_ot, prt_all=True, prt=True)
-                    sim_res_fcfs_alis_weighted_ot = log_ot_data(sim_res_fcfs_alis_weighted_ot, c, w_fcfs_weighted_ot,  q_fcfs_weighted_ot, gamma, 'weighted_fcfs_alis_ot', rho, c_type,)
-                    df_fcfs_alis_weighted_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_weighted_ot, timestamp, aux_exp_data)
-                    write_df_to_file(ot_filename, df_fcfs_alis_weighted_ot)
-    
-    gc.collect()
 
     return None
    
