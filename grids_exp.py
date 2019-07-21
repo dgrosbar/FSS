@@ -142,7 +142,7 @@ def grids_exp_for_parallel(p=30):
     jt_perm_dict = {9: list(jpermute(range(9)))}
     print_progress = True
     for structure in ['torus']:
-        for sqrt_m, d  in zip([30, 9, 3], [3, 2, 1]):
+        for sqrt_m, d  in zip([3, 9, 30], [1, 2, 3]):
             exps = [list(tup) for tup in zip([sqrt_m]*p, [d]*p, range(1, p+1, 1), [structure]*30)]
             pool = mp.Pool(processes=p)
             exps_res = pool.starmap(sbpss_exp, exps)
