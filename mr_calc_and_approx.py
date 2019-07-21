@@ -1239,8 +1239,10 @@ def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 
 	if weighted:
 		w = np.vstack([(1. - rho) * np.ones(n) * compatability_matrix, rho * np.ones(n)])
 		w = (np.vstack([compatability_matrix, np.ones(n)]).sum()/w.sum()) * w
+		print('w_max weighted: ', w.max())
 	else:
 		w = np.vstack([compatability_matrix, np.ones(n)])
+		print('w_max not weighted: ', w.max())
 	if gamma > 0:
 		w = ((1 - gamma)/gamma) * w
 
