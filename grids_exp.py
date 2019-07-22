@@ -201,7 +201,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
 
     for c_type in ['dist', 'rand']:
 
-        for rho in [.6, .8, .9]:
+        for rho in [.6, .8, .9, .95]:
 
             lamda = rho * alpha
             mu = beta 
