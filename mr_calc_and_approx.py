@@ -805,8 +805,8 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 		return res.sum()
 
 	def check_optimality_gap():
-
-			pi_eta = ze*np.exp(-1*At.dot(eta))
+			log_exp_A_eta = -At.dot(eta)
+			pi_eta = np.exp(ze + log_exp_A_eta)
 			f_pi_eta = f(pi_eta) + eta.dot(A.dot(pi_eta) - b)
 			gap_k = f(pi_hat) - f_pi_eta
 			gap_k_pct = gap_k/np.abs(f_pi_eta)
@@ -837,20 +837,18 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 
 		return False, False, False
 
-	ze = z * exp(-1.0)
-	v = np.amin(z[np.where(z > 0)])
-	L = 3 #min(((1.0/v) * (np.amax(np.abs(A[:m].sum(axis=1))) + np.amax(np.abs(A[m:].sum(axis=1))))), 3)
+	# ze = z * exp(-1.0)
+	# v = np.amin(z[np.where(z > 0)])
+	L = 2 #min(((1.0/v) * (np.amax(np.abs(A[:m].sum(axis=1))) + np.amax(np.abs(A[m:].sum(axis=1))))), 3)
 
 	if prt or True:
 		print('L', L)
 
 	flag = False
 
-	def_est = np.seterr(all='raise')
 	try:
 		while not flag:
 
-		
 			m_p_n_p_1, m_p_1_t_n = A.shape
 			At = A.transpose()
 			pi_k = np.zeros((m_p_1_t_n, ))
@@ -860,7 +858,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 			lamda = np.zeros((m_p_n_p_1, ))
 			prev_lamda = np.zeros((m_p_n_p_1, ))
 			zeta = np.zeros((m_p_n_p_1, ))
-			ze = z * exp(-1.0)
+			ze = ma.log(z).filled(0) - 1.0
 			v = np.amin(z[np.where(z > 0)])
 
 			for i in np.arange(max_iter):
@@ -872,63 +870,19 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 					print('starting fast primal dual gradient descent')
 					s = time()
 
-					if i==0 and pi0 is not None:
+					if i == 0 and pi0 is not None:
 						pi_k = pi0
 						pi_hat = pi0
 						gap = b - A.dot(pi_k)
 						prev_gap = gap
 
 					else:
-						pi_k = ze*np.exp(At.dot(lamda))
-					# pi_k = pi0 if i == 0 and pi0 is not None else ze*np.exp(At.dot(lamda))
-
+						log_exp_A_lamda = -At.dot(lamda)
+						pi_k = np.exp(ze + log_exp_A_lamda)
 				
-				# if 0 <= i < 10:
-				# 	print('m: ', m)
-				# 	print('n: ', n)
-				# 	print('m + n + 1: ', m + n + 1, 'len(b): ', len(b))
-
-				# 	print(i)
-				# 	print('-------------------------------')
-
-				# 	prev_pi_hat_mat = np.zeros((m+1, n))
-				# 	for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
-				# 		prev_pi_hat_mat[i,j] = prev_pi_hat[col]
-					
-				# 	printarr(prev_pi_hat_mat, 'prev_pi_hat')
-
-				# 	pi_hat_mat = np.zeros((m+1, n))
-				# 	for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
-				# 		pi_hat_mat[i,j] = pi_hat[col]
-					
-				# 	printarr(pi_hat_mat, 'pi_hat')
-
-				# 	printarr(np.dot(A, prev_pi_hat)[m: ], 'prev_col_sum')
-				# 	printarr(np.dot(A, pi_hat)[m: ], 'cur_col_sum')
-				# 	printarr(np.dot(A, prev_pi_hat)[ :m], 'prev_row_sum')
-				# 	printarr(np.dot(A, pi_hat)[ :m], 'cur_row_sum')
-					
-				# 	printarr(b[m: ], 'req_col_sum')
-				# 	printarr(b[:m], 'req_row_sum')
-
-				# 	printarr(prev_gap[m: ], 'prev_col_violation')
-				# 	printarr(gap[m: ], 'cur_col_violation')
-
-				# 	printarr(prev_gap[ :m], 'prev_row_violation')
-				# 	printarr(gap[ :m], 'cur_row_violation')
-
-				# 	printarr(lamda[m: ], 'lamda_cols')
-				# 	printarr(prev_lamda[m: ], 'prev_lamda_cols')
-
-				# 	printarr(lamda[ :m], 'lamda_rows')
-				# 	printarr(prev_lamda[ :m], 'prev_lamda_rows')
-		 
-				# 	prev_pi_hat = pi_hat
-				# 	prev_gap = b - A.dot(pi_hat)
-				# 	prev_lamda = lamda
-				
-				if i >0:
-					pi_k = ze * np.exp(-At.dot(lamda))
+				if i > 0:
+					log_exp_A_lamda = -At.dot(lamda)
+					pi_k = np.exp(ze + log_exp_A_lamda)
 				pi_hat = tau * pi_k + (1.0 - tau) * pi_hat
 
 				if (i > 0 and i % check_every == 0):
@@ -954,11 +908,9 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 		if prt:
 			print('ended fast primal-dual algorithm after ' + str(i) + ' iterations')
 			print('run time:', time() - s, 'seconds')
-		_ = np.seterr(**def_est)
 		return pi_hat, lamda
 	except:
-		_ = np.seterr(**def_est)
-		print('encountered numerical issuse aborting')
+		print('failed to solve')
 		return None, None
 
 
@@ -1239,10 +1191,10 @@ def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 
 	if weighted:
 		w = np.vstack([(1. - rho) * np.ones(n) * compatability_matrix, rho * np.ones(n)])
 		w = (np.vstack([compatability_matrix, np.ones(n)]).sum()/w.sum()) * w
-		print('w_max weighted: ', w.max())
+		# print('w_max weighted: ', w.max())
 	else:
 		w = np.vstack([compatability_matrix, np.ones(n)])
-		print('w_max not weighted: ', w.max())
+		# print('w_max not weighted: ', w.max())
 	if gamma > 0:
 		w = (1 - gamma) * w
 
@@ -1274,7 +1226,8 @@ def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 
 		eta_w = m_n_eta_w
 		eta = np.divide(eta_w, w, out=np.zeros_like(compatability_matrix), where= w!= 0)
 		r = np.divide(eta, np.dot(np.diag(s), compatability_matrix), out=np.zeros_like(compatability_matrix), where= w!= 0)
-
+		# printarr(r.sum(axis=0), 'r.sum(axis=0)')
+		# printarr(r.sum(axis=1), 'r.sum(axis=1)')
 		return r, w
 	else:
 		return None, None
@@ -1675,7 +1628,52 @@ def sinkhorn_stabilized(M, a, b, compatability_matrix, reg, numItermax=1000, tau
 
 
 
+					# pi_k = pi0 if i == 0 and pi0 is not None else ze*np.exp(At.dot(lamda))
 
+				
+				# if 0 <= i < 10:
+				# 	print('m: ', m)
+				# 	print('n: ', n)
+				# 	print('m + n + 1: ', m + n + 1, 'len(b): ', len(b))
+
+				# 	print(i)
+				# 	print('-------------------------------')
+
+				# 	prev_pi_hat_mat = np.zeros((m+1, n))
+				# 	for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
+				# 		prev_pi_hat_mat[i,j] = prev_pi_hat[col]
+					
+				# 	printarr(prev_pi_hat_mat, 'prev_pi_hat')
+
+				# 	pi_hat_mat = np.zeros((m+1, n))
+				# 	for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
+				# 		pi_hat_mat[i,j] = pi_hat[col]
+					
+				# 	printarr(pi_hat_mat, 'pi_hat')
+
+				# 	printarr(np.dot(A, prev_pi_hat)[m: ], 'prev_col_sum')
+				# 	printarr(np.dot(A, pi_hat)[m: ], 'cur_col_sum')
+				# 	printarr(np.dot(A, prev_pi_hat)[ :m], 'prev_row_sum')
+				# 	printarr(np.dot(A, pi_hat)[ :m], 'cur_row_sum')
+					
+				# 	printarr(b[m: ], 'req_col_sum')
+				# 	printarr(b[:m], 'req_row_sum')
+
+				# 	printarr(prev_gap[m: ], 'prev_col_violation')
+				# 	printarr(gap[m: ], 'cur_col_violation')
+
+				# 	printarr(prev_gap[ :m], 'prev_row_violation')
+				# 	printarr(gap[ :m], 'cur_row_violation')
+
+				# 	printarr(lamda[m: ], 'lamda_cols')
+				# 	printarr(prev_lamda[m: ], 'prev_lamda_cols')
+
+				# 	printarr(lamda[ :m], 'lamda_rows')
+				# 	printarr(prev_lamda[ :m], 'prev_lamda_rows')
+		 
+				# 	prev_pi_hat = pi_hat
+				# 	prev_gap = b - A.dot(pi_hat)
+				# 	prev_lamda = lamda
 
 
 

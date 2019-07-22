@@ -143,12 +143,14 @@ def grids_exp_for_parallel(p=30):
     print_progress = True
     for structure in ['torus']:
         for sqrt_m, d  in zip([30, 9], [2, 1]):
-            exps = [list(tup) for tup in zip([sqrt_m]*p, [d]*p, range(1, p+1, 1), [structure]*30)]
-            pool = mp.Pool(processes=p)
-            exps_res = pool.starmap(sbpss_exp, exps)
-
-            pool.close()
-            pool.join()
+            exps = [list(tup) for tup in zip([sqrt_m]*p, [d]*p, range(1, p+1, 1), [structure]*p)]
+            if p > 1:
+                pool = mp.Pool(processes=p)
+                exps_res = pool.starmap(sbpss_exp, exps)
+                pool.close()
+                pool.join()
+            else:
+                sbpss_exp(*exps[0])
 
 
 def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='new_grid_sbpss_ot3'):
@@ -199,7 +201,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
 
     for c_type in ['dist', 'rand']:
 
-        for rho in [.6, .8, .9, .95]:
+        for rho in [.95, 6, .8, .9]:
 
             lamda = rho * alpha
             mu = beta 
@@ -242,10 +244,10 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
 
                 r_fcfs_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=False)
                 if r_fcfs_ot is None:
-                    print('failed')
+                    print('failed unweighted ', 'gamma:', gamma, ' rho:', rho, ' c_type:', c_type, aux_exp_data['structure'], ' exp_no: ', aux_exp_data['exp_no'])
                 r_fcfs_weighted_ot, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, gamma, weighted=True)
                 if r_fcfs_weighted_ot is None:
-                    print('failed2')
+                    print('failed weighted ', 'gamma:', gamma, ' rho:', rho, ' c_type:', c_type, aux_exp_data['structure'], ' exp_no: ', aux_exp_data['exp_no'])
 
                 if r_fcfs_ot is not None and r_fcfs_weighted_ot is not None:
 
