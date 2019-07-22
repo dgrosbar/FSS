@@ -201,7 +201,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
 
     for c_type in ['dist', 'rand']:
 
-        for rho in [.95, 6, .8, .9]:
+        for rho in [.6, .8, .9]:
 
             lamda = rho * alpha
             mu = beta 
@@ -259,7 +259,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
                     sim_res_fcfs_alis_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_ot, prt_all=True, prt=True)
                     sim_res_fcfs_alis_ot = log_ot_data(sim_res_fcfs_alis_ot, c, w_fcfs_ot , q_fcfs_ot, gamma, 'fcfs_alis_ot', rho, c_type)
                     df_fcfs_alis_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_ot, timestamp, aux_exp_data)
-                    write_df_to_file(filename, df_fcfs_alis_ot)
+                    write_df_to_file(ot_filename, df_fcfs_alis_ot)
 
                     r_fcfs_weighted_ot = r_fcfs_weighted_ot[:m, :]
                     q_fcfs_weighted_ot = r_fcfs_weighted_ot * (1./mu - r_fcfs_weighted_ot.sum(axis=0))
@@ -276,7 +276,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
             sim_res_greedy = log_ot_data(sim_res_greedy, c, c , 0 * compatability_matrix, 1, 'greedy', rho, c_type)
 
             df_greedy = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_greedy, timestamp, aux_exp_data)
-            write_df_to_file(filename, df_greedy)
+            write_df_to_file(ot_filename, df_greedy)
 
     gc.collect()
 
