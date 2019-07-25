@@ -54,7 +54,7 @@ def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss_uni_mu', ot_filename=
         compatability_matrix = compatability_matrix.todense().A
         alpha = np.random.exponential(scale=1, size=m) # obtain values for non normelized customer frequency       
         # beta = np.random.exponential(scale=1, size=m) # obtain values for non normelized server frecquency
-        beta = np.ones(m)
+        beta = np.ones(n)
         alpha = alpha/alpha.sum()
         beta = beta/beta.sum()
         valid = False
