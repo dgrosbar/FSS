@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from math import floor
 from scipy import sparse as sps
+from scipy import stats as stats
 import os
 import datetime as dt
 import numba
@@ -135,17 +136,17 @@ def log_res_to_df(compatability_matrix, alpha=None, beta=None, lamda=None, s = N
     return res_df
 
 
-def gaussian_pdf_2d(m, n, centers, normalize=False):
+def gaussian_pdf_2d(width, height, centers, normalize=False):
 
     lims = (-3, 3)  # support of the PDF
-    xx, yy = np.meshgrid(np.linspace(lims[0], lims[1], m), np.linspace(lims[0], lims[1], n))
+    xx, yy = np.meshgrid(np.linspace(lims[0], lims[1], width), np.linspace(lims[0], lims[1], height))
     points = np.stack((xx, yy), axis=-1)
-    pdf = np.zeros((m,n))
+    pdf = np.zeros((width, height))
     for mean, weight in centers:  # Whatever your (i, j) is
         covariance = np.random.uniform(0, 1, (2, 2))
-        covariance = np.dot(covariance, covariance.transpose()) + np.eye(2)
+        covariance = np.dot(covariance, covariance.transpose()) + 0.5*np.eye(2)
         covariance = covariance/covariance.sum()
-        mean = (6.0*float(mean[0])/m - 3, 6.0*(float(mean[1])/n) - 3)
+        mean = (6.0*float(mean[0])/width - 3, 6.0*(float(mean[1])/height) - 3)
         pdf += weight * stats.multivariate_normal.pdf(points, mean, covariance)
     if normalize:
         pdf = pdf*(1/pdf.sum())

@@ -2,9 +2,83 @@ import networkx as nx
 import numpy as np
 from math import log
 from scipy import sparse as sps
-from utilities import fast_choice, sp_unique, gaussian_pdf_2d
+from scipy import stats as stats
+from utilities import fast_choice, sp_unique, gaussian_pdf_2d, printarr
 from itertools import product
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
+
+
+def generate_grid_compatability_matrix_with_map(m, d=3, structure='tours', prt=True):
+
+
+    num_of_centers_lamda = int(m**0.5)
+    centers_lamda = [((np.random.uniform(0.2*m, 0.8*m), np.random.uniform(0.2*m, 0.8*m)), np.random.uniform(.1, 1)) for _ in range(num_of_centers_lamda)]
+    lamda = gaussian_pdf_2d(m, m, centers_lamda, normalize=True)
+
+    num_of_centers_mu = int(m**0.5)
+    centers_mu = [((np.random.uniform(0.2*m, 0.8*m), np.random.uniform(0.2*m, 0.8*m)), np.random.uniform(.1, 1)) for _ in range(num_of_centers_mu)]
+    mu = gaussian_pdf_2d(m, m, centers_mu, normalize=True)
+
+    min_val  = min(lamda.min(), mu.min())
+    max_val  = max(lamda.max(), mu.max())
+
+    fig, ((ax1, ax2)) = plt.subplots(1, 2)
+
+    g = nx.empty_graph(0, None)
+
+    # nodes = [(x, y, lamda[x,y], mu[x,y]) for x in range(m) for y in range(m)]
+    nodes = [(x, y) for x in range(m) for y in range(m)]
+
+    g.add_nodes_from(nodes)
+
+    def dist_mod_k(ix, iy, jx, jy, k,  p=1):
+
+        # print(ix, iy, jx, jy, k)
+
+        dx = min(np.abs(ix - jx), np.abs(ix + k - jx), np.abs(jx + k - ix))
+        dy = min(np.abs(iy - jy), np.abs(iy + k - jy), np.abs(jy + k - iy))
+
+        # print(dx, dy)
+        # print((dx**p + dy**p)**(1./p))
+
+        return (dx**p + dy**p)**(1./p)
+
+    def dist(ix, iy, jx, jy, k,  p=1):
+
+        dx = np.abs(ix - jx)
+        dy = np.abs(iy - jy)
+
+        return (dx**p + dy**p)**(1./p)
+
+    dist_func = dist_mod_k if structure == 'tours' else dist
+
+    # edges = set(
+    #     ((ix, iy, lamda_ix_iy, mu_ix_iy), (jx, jy, lamda_jx_jy, mu_jx_jy)) 
+    #     for ((ix, iy,  lamda_ix_iy, mu_ix_iy), (jx, jy, lamda_jx_jy, mu_jx_jy)) in product(nodes, nodes)
+    #     if dist_func(ix, iy, jx, jy, m) <= d)
+
+    edges = set(
+        ((ix, iy), (jx, jy)) 
+        for ((ix, iy), (jx, jy)) in product(nodes, nodes)
+        if dist_func(ix, iy, jx, jy, m) <= d)
+    
+    # for ((ix, iy), (jx, jy)) in product(nodes, nodes):
+    #     print((ix, iy), (jx, jy), min(np.abs(ix - jx), np.abs(ix + m - jx), np.abs(jx + m - ix)), min(np.abs(iy - jy), np.abs(iy + m - jy), np.abs(jy + m - iy)) ,dist_func(ix, iy, jx, jy, m))
+
+    g.add_edges_from(edges)
+    printarr(lamda)
+    printarr(mu)
+    for node in zip(g.nodes, lamda.ravel(), mu.ravel()):
+        print(node)
+
+    compatability_matrix = nx.adjacency_matrix(g).todense().A
+
+
+
+    return compatability_matrix, g
 
 def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):
 
@@ -248,30 +322,20 @@ def verify_crp_condition(compatability_matrix, alpha, beta):
         return False, 'not_connected'
 
 
-def generate_grid_supply_demand(m, n):
 
-
-    num_of_centers_demand = int(0.5*((m*n)**0.5))
-    centers_d = [((uniform(0.2*m, 0.8*m), uniform(0.2*n, 0.8*n)), uniform(0, 1)) for _ in range(num_of_centers_demand)]
-
-    num_of_centers_supply = int(0.5*((m*n)**0.5))
-    centers_s = [((uniform(0.2*m, 0.8*m), uniform(0.2*n, 0.8*n)), uniform(0, 1)) for _ in range(num_of_centers_supply)]
-
-    lamda_d_pdf = gaussian_pdf_2d(m, n, centers_d, normalize=True)
-    lamda_d = np.array([lamda_d_pdf[node] for node in nodes])
-
-    lamda_s_pdf = alpha * gaussian_pdf_2d(m, n, centers_s, normalize=True) + (1 - alpha) * lamda_d_pdf
-    lamda_s = np.array([lamda_s_pdf[node] for node in nodes])
-
-    lamda = np.concatenate((lamda_d, lamda_s))
+    
 
 
 
-# if __name__ == '__main__':    
+if __name__ == '__main__':  
+
+    
+    generate_grid_compatability_matrix_with_map(3)
 #     # Test
 #     # Create a large sparse matrix with elements in [0, 10]
 #     A = 10*sps.random(10000, 3, 0.5, format='csr')
 #     A = np.ceil(A).astype(int)
+
 
 #     # unique rows
 #     A_uniq = sp_unique(A, axis=0).toarray()

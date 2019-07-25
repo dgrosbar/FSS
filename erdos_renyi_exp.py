@@ -37,7 +37,7 @@ def erdos_renyi_exp_for_parallel(p=30):
             else:
                 sbpss_exp(m, 1, structure)
         
-def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss', ot_filename='erdos_renyi_sbpss_ot'):
+def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss_uni_mu', ot_filename='erdos_renyi_sbpss_ot_uni_mu'):
 
     n = m
     p_edge = 2*log(m)/m
@@ -53,7 +53,8 @@ def sbpss_exp(m, k, structure, filename='erdos_renyi_sbpss', ot_filename='erdos_
         compatability_matrix = generate_erdos_renyi_compatability_matrix_large(m, m)
         compatability_matrix = compatability_matrix.todense().A
         alpha = np.random.exponential(scale=1, size=m) # obtain values for non normelized customer frequency       
-        beta = np.random.exponential(scale=1, size=m) # obtain values for non normelized server frecquency
+        # beta = np.random.exponential(scale=1, size=m) # obtain values for non normelized server frecquency
+        beta = np.ones(m)
         alpha = alpha/alpha.sum()
         beta = beta/beta.sum()
         valid = False
