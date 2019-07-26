@@ -1887,7 +1887,7 @@ if __name__ == '__main__':
     # batching_window()
     # increasing_n_res()
     # ims_table('FZ_final_w_qp')
-    ot_table('erdos_renyi_sbpss_ot.csv')
+    ot_table('erdos_renyi_sbpss_ot')
 
     # comparison_table_grids()
     # growing_chains_graph()
