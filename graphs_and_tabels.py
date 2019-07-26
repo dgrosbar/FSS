@@ -1762,6 +1762,7 @@ def ot_table(filename='ot_sbpss_res'):
     df = pd.read_csv(filename + '.csv')
     df_i = df[['i', 'lamda','sim_waiting_times', 'sim_waiting_times_stdev'] + base_cols].drop_duplicates()
     df_i.loc[:, 'wt_x_r'] = df_i['lamda'] * df_i['sim_waiting_times']
+    df_i.loc[:, 'wt_x_r_stdev'] = df_i['lamda'] * df_i['sim_waiting_times_stdev']
     df_wt = df_i[base_cols +['wt_x_r']].groupby(by=base_cols, as_index=False).sum().rename(columns={'wt_x_r': 'wt'})
     df.loc[:, 'r_c'] = df['sim_matching_rates'] * df['c']
     df_c = df[base_cols + ['r_c']].groupby(by=base_cols, as_index=False).sum()
@@ -1886,7 +1887,7 @@ if __name__ == '__main__':
     # batching_window()
     # increasing_n_res()
     # ims_table('FZ_final_w_qp')
-    ot_table('new_grid_sbpss_ot3.csv')
+    ot_table('erdos_renyi_sbpss_ot.csv')
 
     # comparison_table_grids()
     # growing_chains_graph()
