@@ -1756,22 +1756,21 @@ def increasing_n_res(filename='increasing_n_system'):
     df = pd.read_csv(filename + '.csv')
 
 
-# def ot_graph(filename='ot_sbpss_res'):
+def ot_table(filename='ot_sbpss_res'):
 
-#     base_cols = ['density_level', 'exp_no', 'beta_dist', 'c_type', 'rho', 'policy','gamma']
+    base_cols= ['c_type','gamma','policy','rho','timestamp','m','n','arc_dist','exp_no','size','structure']
+    df = pd.read_csv(filename + '.csv')
+    df_i = df[['i', 'lamda','sim_waiting_times', 'sim_waiting_times_stdev'] + base_cols].drop_duplicates()
+    df_i.loc[:, 'wt_x_r'] = df_i['lamda'] * df_i['sim_waiting_times']
+    df_wt = df_i[base_cols +['wt_x_r']].groupby(by=base_cols, as_index=False).sum().rename(columns={'wt_x_r': 'wt'})
+    df.loc[:, 'r_c'] = df['sim_matching_rates'] * df['c']
+    df_c = df[base_cols + ['r_c']].groupby(by=base_cols, as_index=False).sum()
+    df_res = pd.merge(left=df_wt, right=df_c, how='left', on=base_cols)
+    # write_to_file(filename + 'res_i', df_res)
 
-#     df= pd.read_csv(filename + '.csv')
-#     # for col in df.columns.values:
-#     #     print(col)
 
-#     # print(df[['gamma']].drop_duplicates())
-#     # df_i = df[['i', 'lamda', '','sim_waiting_times'] + base_cols].drop_duplicates()
-#     # df_i.loc[:, 'wt_x_r'] = df_i['lamda']*df_i['sim_waiting_times']
-#     # df_wt = df_i[base_cols +['wt_x_r']].groupby(by=base_cols, as_index=False).sum().rename(columns={'wt_x_r': 'wt'})
-#     # df.loc[:, 'r_c'] = df['sim_matching_rates'] * df['c']
-#     # df_c = df[base_cols + ['r_c']].groupby(by=base_cols, as_index=False).sum()
-#     # df_res = pd.merge(left=df_wt, right=df_c, how='left', on=base_cols)
-#     print(df.sort_values(by=base_cols))
+    # df_j = df[['j', 'mu','sig_sim_idle_times', 'sig_sim_idle_times_stdev'] + base_cols].drop_duplicates()
+    
    
 def ot_graph(filename='ot_sbpss_res', dl='low', exp_no=12, beta_dist='exponential', c_type='dist', rho=0.9, log_scale=False, rhos=None):
 
@@ -1782,11 +1781,9 @@ def ot_graph(filename='ot_sbpss_res', dl='low', exp_no=12, beta_dist='exponentia
     c_type = 'dist'
     rhos = [0.9] if rhos is  None else rhos
 
-    base_cols = ['density_level', 'graph_no', 'exp_no', 'beta_dist', 'c_type', 'rho', 'policy','gamma']
+    base_cols = ['density_level', 'graph_no', 'exp_no', 'beta_dist', 'c_type', 'rho', 'policy', 'gamma']
     fig, ax = plt.subplots(1, 1)
 
-    # for col in df.columns.values:
-    #     print(col)
     df = df[df['density_level'] == dl]
     df = df[df['exp_no'] == exp_no]
     df = df[df['beta_dist'] == beta_dist]

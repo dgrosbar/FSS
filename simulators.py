@@ -48,9 +48,6 @@ def simulate_matching_sequance(compatability_matrix, alpha, beta, prt=True, prt_
         s_adj[j].append(np.int16(i))
         c_adj[i].append(np.int16(j))
 
-
-
-
     start_time = time()
     if prt:
         print('starting matching simulations')
@@ -366,6 +363,121 @@ def queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_a
                         if w[c_i, j] * (cur_time - customer_queues[c_i][0]) > longest_waiting:
                             i = c_i
                             longest_waiting = w[c_i, j] * (cur_time - customer_queues[c_i][0])
+
+            if i >= 0:
+
+                arrival_time = customer_queues[i].pop()
+                matches = matches + 1
+                if matches > warm_up:
+                    if not record:
+                        record = True
+                        record_stat_time = cur_time
+                    matching_counter[i, j] = matching_counter[i,j] + 1
+                    waiting_time = cur_time - arrival_time
+                    waiting_times[i, :] = waiting_times[i, :] + np.array([1, waiting_time, waiting_time**2])
+
+                service_time = np.random.exponential(s[i]/mu[j])
+                heappush(event_stream, (cur_time + service_time, np.int16(i), np.int16(j)))
+            
+            else:
+                server_states[j] = 0
+                server_idled_at[j] = cur_time
+
+    return matching_counter/(cur_time - record_stat_time), waiting_times, idle_times
+
+
+@jit(nopython=True, cache=True)
+def queueing_sim_loop_lqf(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only):
+
+    heapify = hq.heapify
+    heappop = hq.heappop
+    heappush = hq.heappush
+
+    matching_counter = np.zeros((m,n))
+    idle_times = np.zeros((n, 3))
+    waiting_times = np.zeros((m, 3))
+    server_states = np.zeros(n, dtype=np.int8)
+    server_idled_at = np.zeros(n, dtype=np.float64)
+    interarrival = 1./lamda
+    matches = 0
+    arrivals = 0
+    record = False
+    record_stat_time = 0
+
+    heapify(event_stream)
+    heappop(event_stream)
+
+    for i in range(m):
+        customer_queues[i].pop()
+        heappush(event_stream, (np.random.exponential(interarrival[i]), np.int16(i), np.int16(-1)))
+
+    while arrivals < sim_len:
+
+        event = heappop(event_stream)
+
+        cur_time = event[0]
+        i = event[1]
+        j = event[2]
+
+        if j == -1:
+
+            arrivals = arrivals + 1
+
+            if len(customer_queues[i]) > 0:
+                customer_queues[i].append(cur_time)
+
+            else:
+
+                j = np.int16(-1)
+                longest_idle = 0
+                for s_j in c_adj[i]:
+                    if server_states[s_j] == 0:
+                        if w_only:
+                            if w[i, s_j] > longest_idle:
+                                j = s_j
+                                longest_idle = w[i, s_j]
+                        else:
+                            if w[i, s_j] * (cur_time - server_idled_at[s_j]) > longest_idle:
+                                j = s_j
+                                longest_idle = w[i, s_j] * (cur_time - server_idled_at[s_j])
+
+                if j >= 0:
+
+                    matches = matches + 1
+                    if matches > warm_up:
+                        if not record:
+                            record = True
+                            record_stat_time = cur_time
+                        matching_counter[i, j] = matching_counter[i, j] + 1
+                        waiting_times[i] = waiting_times[i] + np.array([1, 0, 0])
+                        idle_time = cur_time - server_idled_at[s_j]
+                        idle_times[j, :] = idle_times[j, :] + np.array([1, idle_time, idle_time**2])
+                    
+                    server_states[j] = 1
+                    service_time = np.random.exponential(s[i]/mu[j])
+                    heappush(event_stream, (cur_time + service_time, np.int16(i), np.int16(j)))
+                
+                else:
+                    customer_queues[i].append(cur_time)
+
+            heappush(event_stream, (cur_time + np.random.exponential(interarrival[i]), np.int16(i), np.int16(-1)))
+        
+        else:
+
+            i = np.int16(-1)
+            longest_queue = 0
+
+            for c_i in s_adj[j]:
+                if len(customer_queues[c_i]) > 0:
+                    if w_only:
+                        if w[c_i, j] > longest_queue:
+                            i = c_i
+                            longest_queue = w[c_i, j]                      
+                    else:
+                        c_i_queue = w[c_i, j] * len(customer_queues[c_i]) 
+                        if c_i_queue > longest_queue:
+                            i = c_i
+                            longest_queue = c_i_queue
 
             if i >= 0:
 

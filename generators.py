@@ -8,10 +8,11 @@ from itertools import product
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import sys
 
 
 
-def generate_grid_compatability_matrix_with_map(m, d=3, structure='tours', prt=True):
+def generate_grid_compatability_matrix_with_map(m, d, structure='grid', prt=True):
 
 
     num_of_centers_lamda = int(m**0.5)
@@ -55,30 +56,18 @@ def generate_grid_compatability_matrix_with_map(m, d=3, structure='tours', prt=T
 
     dist_func = dist_mod_k if structure == 'tours' else dist
 
-    # edges = set(
-    #     ((ix, iy, lamda_ix_iy, mu_ix_iy), (jx, jy, lamda_jx_jy, mu_jx_jy)) 
-    #     for ((ix, iy,  lamda_ix_iy, mu_ix_iy), (jx, jy, lamda_jx_jy, mu_jx_jy)) in product(nodes, nodes)
-    #     if dist_func(ix, iy, jx, jy, m) <= d)
-
     edges = set(
         ((ix, iy), (jx, jy)) 
         for ((ix, iy), (jx, jy)) in product(nodes, nodes)
         if dist_func(ix, iy, jx, jy, m) <= d)
     
-    # for ((ix, iy), (jx, jy)) in product(nodes, nodes):
-    #     print((ix, iy), (jx, jy), min(np.abs(ix - jx), np.abs(ix + m - jx), np.abs(jx + m - ix)), min(np.abs(iy - jy), np.abs(iy + m - jy), np.abs(jy + m - iy)) ,dist_func(ix, iy, jx, jy, m))
-
     g.add_edges_from(edges)
     printarr(lamda)
     printarr(mu)
-    for node in zip(g.nodes, lamda.ravel(), mu.ravel()):
-        print(node)
-
     compatability_matrix = nx.adjacency_matrix(g).todense().A
 
 
-
-    return compatability_matrix, g
+    return compatability_matrix, g, lamda, mu
 
 def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):
 
@@ -329,8 +318,8 @@ def verify_crp_condition(compatability_matrix, alpha, beta):
 
 if __name__ == '__main__':  
 
-    
-    generate_grid_compatability_matrix_with_map(3)
+    np.set_printoptions(threshold=sys.maxsize)
+    generate_grid_compatability_matrix_with_map(5,2)
 #     # Test
 #     # Create a large sparse matrix with elements in [0, 10]
 #     A = 10*sps.random(10000, 3, 0.5, format='csr')

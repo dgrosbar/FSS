@@ -13,6 +13,7 @@ def printcols(df):
     for col in df.columns.values:
     	print(col)
 
+
 def printarr(arr, arr_name=None):
 
     if arr_name is None:
@@ -24,6 +25,7 @@ def printarr(arr, arr_name=None):
     print(np.array2string(arr, max_line_width=np.inf, formatter={'float_kind':lambda x: "%.6f" % x}))
     
     print('-'*75)
+
 
 def fast_choice(arr, size, shuffle=False):
 
