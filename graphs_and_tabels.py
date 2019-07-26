@@ -1758,7 +1758,7 @@ def increasing_n_res(filename='increasing_n_system'):
 
 def ot_table(filename='ot_sbpss_res'):
 
-    base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
+    base_cols= ['policy','rho','timestamp','m','n',,'exp_no','size','structure']
     df = pd.read_csv(filename + '.csv')
     df_i = df[['i', 'lamda','sim_waiting_times', 'sim_waiting_times_stdev'] + base_cols].drop_duplicates()
     df_i.loc[:, 'wt_x_r'] = df_i['lamda'] * df_i['sim_waiting_times']
@@ -1849,8 +1849,8 @@ def ot_graph(filename='ot_sbpss_res', dl='low', exp_no=12, beta_dist='exponentia
     # df_res = pd.merge(left=df_wt, right=df_c, how='left', on=base_cols)
     # print(df.sort_values(by=base_cols))
 
-def batching_window():
 
+def batching_window():
 
     x = np.array(range(70))
     y = np.array([0.2 + 1-exp(-i*0.1) for i in range(70)])
@@ -1874,6 +1874,176 @@ def batching_window():
 
     plt.show()
 
+
+def sbpss_gini_table(filename):
+
+
+    base_cols= ['policy','rho','timestamp','m','n',,'exp_no','size','structure']
+
+    df  = pd.read_csv(filename + 'csv')
+    df.loc[:, 'lamda_x_wt'] = df['sim_waiting_times']*df['sim_matching_rates']
+    df_cum = df[base_cols + ['lamda', 'sim_waiting_times', 'lamda_x_wt']].sort_values(by=base_cols + ['sim_waiting_times']).groupby(by=base_cols, as_index=False).
+
+    reses_i = reses_i.join(reses_i.sort_values(by=base_cols + ['WT_i_sim'])
+                           .groupby(base_cols)[['MR_i_sim','WTxMR_i_sim']].cumsum(axis=0)
+                           .rename(columns={'WTxMR_i_sim': 'cum_WT_i_sim', 'MR_i_sim': 'cum_MR_i_sim'}))
+
+    reses_ij.loc[:,'pi_ent/pi_hat'] = reses_ij['pi_hat']/reses_ij['pi_ent']
+
+    reses_ij = pd.merge(left=reses_ij,
+                        right=reses_ij[base_cols + ['j', 'pi_hat', 'pi_ent']]
+                        .groupby(base_cols + ['j'], as_index=False).sum()
+                        .rename(columns={'pi_ent': 'rho_ent', 'pi_hat': 'rho_hat'}),
+                        on=base_cols + ['j'], how='left')
+
+    reses_ij.loc[:,'Q_ij_ent'] = reses_ij['pi_ent']/(1.0-reses_ij['rho_ent'])
+    reses_ij.loc[:,'Q_ij_hat'] = reses_ij['pi_hat']/(1.0-reses_ij['rho_hat'])
+
+    reses_j.loc[:, 'WT_j_scv_sim'] = (reses_j['WT_j_std_sim']**2)/(reses_j['WT_j_sim'])**2
+    reses_i.loc[:, 'WT_i_scv_sim'] = (reses_i['WT_i_std_sim']**2)/(reses_i['WT_i_sim'])**2
+
+    reses_i = pd.merge(left=reses_i,
+                       right=reses_ij[base_cols + ['i', 'MR_ij_sim']].groupby(by=base_cols+['i'], as_index=False).sum()
+                       .rename(columns={'MR_ij_sim': 'MR_i_sim'}), on=base_cols + ['i'], how='left')
+
+    #print reses_i[base_cols + ['i', 'MR_i_sim']]
+
+    reses_i = pd.merge(left=reses_i,
+                       right=reses_ij[base_cols + ['MR_ij_sim']]
+                       .groupby(by=base_cols, as_index=False).sum()
+                       .rename(columns={'MR_ij_sim': 'MR_sim'}), on=base_cols, how='left')
+
+
+
+
+
+
+    reses_j.loc[:, 'norm_j'] = (reses_j['j'] + 1.)/reses_j[n_name]
+
+    fig, ax = plt.subplots(1, 2)
+    i = -1
+    j = -1
+    k = None
+    lines = [[], []]
+    color = COLORS[0]
+    util = False
+    fill_between = False
+    gini_curve = True
+
+    #base_cols = [0'chain_lem', 1'm', 2'exp_num', 3'sim_name', 4'rho']
+    res_dic = dict()
+    for key, grp in reses_i.groupby(base_cols):
+
+        grp = grp.sort_values(by=['cum_MR_i_sim'])
+        key_dict = dict(zip(base_cols, key))
+        print(key_dict)
+        if ('FIFO' in key_dict['sim_name'] or 'MW' in key_dict['sim_name'] or 'prio' in key_dict['sim_name']) \
+                and key_dict[n_name] in [5, 10, 50, 100, 500]:
+
+            if 'MW' in key_dict['sim_name']:
+                k = 0
+                i += 1
+                h = i
+            elif 'FIFO' in key_dict['sim_name'] or 'prio' in key_dict['sim_name']:
+                k = 1
+                j += 1
+                h = j
+
+            if util:
+                norm_j = grp['norm_j']
+                rho_j = 1. - grp['r_j_sim']
+                ax[k].plot(norm_j, rho_j, color='black', linewidth=.5,
+                       linestyle='-', marker=MARKERS[h],markersize=4,label='n=' + str(key[1]))
+                # ax[k].plot(cum_mr_i_sim, cum_wt_i_sim, color='black')
+                ax[k].set_xlabel('Server', fontsize=16)
+                ax[k].set_ylabel('Utilization', fontsize=16)
+                ax[k].set_xticks([0, 0.5, 1.])
+                ax[k].set_xticklabels(['1','n/2', 'n'], fontsize=16)
+                ax[k].set_ylim((0, 1))
+
+                ax[k].legend(title='')
+            else:
+
+                cum_wt_i_sim = np.append(np.array([0]), grp['cum_WT_i_sim'])
+                cum_mr_i_sim = np.append(np.array([0]), grp['cum_MR_i_sim'])
+                #print grp[['i', 'WT_i_sim', 'cum_MR_i_sim']]
+                #print cum_mr_i_sim
+                wt_i_sim = np.append(np.array([0]), grp['WT_i_sim'])
+                max_cum_wt = np.amax(cum_wt_i_sim)
+                max_wt = np.amax(wt_i_sim)
+                area_1 = calc_area_between_curves(cum_mr_i_sim, cum_mr_i_sim*max_cum_wt, cum_mr_i_sim, cum_mr_i_sim*0)
+                area_2 = calc_area_between_curves(cum_mr_i_sim, cum_wt_i_sim, cum_mr_i_sim, cum_mr_i_sim*0)
+                area_3 = calc_area_between_curves(cum_mr_i_sim, cum_mr_i_sim, cum_mr_i_sim, cum_mr_i_sim*0)
+                area_4 = calc_area_between_curves(cum_mr_i_sim, cum_wt_i_sim/max_cum_wt, cum_mr_i_sim, cum_mr_i_sim*0)
+                gini1 = (area_1 - area_2)/area_1
+                gini2 = (area_3 - area_4)/area_3
+                print key
+                res_dic[key_dict['sim_name']] = {'avg. WT': max_cum_wt, 'gini1': gini1,'gini2': gini2, 'worst':max_wt }
+                print max_cum_wt
+                print "{:.0%}".format((area_1 - area_2)/area_1)
+                # sort_wt_i_sim = np.sort(wt_i_sim)
+                # nn = sort_wt_i_sim.shape[0]
+                # gini_score = (2*((np.arange(1, nn + 1, 1)*sort_wt_i_sim).sum()))/(nn * sort_wt_i_sim.sum()) - ((nn+1)/nn)
+                # print "{:.0%}".format(gini_score)
+
+                if fill_between:
+                    ax[k].fill_between(cum_mr_i_sim, cum_mr_i_sim*max_cum_wt, cum_wt_i_sim, color=color, alpha=0.2)
+                    ax[k].fill_between(cum_mr_i_sim, 0, cum_wt_i_sim,  color=color, label=key)
+                if gini_curve:
+                        if key_dict['sim_name'] in ['rho_weighted_j_MW', 'rho_weighted_j_FIFO', 'plain_FIFO', 'plain_MW']:
+                            color = 'blue' if key_dict['sim_name'] in ['rho_weighted_j_MW', 'rho_weighted_j_FIFO'] else 'red'
+                            ax[k].plot(cum_mr_i_sim, cum_mr_i_sim*max_cum_wt, color='black', linewidth=.1)
+                            ax[k].plot(cum_mr_i_sim, cum_wt_i_sim, color=color,linewidth=.5,
+                                       linestyle='-', marker=MARKERS[h%len(MARKERS)], markersize=3,
+                                       label=key_dict['sim_name'] + '-' + str(key_dict['rho']))
+                            if 'prio' in key_dict['sim_name']:
+                                ax[0].plot(cum_mr_i_sim, cum_mr_i_sim*max_cum_wt, color='black', linewidth=.1)
+                                ax[0].plot(cum_mr_i_sim, cum_wt_i_sim, color='black',linewidth=.5,
+                                           linestyle='-', marker=MARKERS[(h)%len(MARKERS)], markersize=3,
+                                           label=key_dict['sim_name'] + '-' + str(key_dict['rho']))
+
+                    # ax[k].plot(cum_mr_i_sim, wt_i_sim, color='black', linewidth=.5,
+                    #            linestyle='-', marker=MARKERS2[h],markersize=4,label='n=' + str(key[1]))
+                    #print 1.-cum_mr_i_sim
+                else:
+                    lines[k] += ax[k].plot(1.-cum_mr_i_sim, wt_i_sim, color='black', linewidth=.5,
+                           linestyle='-', marker=MARKERS[h%len(MARKERS)], markersize=4,
+                                           label=key_dict['sim_name'] + '-' + str(key_dict['rho']))
+
+                # lines[k] += ax[k].plot(np.arange(0,1.2,0.2), wt_sim * np.ones(6), color='black', linewidth=.5,
+                #                        linestyle=LINE_STYLES['dashed'], marker=MARKERS2[h], markersize=4)
+
+                for k in [0, 1]:
+
+                    # leg = Legend(ax[k], [lines[k][g] for g in range(len(lines[k])) if g%2 == 1],[" ,",", ",", ",", "],
+                    #              loc='upper left', bbox_to_anchor=(.7, .95), frameon=True, title='Total')
+                    # leg._legend_box.align = "left"
+                    # ax[k].add_artist(leg)
+
+                    # ax[k].plot(cum_mr_i_sim, cum_wt_i_sim, color='black')
+                    ax[k].set_xlabel('Customer Class', fontsize=16)
+                    ax[k].set_ylabel('Avg. Waiting Time', fontsize=16)
+                    ax[k].set_xticks([0, 0.5, 1.])
+                    #ax[k].set_yticks([2*g for g in range(9)])
+                    ax[k].set_xticklabels(['1','n/2', 'n'], fontsize=16)
+                    #ax[k].set_ylim((0, 18))
+                    ax[k].legend()
+
+                    # leg2 = ax[k].legend(title='Class', frameon=True, bbox_to_anchor=(1.,.95), )
+                    # leg2._legend_box.align = "left"
+
+                    # ax[0].set_title(r"LQF-ALIS," r"$\quad \rho=.95$", fontsize=16, color='black')
+                    # ax[1].set_title(r"FIFO-ALIS," r"$\quad\rho=.95$", fontsize=16, color='black')
+    for key, val in sorted(res_dic.iteritems()):
+        if 'FIFO' in key or 'prio' in key:
+            print key, [(key2, ':', val2) for key2, val2 in val.iteritems()]
+    print '-------------------------------------------------'
+    print '-------------------------------------------------'
+    for key, val in sorted(res_dic.iteritems()):
+        if 'MW' in key or 'prio' in key:
+            print key, [(key2, ':', val2) for key2, val2 in val.iteritems()]
+    if show:
+        plt.show()
 
 
 if __name__ == '__main__':
