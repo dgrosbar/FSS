@@ -1766,7 +1766,8 @@ def ot_table(filename='ot_sbpss_res'):
     df.loc[:, 'r_c'] = df['sim_matching_rates'] * df['c']
     df_c = df[base_cols + ['r_c']].groupby(by=base_cols, as_index=False).sum()
     df_res = pd.merge(left=df_wt, right=df_c, how='left', on=base_cols)
-    # write_to_file(filename + 'res_i', df_res)
+    df_res.to_csv(filename +'_i', index=False)
+
 
 
     # df_j = df[['j', 'mu','sig_sim_idle_times', 'sig_sim_idle_times_stdev'] + base_cols].drop_duplicates()
@@ -1885,7 +1886,7 @@ if __name__ == '__main__':
     # batching_window()
     # increasing_n_res()
     # ims_table('FZ_final_w_qp')
-    ot_graph()
+    ot_table('new_grid_sbpss_ot3.csv')
 
     # comparison_table_grids()
     # growing_chains_graph()
