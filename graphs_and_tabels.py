@@ -1756,7 +1756,7 @@ def increasing_n_res(filename='increasing_n_system'):
     df = pd.read_csv(filename + '.csv')
 
 
-def ot_table(filename='ot_sbpss_res'):
+def ot_table(filename=''):
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
     df = pd.read_csv(filename + '.csv')
@@ -1884,18 +1884,13 @@ def sbpss_gini_cum(filename, cost=False):
     df = df[(df['exp_no'] == 1) & (df['policy'] == 'weighted_fcfs_alis') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95))]
     df_i = df[['i', 'lamda','sim_waiting_times', 'sim_waiting_times_stdev'] + base_cols].drop_duplicates()
     df_i.loc[:, 'lamda_x_sim_waiting_times'] = df_i['lamda'] * df_i['sim_waiting_times']
-    df_i.loc[:, 'lamda_x_sim_waiting_times_stdev'] = df_i['lamda'] * df_i['sim_waiting_times_stdev']
-    df_wt = df_i[base_cols +['lamda_x_sim_waiting_times', 'lamda_x_sim_waiting_times_stdev']]
-    df_wt = df_wt.groupby(by=base_cols, as_index=False).sum()
-    df_wt = df_wt.rename(columns={'wt_x_r': 'wt', 'wt_x_r_stdev': 'wt_stdev'})
-
-    df = df.sort_values(by=base_cols + ['sim_waiting_times'])
-    df_cum = df[base_cols + ['wt_x_r', 'lamda']].groupby(by=base_cols, as_index=False).cumsum(axis=0)
-    df_cum = df_cum.rename(columns={'wt_x_r': 'wt_x_r_cum', 'lamda':'lamda_cum'})
+    df_i = df_i[base_cols +['lamda_x_sim_waiting_times']]
+    df_i = df_i.sort_values(by=base_cols + ['sim_waiting_times'])
+    df_cum = df_i.groupby(by=base_cols, as_index=False).cumsum(axis=0)
+    df_cum = df_cum.rename(columns={'lamda_x_sim_waiting_times': 'cum_sim_waiting_timnes', 'lamda': 'cum_lamda'})
+    df_i = df_i.join(df_cum)
     print('-------------')
-    print(df)
-    print(df_cum)
-    df_cum = df.join(df_cum)
+    print(df_i)
     print(df_cum)
 
 
@@ -2057,17 +2052,17 @@ def sbpss_gini_cum(filename, cost=False):
         plt.show()
 
 
-def make_test_file(filename):
+# def make_test_file(filename):
 
-    df = pd.read_csv(filename + '.csv')
-    df = df[(df['exp_no'] == 1) & (df['policy'] == 'weighted_fcfs_alis') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95))]
-    df.to_csv(filename + '_test.csv', index=False)
+#     df = pd.read_csv(filename + '.csv')
+#     df = df[(df['exp_no'] == 1) & (df['policy'] == 'weighted_fcfs_alis') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95))]
+#     df.to_csv(filename + '_test.csv', index=False)
 
-def make_test_file_ot(filename):
+# def make_test_file_ot(filename):
 
-    df = pd.read_csv(filename + '.csv')
-    df = df[(df['exp_no'] == 1) & (df['policy'] == 'fcfs_alis_ot') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95)) & ((df['gamma']==0.1) | (df['gamma']==0.2))]
-    df.to_csv(filename + '_test.csv', index=False)
+#     df = pd.read_csv(filename + '.csv')
+#     df = df[(df['exp_no'] == 1) & (df['policy'] == 'fcfs_alis_ot') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95)) & ((df['gamma']==0.1) | (df['gamma']==0.2))]
+#     df.to_csv(filename + '_test.csv', index=False)
 
 
 if __name__ == '__main__':
