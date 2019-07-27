@@ -1758,7 +1758,7 @@ def increasing_n_res(filename='increasing_n_system'):
 
 def ot_table(filename='ot_sbpss_res'):
 
-    base_cols= ['policy','rho','timestamp','m','n',,'exp_no','size','structure']
+    base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
     df = pd.read_csv(filename + '.csv')
     df_i = df[['i', 'lamda','sim_waiting_times', 'sim_waiting_times_stdev'] + base_cols].drop_duplicates()
     df_i.loc[:, 'wt_x_r'] = df_i['lamda'] * df_i['sim_waiting_times']
@@ -1875,14 +1875,29 @@ def batching_window():
     plt.show()
 
 
-def sbpss_gini_table(filename):
+def sbpss_gini_cum(filename, cost=False):
 
 
-    base_cols= ['policy','rho','timestamp','m','n',,'exp_no','size','structure']
+    base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
+    
+    df = pd.read_csv(filename + '.csv')
+    df = df[(df['exp_no'] == 1) & (df['policy'] == 'weighted_fcfs_alis') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95))]
+    df_i = df[['i', 'lamda','sim_waiting_times', 'sim_waiting_times_stdev'] + base_cols].drop_duplicates()
+    df_i.loc[:, 'lamda_x_sim_waiting_times'] = df_i['lamda'] * df_i['sim_waiting_times']
+    df_i.loc[:, 'lamda_x_sim_waiting_times_stdev'] = df_i['lamda'] * df_i['sim_waiting_times_stdev']
+    df_wt = df_i[base_cols +['lamda_x_sim_waiting_times', 'lamda_x_sim_waiting_times_stdev']]
+    df_wt = df_wt.groupby(by=base_cols, as_index=False).sum()
+    df_wt = df_wt.rename(columns={'wt_x_r': 'wt', 'wt_x_r_stdev': 'wt_stdev'})
 
-    df  = pd.read_csv(filename + 'csv')
-    df.loc[:, 'lamda_x_wt'] = df['sim_waiting_times']*df['sim_matching_rates']
-    df_cum = df[base_cols + ['lamda', 'sim_waiting_times', 'lamda_x_wt']].sort_values(by=base_cols + ['sim_waiting_times']).groupby(by=base_cols, as_index=False).
+    df = df.sort_values(by=base_cols + ['sim_waiting_times'])
+    df_cum = df[base_cols + ['wt_x_r', 'lamda']].groupby(by=base_cols, as_index=False).cumsum(axis=0)
+    df_cum = df_cum.rename(columns={'wt_x_r': 'wt_x_r_cum', 'lamda':'lamda_cum'})
+    print('-------------')
+    print(df)
+    print(df_cum)
+    df_cum = df.join(df_cum)
+    print(df_cum)
+
 
     reses_i = reses_i.join(reses_i.sort_values(by=base_cols + ['WT_i_sim'])
                            .groupby(base_cols)[['MR_i_sim','WTxMR_i_sim']].cumsum(axis=0)
@@ -1906,16 +1921,12 @@ def sbpss_gini_table(filename):
                        right=reses_ij[base_cols + ['i', 'MR_ij_sim']].groupby(by=base_cols+['i'], as_index=False).sum()
                        .rename(columns={'MR_ij_sim': 'MR_i_sim'}), on=base_cols + ['i'], how='left')
 
-    #print reses_i[base_cols + ['i', 'MR_i_sim']]
+    #print( reses_i[base_cols + ['i', 'MR_i_sim']])
 
     reses_i = pd.merge(left=reses_i,
                        right=reses_ij[base_cols + ['MR_ij_sim']]
                        .groupby(by=base_cols, as_index=False).sum()
                        .rename(columns={'MR_ij_sim': 'MR_sim'}), on=base_cols, how='left')
-
-
-
-
 
 
     reses_j.loc[:, 'norm_j'] = (reses_j['j'] + 1.)/reses_j[n_name]
@@ -1966,8 +1977,8 @@ def sbpss_gini_table(filename):
 
                 cum_wt_i_sim = np.append(np.array([0]), grp['cum_WT_i_sim'])
                 cum_mr_i_sim = np.append(np.array([0]), grp['cum_MR_i_sim'])
-                #print grp[['i', 'WT_i_sim', 'cum_MR_i_sim']]
-                #print cum_mr_i_sim
+                #print( grp[['i', 'WT_i_sim', 'cum_MR_i_sim']])
+                #print( cum_mr_i_sim)
                 wt_i_sim = np.append(np.array([0]), grp['WT_i_sim'])
                 max_cum_wt = np.amax(cum_wt_i_sim)
                 max_wt = np.amax(wt_i_sim)
@@ -1977,14 +1988,14 @@ def sbpss_gini_table(filename):
                 area_4 = calc_area_between_curves(cum_mr_i_sim, cum_wt_i_sim/max_cum_wt, cum_mr_i_sim, cum_mr_i_sim*0)
                 gini1 = (area_1 - area_2)/area_1
                 gini2 = (area_3 - area_4)/area_3
-                print key
+                print(key)
                 res_dic[key_dict['sim_name']] = {'avg. WT': max_cum_wt, 'gini1': gini1,'gini2': gini2, 'worst':max_wt }
-                print max_cum_wt
-                print "{:.0%}".format((area_1 - area_2)/area_1)
+                print( max_cum_wt)
+                print( "{:.0%}".format((area_1 - area_2)/area_1))
                 # sort_wt_i_sim = np.sort(wt_i_sim)
                 # nn = sort_wt_i_sim.shape[0]
                 # gini_score = (2*((np.arange(1, nn + 1, 1)*sort_wt_i_sim).sum()))/(nn * sort_wt_i_sim.sum()) - ((nn+1)/nn)
-                # print "{:.0%}".format(gini_score)
+                # print( "{:.0%}".format(gini_score))
 
                 if fill_between:
                     ax[k].fill_between(cum_mr_i_sim, cum_mr_i_sim*max_cum_wt, cum_wt_i_sim, color=color, alpha=0.2)
@@ -2004,7 +2015,7 @@ def sbpss_gini_table(filename):
 
                     # ax[k].plot(cum_mr_i_sim, wt_i_sim, color='black', linewidth=.5,
                     #            linestyle='-', marker=MARKERS2[h],markersize=4,label='n=' + str(key[1]))
-                    #print 1.-cum_mr_i_sim
+                    #print( 1.-cum_mr_i_sim)
                 else:
                     lines[k] += ax[k].plot(1.-cum_mr_i_sim, wt_i_sim, color='black', linewidth=.5,
                            linestyle='-', marker=MARKERS[h%len(MARKERS)], markersize=4,
@@ -2036,14 +2047,27 @@ def sbpss_gini_table(filename):
                     # ax[1].set_title(r"FIFO-ALIS," r"$\quad\rho=.95$", fontsize=16, color='black')
     for key, val in sorted(res_dic.iteritems()):
         if 'FIFO' in key or 'prio' in key:
-            print key, [(key2, ':', val2) for key2, val2 in val.iteritems()]
-    print '-------------------------------------------------'
-    print '-------------------------------------------------'
+            print( key, [(key2, ':', val2) for key2, val2 in val.iteritems()])
+    print( '-------------------------------------------------')
+    print( '-------------------------------------------------')
     for key, val in sorted(res_dic.iteritems()):
         if 'MW' in key or 'prio' in key:
-            print key, [(key2, ':', val2) for key2, val2 in val.iteritems()]
+            print( key, [(key2, ':', val2) for key2, val2 in val.iteritems()])
     if show:
         plt.show()
+
+
+def make_test_file(filename):
+
+    df = df.read_csv(filename + '.csv')
+    df = df[(df['exp_no'] == 1) & (df['policy'] == 'weighted_fcfs_alis') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95))]
+    df.to_csv(filename + '_test.csv', index=False)
+
+def make_test_file_ot(filename):
+
+    df = df.read_csv(filename + '.csv')
+    df = df[(df['exp_no'] == 1) & (df['policy'] == 'fcfs_alis_ot') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95)) & ((df['gamma']==0.1) | (df['gamma']==0.2))]
+    df.to_csv(filename + '_test.csv', index=False)
 
 
 if __name__ == '__main__':
@@ -2057,7 +2081,9 @@ if __name__ == '__main__':
     # batching_window()
     # increasing_n_res()
     # ims_table('FZ_final_w_qp')
-    ot_table('erdos_renyi_sbpss_ot')
+    # ot_table('erdos_renyi_sbpss_ot')
+    make_test_file('erdos_renyi_sbpss.csv')
+    make_test_file_ot('erdos_renyi_sbpss_ot.csv')
 
     # comparison_table_grids()
     # growing_chains_graph()
