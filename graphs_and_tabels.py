@@ -2059,13 +2059,13 @@ def sbpss_gini_cum(filename, cost=False):
 
 def make_test_file(filename):
 
-    df = df.read_csv(filename + '.csv')
+    df = pd.read_csv(filename + '.csv')
     df = df[(df['exp_no'] == 1) & (df['policy'] == 'weighted_fcfs_alis') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95))]
     df.to_csv(filename + '_test.csv', index=False)
 
 def make_test_file_ot(filename):
 
-    df = df.read_csv(filename + '.csv')
+    df = pd.read_csv(filename + '.csv')
     df = df[(df['exp_no'] == 1) & (df['policy'] == 'fcfs_alis_ot') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95)) & ((df['gamma']==0.1) | (df['gamma']==0.2))]
     df.to_csv(filename + '_test.csv', index=False)
 
