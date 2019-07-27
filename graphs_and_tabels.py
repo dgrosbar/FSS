@@ -2078,12 +2078,8 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    # batching_window()
-    # increasing_n_res()
-    # ims_table('FZ_final_w_qp')
-    # ot_table('erdos_renyi_sbpss_ot')
-    make_test_file('erdos_renyi_sbpss.csv')
-    make_test_file_ot('erdos_renyi_sbpss_ot.csv')
+    make_test_file('erdos_renyi_sbpss')
+    make_test_file_ot('erdos_renyi_sbpss_ot')
 
     # comparison_table_grids()
     # growing_chains_graph()
