@@ -2073,7 +2073,7 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    sbpss_gini_cum(test)
+    sbpss_gini_cum('test')
 
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
