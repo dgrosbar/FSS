@@ -2078,8 +2078,8 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    make_test_file('erdos_renyi_sbpss')
-    make_test_file_ot('erdos_renyi_sbpss_ot')
+    make_test_file('new_grid_sbpss3')
+    make_test_file_ot('new_grid_sbpss_ot3')
 
     # comparison_table_grids()
     # growing_chains_graph()
