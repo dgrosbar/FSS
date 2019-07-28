@@ -5,7 +5,7 @@ mpl.use('TkAgg')
 import matplotlib.pyplot as plt
 import sys
 from itertools import product
-from utilities import printarr, printcols
+from utilities import printarr, printcols, calc_area_between_curves
 from math import exp
 
 
@@ -1770,10 +1770,6 @@ def ot_table(filename=''):
     df_res.to_csv(filename +'_i', index=False)
 
 
-
-    # df_j = df[['j', 'mu','sig_sim_idle_times', 'sig_sim_idle_times_stdev'] + base_cols].drop_duplicates()
-    
-   
 def ot_graph(filename='ot_sbpss_res', dl='low', exp_no=12, beta_dist='exponential', c_type='dist', rho=0.9, log_scale=False, rhos=None):
 
     df= pd.read_csv(filename + '.csv')
@@ -1883,48 +1879,20 @@ def sbpss_gini_cum(filename, cost=False):
     df = pd.read_csv(filename + '.csv')
     df = df[(df['exp_no'] == 1) & (df['policy'] == 'weighted_fcfs_alis') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95))]
     df_i = df[['i', 'lamda','sim_waiting_times', 'sim_waiting_times_stdev'] + base_cols].drop_duplicates()
-    df_i.loc[:, 'lamda_x_sim_waiting_times'] = df_i['lamda'] * df_i['sim_waiting_times']
-    df_i = df_i[base_cols +['lamda_x_sim_waiting_times']]
+    df_i.loc[:, 'lamda_x_sim_waiting_times'] = df_i['lamda'] * df_i['sim_waiting_times']/df_i['rho']
     df_i = df_i.sort_values(by=base_cols + ['sim_waiting_times'])
-    df_cum = df_i.groupby(by=base_cols, as_index=False).cumsum(axis=0)
+    df_cum = df_i[base_cols + ['lamda','lamda_x_sim_waiting_times']]
+    df_cum = df_cum.groupby(by=base_cols, as_index=False).cumsum(axis=0)
     df_cum = df_cum.rename(columns={'lamda_x_sim_waiting_times': 'cum_sim_waiting_timnes', 'lamda': 'cum_lamda'})
     df_i = df_i.join(df_cum)
-    print('-------------')
-    print(df_i)
-    print(df_cum)
+    df_i.loc[:, 'cum_lamda'] = df_i['cum_lamda']/df_i['rho']
+    df_i.loc[:, 'lamda_x_sim_waiting_times'] = df_i['lamda'] * df_i['sim_waiting_times']
+    df_i = df_i.sort_values(by=base_cols + ['sim_waiting_times'])
+    df_cum = df_i[base_cols + ['lamda','lamda_x_sim_waiting_times']]
+    df_cum = df_cum.groupby(by=base_cols, as_index=False).cumsum(axis=0)
+    df_cum = df_cum.rename(columns={'lamda_x_sim_waiting_times': 'cum_sim_waiting_timnes', 'lamda': 'cum_lamda'})
+    df_i = df_i.join(df_cum)
 
-
-    reses_i = reses_i.join(reses_i.sort_values(by=base_cols + ['WT_i_sim'])
-                           .groupby(base_cols)[['MR_i_sim','WTxMR_i_sim']].cumsum(axis=0)
-                           .rename(columns={'WTxMR_i_sim': 'cum_WT_i_sim', 'MR_i_sim': 'cum_MR_i_sim'}))
-
-    reses_ij.loc[:,'pi_ent/pi_hat'] = reses_ij['pi_hat']/reses_ij['pi_ent']
-
-    reses_ij = pd.merge(left=reses_ij,
-                        right=reses_ij[base_cols + ['j', 'pi_hat', 'pi_ent']]
-                        .groupby(base_cols + ['j'], as_index=False).sum()
-                        .rename(columns={'pi_ent': 'rho_ent', 'pi_hat': 'rho_hat'}),
-                        on=base_cols + ['j'], how='left')
-
-    reses_ij.loc[:,'Q_ij_ent'] = reses_ij['pi_ent']/(1.0-reses_ij['rho_ent'])
-    reses_ij.loc[:,'Q_ij_hat'] = reses_ij['pi_hat']/(1.0-reses_ij['rho_hat'])
-
-    reses_j.loc[:, 'WT_j_scv_sim'] = (reses_j['WT_j_std_sim']**2)/(reses_j['WT_j_sim'])**2
-    reses_i.loc[:, 'WT_i_scv_sim'] = (reses_i['WT_i_std_sim']**2)/(reses_i['WT_i_sim'])**2
-
-    reses_i = pd.merge(left=reses_i,
-                       right=reses_ij[base_cols + ['i', 'MR_ij_sim']].groupby(by=base_cols+['i'], as_index=False).sum()
-                       .rename(columns={'MR_ij_sim': 'MR_i_sim'}), on=base_cols + ['i'], how='left')
-
-    #print( reses_i[base_cols + ['i', 'MR_i_sim']])
-
-    reses_i = pd.merge(left=reses_i,
-                       right=reses_ij[base_cols + ['MR_ij_sim']]
-                       .groupby(by=base_cols, as_index=False).sum()
-                       .rename(columns={'MR_ij_sim': 'MR_sim'}), on=base_cols, how='left')
-
-
-    reses_j.loc[:, 'norm_j'] = (reses_j['j'] + 1.)/reses_j[n_name]
 
     fig, ax = plt.subplots(1, 2)
     i = -1
@@ -1936,7 +1904,6 @@ def sbpss_gini_cum(filename, cost=False):
     fill_between = False
     gini_curve = True
 
-    #base_cols = [0'chain_lem', 1'm', 2'exp_num', 3'sim_name', 4'rho']
     res_dic = dict()
     for key, grp in reses_i.groupby(base_cols):
 
@@ -2052,6 +2019,44 @@ def sbpss_gini_cum(filename, cost=False):
         plt.show()
 
 
+def sbpss_gini_score(filename, base_cols ,cost=False):
+
+    
+    df = pd.read_csv(filename + '.csv')
+    df_i = df[['i', 'lamda','sim_waiting_times', 'sim_waiting_times_stdev'] + base_cols].drop_duplicates()
+    df_i.loc[:, 'lamda_x_sim_waiting_times'] = df_i['lamda'] * df_i['sim_waiting_times']/df_i['rho']
+    df_i = df_i.sort_values(by=base_cols + ['sim_waiting_times'])
+    df_cum = df_i[base_cols + ['lamda','lamda_x_sim_waiting_times']]
+    df_cum = df_cum.groupby(by=base_cols, as_index=False).cumsum(axis=0)
+    df_cum = df_cum.rename(columns={'lamda_x_sim_waiting_times': 'cum_sim_waiting_timnes', 'lamda': 'cum_lamda'})
+    df_i = df_i.join(df_cum)
+    df_i.loc[:, 'cum_lamda'] = df_i['cum_lamda']/df_i['rho']
+
+    exp_df = []    
+    for key, exp in df_i.groupby(by=base_cols):
+        
+        exp_dict = dict(zip(base_cols, key))
+        cum_wt_i_sim = np.append(np.array([0]), exp['cum_sim_waiting_timnes'])
+        cum_mr_i_sim = np.append(np.array([0]), exp['cum_lamda'])
+        wt_i_sim = np.append(np.array([0]), exp['sim_waiting_times'])
+        max_cum_wt = np.amax(cum_wt_i_sim)
+        area_1 = calc_area_between_curves(cum_mr_i_sim, cum_mr_i_sim*max_cum_wt, cum_mr_i_sim, cum_mr_i_sim*0)
+        area_2 = calc_area_between_curves(cum_mr_i_sim, cum_wt_i_sim, cum_mr_i_sim, cum_mr_i_sim*0)
+        area_3 = calc_area_between_curves(cum_mr_i_sim, cum_mr_i_sim, cum_mr_i_sim, cum_mr_i_sim*0)
+        area_4 = calc_area_between_curves(cum_mr_i_sim, cum_wt_i_sim/max_cum_wt, cum_mr_i_sim, cum_mr_i_sim*0)
+        gini1 = (area_1 - area_2)/area_1
+        gini2 = (area_3 - area_4)/area_3
+        exp_dict['gini'] = gini1
+        exp_dict['Avg. Wq'] = max_cum_wt
+        exp_df.append(exp_dict)
+    
+    exp_df = pd.DataFrame(exp_df)
+    print(exp_df)
+    exp_df.to_csv(filename + '_gini.csv', index=False)
+
+
+
+
 # def make_test_file(filename):
 
 #     df = pd.read_csv(filename + '.csv')
@@ -2073,7 +2078,9 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    sbpss_gini_cum('test')
+    base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
+
+    sbpss_gini_score('new_grid_sbpss3', base_cols)
 
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
