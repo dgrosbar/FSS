@@ -2043,7 +2043,10 @@ def sbpss_gini_score(filename, base_cols ,cost=False):
 
         area_1 = calc_area_between_curves(cum_mr_i_sim, cum_mr_i_sim*max_cum_wt, cum_mr_i_sim, cum_mr_i_sim*0)
         area_2 = calc_area_between_curves(cum_mr_i_sim, cum_wt_i_sim, cum_mr_i_sim, cum_mr_i_sim*0)
-        gini1 = (area_1 - area_2)/area_1
+        if area_1 > 0:
+            gini1 = (area_1 - area_2)/area_1
+        else:
+            gini1 = 0
         exp_dict['gini'] = gini1
         # area_3 = calc_area_between_curves(cum_mr_i_sim, cum_mr_i_sim, cum_mr_i_sim, cum_mr_i_sim*0)
         # area_4 = calc_area_between_curves(cum_mr_i_sim, cum_wt_i_sim/max_cum_wt, cum_mr_i_sim, cum_mr_i_sim*0)
