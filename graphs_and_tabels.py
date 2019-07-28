@@ -2082,7 +2082,7 @@ if __name__ == '__main__':
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
 
-    sbpss_gini_score('grid_sbpss_comp', base_cols)
+    sbpss_gini_score('erdos_renyi_sbpss', base_cols)
 
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
