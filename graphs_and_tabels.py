@@ -2040,13 +2040,15 @@ def sbpss_gini_score(filename, base_cols ,cost=False):
         cum_mr_i_sim = np.append(np.array([0]), exp['cum_lamda'])
         wt_i_sim = np.append(np.array([0]), exp['sim_waiting_times'])
         max_cum_wt = np.amax(cum_wt_i_sim)
+
         area_1 = calc_area_between_curves(cum_mr_i_sim, cum_mr_i_sim*max_cum_wt, cum_mr_i_sim, cum_mr_i_sim*0)
         area_2 = calc_area_between_curves(cum_mr_i_sim, cum_wt_i_sim, cum_mr_i_sim, cum_mr_i_sim*0)
-        area_3 = calc_area_between_curves(cum_mr_i_sim, cum_mr_i_sim, cum_mr_i_sim, cum_mr_i_sim*0)
-        area_4 = calc_area_between_curves(cum_mr_i_sim, cum_wt_i_sim/max_cum_wt, cum_mr_i_sim, cum_mr_i_sim*0)
         gini1 = (area_1 - area_2)/area_1
-        gini2 = (area_3 - area_4)/area_3
         exp_dict['gini'] = gini1
+        # area_3 = calc_area_between_curves(cum_mr_i_sim, cum_mr_i_sim, cum_mr_i_sim, cum_mr_i_sim*0)
+        # area_4 = calc_area_between_curves(cum_mr_i_sim, cum_wt_i_sim/max_cum_wt, cum_mr_i_sim, cum_mr_i_sim*0)
+        # gini2 = (area_3 - area_4)/area_3
+        
         exp_dict['Avg. Wq'] = max_cum_wt
         exp_df.append(exp_dict)
         print(exp_dict)
