@@ -2049,6 +2049,7 @@ def sbpss_gini_score(filename, base_cols ,cost=False):
         exp_dict['gini'] = gini1
         exp_dict['Avg. Wq'] = max_cum_wt
         exp_df.append(exp_dict)
+        print(exp_dict)
     
     exp_df = pd.DataFrame(exp_df)
     print(exp_df)
@@ -2080,7 +2081,8 @@ if __name__ == '__main__':
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
-    sbpss_gini_score('new_grid_sbpss3', base_cols)
+
+    sbpss_gini_score('grid_sbpss_comp', base_cols)
 
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
