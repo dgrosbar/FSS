@@ -2061,6 +2061,15 @@ def sbpss_gini_score(filename, base_cols ,cost=False):
     exp_df.to_csv(filename + '_gini.csv', index=False)
 
 
+def sbpss_gini_table(filename):
+
+    df = pd.read_csv(filename + '.csv')
+
+    # print(df.sort_values(by=['size', 'rho', 'exp_no', 'policy']))
+    # df = df.set_index(['size', 'exp_no', 'rho'])
+    df_comp = df[df['rho']>=0.6]
+    df_comp = df_comp.pivot_table(index=['size', 'rho'], values=['Avg. Wq', 'gini'], columns=['policy'], aggfunc=np.mean)
+    print(df_comp.reset_index())
 
 
 # def make_test_file(filename):
@@ -2086,8 +2095,8 @@ if __name__ == '__main__':
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
-
-    sbpss_gini_score('grid_sbpss_comp', base_cols)
+    sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
+    # sbpss_gini_table('grid_sbpss_comp_gini')
 
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
