@@ -2064,25 +2064,52 @@ def sbpss_gini_score(filename, base_cols ,cost=False):
 def sbpss_gini_table(filename):
 
     df = pd.read_csv(filename + '.csv')
+    df_comp = df[(df['rho']>=0.6) & (df['exp_no'] != 9)]
+    df_comp.loc[:, 'scaled_Wq'] = df_comp['Avg. Wq']*(1. - df_comp['rho'])/df_comp['rho']
+    df_comp = df_comp.pivot_table(index=['size', 'exp_no', 'rho'], values=['Avg. Wq', 'gini', 'scaled_Wq'], columns=['policy'], aggfunc=np.mean)
+    df_comp = df_comp.reset_index()
+    df_comp.columns = [' '.join(col).strip() for col in df_comp.columns.values]
+    df_comp.loc[:, 'Wq_ratio'] = df_comp['Avg. Wq weighted_fcfs_alis']/df_comp['Avg. Wq fcfs_alis']
+    df_comp.loc[:, 'gini_gap'] = df_comp['gini fcfs_alis'] - df_comp['gini weighted_fcfs_alis']
+    df_comp.loc[:, 'scaled_Wq_weighted_fcfs_alis'] = df_comp['Avg. Wq weighted_fcfs_alis']/(1. - df_comp['rho'])
+    print(df_comp[df_comp['exp_no']== 9][['size','exp_no' ,'rho', 'gini_gap', 'Wq_ratio']])
+    
+    def f(df):
 
-    # print(df.sort_values(by=['size', 'rho', 'exp_no', 'policy']))
-    # df = df.set_index(['size', 'exp_no', 'rho'])
-    df_comp = df[df['rho']>=0.6]
-    df_comp = df_comp.pivot_table(index=['size', 'rho'], values=['Avg. Wq', 'gini'], columns=['policy'], aggfunc=np.mean)
-    print(df_comp.reset_index())
+        x = '_sim'
+
+        d = {}
+        
+        d['Wq_ratio'] = df['Wq_ratio'].mean()
+        d['Wq_ratio_stdev'] = df['Wq_ratio'].std()
+        d['Wq_ratio_max'] = df['Wq_ratio'].max()
+        d['Wq_ratio_min'] = df['Wq_ratio'].min()
+        d['gini_gap'] = df['gini_gap'].mean()
+        d['gini_gap_stdev'] = df['gini_gap'].std()
+        d['gini_gap_max'] = df['gini_gap'].max()
+        d['gini_gap_min'] = df['gini_gap'].min()
 
 
-# def make_test_file(filename):
+        index = [
+            'Wq_ratio',
+            'Wq_ratio_stdev',
+            'gini_gap',
+            'gini_gap_stdev',
+            'Wq_ratio_max',
+            'Wq_ratio_min',
+            'gini_gap_max',
+            'gini_gap_min'
+        ]
 
-#     df = pd.read_csv(filename + '.csv')
-#     df = df[(df['exp_no'] == 1) & (df['policy'] == 'weighted_fcfs_alis') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95))]
-#     df.to_csv(filename + '_test.csv', index=False)
+        return pd.Series(d, index=index)
 
-# def make_test_file_ot(filename):
+    agg_res = df_comp.groupby(by=['size', 'rho'], as_index=False).apply(f).reset_index()
 
-#     df = pd.read_csv(filename + '.csv')
-#     df = df[(df['exp_no'] == 1) & (df['policy'] == 'fcfs_alis_ot') & (df['n'] == 81) & ((df['rho']==0.9) | (df['rho']==0.95)) & ((df['gamma']==0.1) | (df['gamma']==0.2))]
-#     df.to_csv(filename + '_test.csv', index=False)
+
+
+    print(agg_res)
+
+
 
 
 if __name__ == '__main__':
@@ -2095,8 +2122,8 @@ if __name__ == '__main__':
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
-    sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
-    # sbpss_gini_table('grid_sbpss_comp_gini')
+    # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
+    sbpss_gini_table('grid_sbpss_comp_gini')
 
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')

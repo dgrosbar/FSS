@@ -692,7 +692,7 @@ def local_entropy(compatability_matrix, lamda, mu, s=None, prt=False):
 	
 	z = np.vstack([compatability_matrix, np.ones(n)]).ravel()
 	
-	pi_hat, duals = fast_primal_dual_algorithm(A, b, z, m, n, prt=True)
+	pi_hat, duals = fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, prt=True)
 	pi_hat = pi_hat.reshape((m + 1, n))
 	return(np.dot(np.diag(lamda), pi_hat[:m, :]))
 
@@ -1089,10 +1089,10 @@ def fast_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=
 	return r
 
 	
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def p_to_q(p, compatability_matrix, alpha, m, n):
 
-	q = (np.ones((n, m)) - np.dot(compatability_matrix, p.T)).T
+	q = (np.ones((n, m)) - np.dot(compatability_matrix, p.T).T)
 	
 	for ell in range(1, n, 1):
 		q[ell, :] = q[ell, :] * q[ell - 1, :] 
@@ -1105,7 +1105,7 @@ def p_to_q(p, compatability_matrix, alpha, m, n):
 
 	return q
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def r_to_p(compatability_matrix, pp, qq, p, n):
 
 	r = qq * pp

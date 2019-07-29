@@ -1345,6 +1345,32 @@ def go_back_and_approximate_sbpss_customer_dependet(filename='FZ_final_w_qp'):
                 exps = []   
 
 
+def go_back_and_approximate_sbpss_customer_dependet_lqf(filename='FZ_final_w_qp', p=30):
+
+    df = pd.read_csv(filename + '.csv')
+    pool = mp.Pool(processes=p)
+
+    for n in range(7,11,1):
+        exps = []
+        for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
+            exps.append([exp, timestamp])
+            if len(exps) == p:
+                print('no_of_exps:', len(exps), 'n:', n)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
+                sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf', sbpss_df)
+                exps = []
+        else:
+            if len(exps) > 0:
+                print('no_of_exps:', len(exps), 'n:', n)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
+                sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf', sbpss_df)
+                exps = []   
+
+
 def go_back_and_approximate_sbpss_w_alis(filename='FZ_Kaplan_exp_sbpss_good2'):
 
     df = pd.read_csv(filename + '.csv')
@@ -1435,55 +1461,63 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
 
         sbpss_df = []
 
-        for split in ['one', 'half', 'rand']:
+        for policy in ['fcfs_alis', 'lqf_alis']:
 
-            if split == 'one':
-                theta = np.ones(m)
-            elif split == 'half':
-                theta = 0.5 * np.ones(m)
-            else:
-                theta = np.random.uniform(0.1, 0.9, m)
+            for split in ['zero', 'one', 'half', 'rand']:
 
-            for rho in [0.01] + [0.05] + [0.1*i for i in range(1, 10, 1)] + [.95, .99]:
-                
-                st = time()            
-                lamda = np.ones(m) * rho * theta
-                s = alpha * (1./theta)
-                eta = lamda * s
-                mu = beta
+                if split == 'zero':
+                    theta = np.zeros(m)
+                elif split == 'one':
+                    theta = np.ones(m)
+                elif split == 'half':
+                    theta = 0.5 * np.ones(m)
+                else:
+                    theta = np.random.uniform(0.1, 0.9, m)
 
-                print(
-                    'rho:' , rho, '\n',
-                    'lamda: ', np.array2string(lamda, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x}), '\n',
-                    'eta: ', np.array2string(eta, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x}), '\n',
-                    'mu', np.array2string(mu, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x})
-                    )
+                for rho in [0.01] + [0.05] + [0.1*i for i in range(1, 10, 1)] + [.95, .99]:
+                    
+                    lamda = (alpha * rho)**(1.- theta)
+                    s = (alpha * rho)**theta
 
-                exp_res = simulate_queueing_system(compatability_matrix, lamda, beta, s=s, sims=30)
-                heavy_traffic_approx_entropy_eta=  entropy_approximation(compatability_matrix, eta, mu, pad=True)
-                heavy_traffic_approx_entropy = np.dot(np.diag(1./s), heavy_traffic_approx_entropy_eta)
-                exp_res['mat']['heavy_traffic_approx_entropy'] = heavy_traffic_approx_entropy
-                exp_res['mat']['low_traffic_approx_entropy'] = local_entropy(compatability_matrix, lamda, beta, s)
-                exp_res['mat']['rho_approx'] = (1. - rho) * exp_res['mat']['low_traffic_approx_entropy'] + (rho) * exp_res['mat']['heavy_traffic_approx_entropy']
-                exp_res['mat']['heavy_traffic_approx_exact'] = np.zeros((m, n))
-                
-                print('ending - density_level: ', density_level, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' beta_dist: ', beta_dist, ' rho: ', rho, ' split:', split ,' duration: ', time() - st)
-                print('pct_error_rho_entropy:'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['rho_approx']).sum()/lamda.sum())
+                    st = time()            
+                    
+                    eta = lamda * s
+                    mu = beta
 
-                exp_res['aux']['split'] =  split
-                exp_res['aux']['graph_no'] =  graph_no
-                exp_res['aux']['exp_no'] =  exp_no
-                exp_res['aux']['beta_dist'] =  beta_dist
-                exp_res['aux']['density_level'] =  density_level
-                exp_res['aux']['rho'] = rho
+                    print(
+                        'rho:' , rho, '\n',
+                        'lamda: ', np.array2string(lamda, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x}), '\n',
+                        'eta: ', np.array2string(eta, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x}), '\n',
+                        'mu', np.array2string(mu, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x})
+                        )
+                    exp_res = simulate_queueing_system(compatability_matrix, lamda, beta, s=s, sims=30, lqf=(policy == 'lqf_alis'))
+                    heavy_traffic_approx_entropy_eta=  entropy_approximation(compatability_matrix, eta, mu, pad=True)
+                    heavy_traffic_approx_entropy = np.dot(np.diag(1./s), heavy_traffic_approx_entropy_eta)
+                    exp_res['mat']['fcfs_apporx'] = heavy_traffic_approx_entropy
+                    exp_res['mat']['local_approx'] = local_entropy(compatability_matrix, lamda, beta, s)
+                    lamda_norm = lamda/lamda.sum()
+                    exp_res['mat']['alis_approx'] = fast_alis_approximation(compatability_matrix, lamda_norm, beta, rho, check_every=10, max_time=600)
+                    exp_res['mat']['rho_approx'] = (1. - rho) * exp_res['mat']['local_approx'] + (rho) * exp_res['mat']['fcfs_apporx']
+                    exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + rho*exp_res['mat']['fcfs_apporx']
+                    
+                    print('ending - density_level: ', density_level, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' beta_dist: ', beta_dist, ' rho: ', rho,
+                    ' split:', split ,' duration: ', time() - st, 'pct_error'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['fcfs_alis_approx']).sum()/lamda.sum())
 
-                exp_res['row']['theta'] = theta
-                exp_res['row']['eta'] = eta
+                    exp_res['aux']['split'] =  split
+                    exp_res['aux']['graph_no'] =  graph_no
+                    exp_res['aux']['exp_no'] =  exp_no
+                    exp_res['aux']['beta_dist'] =  beta_dist
+                    exp_res['aux']['density_level'] =  density_level
+                    exp_res['aux']['rho'] = rho
+                    exp_res['aux']['policy'] = policy
+
+                    exp_res['row']['theta'] = theta
+                    exp_res['row']['eta'] = eta
 
 
-                sbpss_rho_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu,  result_dict=exp_res)
+                    sbpss_rho_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu,  result_dict=exp_res)
 
-                sbpss_df.append(sbpss_rho_df)
+                    sbpss_df.append(sbpss_rho_df)
 
         return sbpss_df
 
@@ -2093,7 +2127,7 @@ if __name__ == '__main__':
 
     # print(cm.shape)
 
-    go_back_and_approximate_grids_sbpss(3)
+    # go_back_and_approximate_grids_sbpss(3)
     # increasing_n_system()
     # go_back_and_approximate_sbpss_customer_dependet()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')
@@ -2129,15 +2163,20 @@ if __name__ == '__main__':
     # mu = np.ones(n)/n
     # beta = mu
 
-    # rho = 1
+    # rho = 0.9
     # compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
     # m , n = compatability_matrix.shape
-    # lamda = alpha
+    # lamda = alpha * rho
     # mu = beta
-    # sim_len = 2*10**6
-    # warm_up = 1*10**6
-    # res = simulate_sparse_queueing_system(compatability_matrix, lamda, mu)
+    # # sim_len = 2*10**6
+    # # warm_up = 1*10**6
+    # res = simulate_queueing_system(compatability_matrix, lamda, mu)
 
+    # res_lqf = simulate_queueing_system(compatability_matrix, lamda, mu)
+    # printarr(res['mat']['sim_matching_rates'], 'fcfs')
+
+    # printarr(res_lqf['mat']['sim_matching_rates'], 'lqf')
+    go_back_and_approximate_sbpss_customer_dependet_lqf()
     # printarr(res['mat']['sim_matching_rates'], 'sim_mr')
     # mre  = adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta)
     # printarr(mre, 'exact_mr')

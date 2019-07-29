@@ -177,7 +177,7 @@ def matching_sim_loop(customer_queues, server_queues, cum_alpha, cum_beta, s_adj
     return matching_counter/matching_counter.sum()
 
 
-def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_only=False, prt=False, sims=30, sim_len=None, warm_up=None, seed=None, per_edge=1000, prt_all=False, p=None):
+def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_only=False, prt=False, sims=30, sim_len=None, warm_up=None, seed=None, per_edge=1000, prt_all=False, p=None, lqf=False):
 
 
     m = len(lamda)  # m- number of servers
@@ -232,7 +232,10 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_
             if w is None:
                 w = compatability_matrix
             
-            match_rates_k, wait_k, idle_k = queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only)
+            if lqf: 
+                match_rates_k, wait_k, idle_k = queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only)
+            else:
+                match_rates_k, wait_k, idle_k = queueing_sim_loop_lqf(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only)
 
 
             match_rates.append(match_rates_k)
