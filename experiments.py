@@ -1494,9 +1494,9 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                     heavy_traffic_approx_entropy_eta=  entropy_approximation(compatability_matrix, eta, mu, pad=True)
                     heavy_traffic_approx_entropy = np.dot(np.diag(1./s), heavy_traffic_approx_entropy_eta)
                     exp_res['mat']['fcfs_apporx'] = heavy_traffic_approx_entropy
-                    exp_res['mat']['local_approx'] = local_entropy(compatability_matrix, lamda, beta, s)
+                    # exp_res['mat']['local_approx'] = local_entropy(compatability_matrix, lamda, beta, s)
                     lamda_norm = lamda/lamda.sum()
-                    exp_res['mat']['alis_approx'] = fast_alis_approximation(compatability_matrix, lamda_norm, beta, rho, check_every=10, max_time=600)
+                    exp_res['mat']['alis_approx'] = alis_approximation(compatability_matrix, lamda_norm, beta, rho, check_every=10, max_time=600)
                     exp_res['mat']['rho_approx'] = (1. - rho) * exp_res['mat']['local_approx'] + (rho) * exp_res['mat']['fcfs_apporx']
                     exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + rho*exp_res['mat']['fcfs_apporx']
                     
@@ -2129,7 +2129,7 @@ if __name__ == '__main__':
 
     # go_back_and_approximate_grids_sbpss(3)
     # increasing_n_system()
-    # go_back_and_approximate_sbpss_customer_dependet()
+    go_back_and_approximate_sbpss_customer_dependet()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')
     # df = go_back_and_solve_qp(df)
     # df.to_csv('erdos_renyi_exp_final_w_qp.csv', index=False)
@@ -2157,11 +2157,14 @@ if __name__ == '__main__':
 
     # n = 10
     # m = 10
-    # rho = 0.1
     # compatability_matrix = np.tril(np.ones((n, n)))
-    # alpha = np.ones(n)/n
+    # lamda = np.arange(.94, 0.45, -0.05)
     # mu = np.ones(n)/n
     # beta = mu
+    # print(lamda)
+    # workload_sets, rho_m, rho_n= bipartite_workload_decomposition(compatability_matrix, lamda, mu)
+    # for key,val in workload_sets.items():
+    #     print(key, val)
 
     # rho = 0.9
     # compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
@@ -2176,7 +2179,7 @@ if __name__ == '__main__':
     # printarr(res['mat']['sim_matching_rates'], 'fcfs')
 
     # printarr(res_lqf['mat']['sim_matching_rates'], 'lqf')
-    go_back_and_approximate_sbpss_customer_dependet_lqf()
+    # go_back_and_approximate_sbpss_customer_dependet_lqf()
     # printarr(res['mat']['sim_matching_rates'], 'sim_mr')
     # mre  = adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta)
     # printarr(mre, 'exact_mr')

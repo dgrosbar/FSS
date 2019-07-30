@@ -8,6 +8,10 @@ from itertools import product
 from utilities import printarr, printcols, calc_area_between_curves
 from math import exp
 
+prop_cycle = plt.rcParams['axes.prop_cycle']
+COLORS = prop_cycle.by_key()['color']
+MARKERS = ["|", "v", "*", "x", "+", "D", "s"]
+
 
 def comparison_graph(filename):
 
@@ -2063,16 +2067,25 @@ def sbpss_gini_score(filename, base_cols ,cost=False):
 
 def sbpss_gini_table(filename):
 
+    plt.rc('text', usetex=True)
+    # plt.rc('font', family='serif')
+    mpl.rcParams['text.latex.preamble'] = [r'\usepackage{xfrac}']
+    mpl.rcParams['hatch.linewidth'] = 0.05
+
     df = pd.read_csv(filename + '.csv')
-    df_comp = df[(df['rho']>=0.6) & (df['exp_no'] != 9)]
-    df_comp.loc[:, 'scaled_Wq'] = df_comp['Avg. Wq']*(1. - df_comp['rho'])/df_comp['rho']
+    df_comp = df[(df['rho']>=0.6)]
+    if 'grid' in filename:
+        df_comp = df_comp[(df_comp['exp_no'] != 9) | (df_comp['size'] != '30x30') ]
+    df_comp.loc[:, 'scaled_Wq'] = df_comp['Avg. Wq'] * (1. - df_comp['rho'])/df_comp['rho']
     df_comp = df_comp.pivot_table(index=['size', 'exp_no', 'rho'], values=['Avg. Wq', 'gini', 'scaled_Wq'], columns=['policy'], aggfunc=np.mean)
     df_comp = df_comp.reset_index()
+    # print(df_comp)
     df_comp.columns = [' '.join(col).strip() for col in df_comp.columns.values]
     df_comp.loc[:, 'Wq_ratio'] = df_comp['Avg. Wq weighted_fcfs_alis']/df_comp['Avg. Wq fcfs_alis']
     df_comp.loc[:, 'gini_gap'] = df_comp['gini fcfs_alis'] - df_comp['gini weighted_fcfs_alis']
     df_comp.loc[:, 'scaled_Wq_weighted_fcfs_alis'] = df_comp['Avg. Wq weighted_fcfs_alis']/(1. - df_comp['rho'])
-    print(df_comp[df_comp['exp_no']== 9][['size','exp_no' ,'rho', 'gini_gap', 'Wq_ratio']])
+    # print(df_comp[df_comp['rho']== .99][['size','exp_no' ,'rho', 'gini_gap', 'Wq_ratio']])
+    # print(df_comp[df_comp['exp_no']== 9][['size','exp_no' ,'rho', 'gini_gap', 'Wq_ratio']])
     
     def f(df):
 
@@ -2104,8 +2117,98 @@ def sbpss_gini_table(filename):
         return pd.Series(d, index=index)
 
     agg_res = df_comp.groupby(by=['size', 'rho'], as_index=False).apply(f).reset_index()
+    agg_res['Wq_ratio_u'] = agg_res['Wq_ratio'] + 1.96 * agg_res['Wq_ratio_stdev']
+    agg_res['Wq_ratio_l'] = agg_res['Wq_ratio'] - 1.96 * agg_res['Wq_ratio_stdev']
+    agg_res['gini_gap_u'] = agg_res['gini_gap'] + 1.96 * agg_res['gini_gap_stdev']
+    agg_res['gini_gap_l'] = agg_res['gini_gap'] - 1.96 * agg_res['gini_gap_stdev']
 
 
+    fig, ax = plt.subplots(2, 2)
+    marker_dict = {'fcfs_alis': 'x', 'weighted_fcfs_alis': 'v'}
+    marker_dict = {'fcfs_alis': 'x', 'weighted_fcfs_alis': 'v'}
+
+    max_x = [0,0]
+    max_y = [0,0]
+    min_x = [0,0]
+    min_y = [0,0]
+
+
+    for k, (size, grp) in enumerate(df_comp.groupby(by=['size'])):
+        # title = '(' + size + ')x(' + size  + ')' if 'x' in str(size) else str(int(size)) + 'x' + str(int(size))
+        title = str(int(size)) + 'x' + str(int(size))
+        # ax[1,k].set_title(title)
+        for v, (rho, exp_grp) in enumerate(grp.groupby(by=['exp_no'])):
+            exp_grp = exp_grp.sort_values(by='rho')
+            ax[1, k].plot(1.-exp_grp['Wq_ratio'], exp_grp['gini_gap'], color='black', linestyle=':', linewidth=0.5, alpha=0.3, label='_nolegend_')
+        for v, (rho, rho_grp) in enumerate(grp.groupby(by=['rho'])):
+            ax[1, k].scatter(1.- rho_grp['Wq_ratio'], rho_grp['gini_gap'], color=COLORS[v], marker=MARKERS[v], label="{:.2}".format(rho), s=12)
+            rho_max_x = (1.-rho_grp['Wq_ratio']).max()
+            rho_max_y = rho_grp['gini_gap'].max()
+            max_x[k] = rho_max_x if rho_max_x > max_x[k] else max_x[k]
+            max_y[k] = rho_max_y if rho_max_y > max_y[k] else max_y[k]
+            rho_min_x = (1.-rho_grp['Wq_ratio']).min()
+            rho_min_y = rho_grp['gini_gap'].min()
+            min_x[k] = rho_min_x if rho_min_x < min_x[k] else min_x[k]
+            min_y[k] = rho_min_y if rho_min_y < min_y[k] else min_y[k]
+
+
+    for k in range(2):
+        ax[1, k].plot([-1, 1], [0,0], color='black', linewidth=1)
+        ax[1 ,k].plot([0,0], [-1, 1], color='black', linewidth=1)
+        abs_x = max(abs(max_x[k]),abs(min_x[k]))
+        abs_y = max(abs(max_y[k]),abs(min_y[k]))
+        ax[1, k].set_xlim(min(min_x[k] * 1.1, -0.25*abs_x), max(max_x[k] * 1.1,0.25*abs_x))
+        ax[1, k].set_ylim(min(min_y[k] * 1.1, -0.25*abs_y), max(max_y[k] * 1.1,0.25*abs_y))
+
+    for k, (size, grp) in enumerate(agg_res.groupby(by='size')):
+
+        # title = '(' + size + ')x(' + size  + ')' if 'x' in size else str(int(size)) + 'x' + str(int(size))
+        title = str(int(size)) + 'x' + str(int(size))
+        ax[0,k].set_title(title, fontsize=18)
+        ax[0,k].plot(grp['rho'], 1. - grp['Wq_ratio'], color='red', label=r"$1-\sfrac{Wq(w)}{Wq(1)}$")#label='Wq.(weighted) / Wq.(not weighted)')
+        ax[0,k].plot(grp['rho'], 1. - grp['Wq_ratio_u'], color='red', label='CI-95', linewidth=0.5, linestyle=':')
+        ax[0,k].plot(grp['rho'], 1. - grp['Wq_ratio_l'], color='red', label='_nolegend_', linewidth=0.5, linestyle=':')
+        ax[0,k].scatter(grp['rho'], 1. - grp['Wq_ratio_max'], color='red', label= 'Max-Min', marker='x')
+        ax[0,k].scatter(grp['rho'], 1. - grp['Wq_ratio_min'], color='red', label='_nolegend_', marker='x')
+        ax[0,k].plot(grp['rho'], grp['gini_gap'], color='blue', label=r"$G(Wq(1))-G(Wq(w))$", linestyle='--')
+        ax[0,k].plot(grp['rho'], grp['gini_gap_u'], color='blue', label='CI-95', linewidth=0.5, linestyle=':')
+        ax[0,k].plot(grp['rho'], grp['gini_gap_l'], color='blue', label='_nolegend_', linewidth=0.5, linestyle=':')
+        ax[0,k].scatter(grp['rho'], grp['gini_gap_max'], color='blue', label='Max-Min', marker='v')
+        ax[0,k].scatter(grp['rho'], grp['gini_gap_min'], color='blue', label='_nolegend_', marker='v')
+        ax[0,k].plot([.6,1], [0,0], color='black', linewidth=0.5, linestyle='--')
+        # ax[k, 0].plot([.6,1], [0,0], color='black', linewidth=0.5, linestyle='--')
+        # ax[k, 0].set_xlim(0.59, 1)
+        # ax[k, 0].set_ylim(-0.1, 1.3)
+
+    ax[0, 0].set_xlabel(r"$\rho$", fontsize=16)
+    ax[0, 1].set_xlabel(r"$\rho$", fontsize=16)
+    ax[1, 0].set_xlabel(r"$1-\sfrac{Wq(w)}{Wq(1)}$", fontsize=16)
+    ax[1, 1].set_xlabel(r"$1-\sfrac{Wq(w)}{Wq(1)}$", fontsize=16)
+    ax[1, 0].set_ylabel(r"$G(Wq(1))-G(Wq(w))$", fontsize=12)
+    ax[1, 1].set_ylabel(r"$G(Wq(1))-G(Wq(w))$", fontsize=12)
+
+    plt.rc('xtick',labelsize=14)
+    plt.rc('ytick',labelsize=14)
+
+    
+    handles,labels = ax[0, 0].get_legend_handles_labels()
+
+    order = [0, 2, 1, 3, 4, 5]
+
+    handles = [handles[v] for v in order]
+    labels = [labels[v] for v in order]
+
+    print(labels)
+
+    ax[0, 0].legend(handles, labels, ncol=3)
+    ax[0, 1].legend(handles, labels, ncol=3)
+    # ax[0, 0].legend()
+    ax[1, 0].legend(title='utilization')
+    ax[1, 1].legend(title='utilization')
+
+    # plt.legend()
+
+    plt.show()
 
     print(agg_res)
 
@@ -2123,7 +2226,8 @@ if __name__ == '__main__':
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
     # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
-    sbpss_gini_table('grid_sbpss_comp_gini')
+    # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
+    sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
 
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')

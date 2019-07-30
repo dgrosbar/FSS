@@ -67,6 +67,7 @@ def generate_grid_compatability_matrix_with_map(m, d, structure='grid', prt=True
     compatability_matrix = nx.adjacency_matrix(g).todense().A
 
 
+
     return compatability_matrix, g, lamda, mu
 
 def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):
