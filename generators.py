@@ -4,6 +4,7 @@ from math import log
 from scipy import sparse as sps
 from scipy import stats as stats
 from utilities import fast_choice, sp_unique, gaussian_pdf_2d, printarr
+from mr_calc_and_approx import bipartite_workload_decomposition
 from itertools import product
 import matplotlib
 matplotlib.use('TkAgg')
@@ -12,26 +13,34 @@ import sys
 
 
 
-def generate_grid_compatability_matrix_with_map(m, d, structure='grid', prt=True):
+
+def generate_grid_compatability_matrix_with_map(m, d, zeta, structure='grid', prt=True):
 
 
     num_of_centers_lamda = int(m**0.5)
-    centers_lamda = [((np.random.uniform(0.2*m, 0.8*m), np.random.uniform(0.2*m, 0.8*m)), np.random.uniform(.1, 1)) for _ in range(num_of_centers_lamda)]
+    centers_lamda = [((np.random.uniform(0.2*m, 0.8*m), np.random.uniform(0.2*m, 0.8*m)), np.random.uniform(0.2, 1)) for _ in range(num_of_centers_lamda)]
     lamda = gaussian_pdf_2d(m, m, centers_lamda, normalize=True)
+    lamda = lamda + (10**-6)*np.ones(lamda.shape)
+    lamda = lamda/lamda.sum()
 
     num_of_centers_mu = int(m**0.5)
-    centers_mu = [((np.random.uniform(0.2*m, 0.8*m), np.random.uniform(0.2*m, 0.8*m)), np.random.uniform(.1, 1)) for _ in range(num_of_centers_mu)]
+    centers_mu = [((np.random.uniform(0.2*m, 0.8*m), np.random.uniform(0.2*m, 0.8*m)), np.random.uniform(0.2, 1)) for _ in range(num_of_centers_mu)]
     mu = gaussian_pdf_2d(m, m, centers_mu, normalize=True)
+    mu = mu + (10**-6)*np.ones(mu.shape)
+    mu = mu/mu.sum()
+    mu = (1 - zeta) * lamda + zeta * mu
 
     min_val  = min(lamda.min(), mu.min())
     max_val  = max(lamda.max(), mu.max())
 
-    fig, ((ax1, ax2)) = plt.subplots(1, 2)
+    # fig, ((ax1, ax2)) = plt.subplots(1, 2)
 
     g = nx.empty_graph(0, None)
 
     # nodes = [(x, y, lamda[x,y], mu[x,y]) for x in range(m) for y in range(m)]
     nodes = [(x, y) for x in range(m) for y in range(m)]
+    node_map = np.array([[k, x, y] for k, (x,y) in enumerate(nodes)])
+    
 
     g.add_nodes_from(nodes)
 
@@ -47,7 +56,7 @@ def generate_grid_compatability_matrix_with_map(m, d, structure='grid', prt=True
 
         return (dx**p + dy**p)**(1./p)
 
-    def dist(ix, iy, jx, jy, k,  p=1):
+    def dist(ix, iy, jx, jy, k=0,  p=1):
 
         dx = np.abs(ix - jx)
         dy = np.abs(iy - jy)
@@ -56,19 +65,53 @@ def generate_grid_compatability_matrix_with_map(m, d, structure='grid', prt=True
 
     dist_func = dist_mod_k if structure == 'tours' else dist
 
-    edges = set(
-        ((ix, iy), (jx, jy)) 
-        for ((ix, iy), (jx, jy)) in product(nodes, nodes)
-        if dist_func(ix, iy, jx, jy, m) <= d)
+    edges = set()
+        # ((ix, iy), (jx, jy)) 
+        # for ((ix, iy), (jx, jy)) in product(nodes, nodes)
+        # if dist_func(ix, iy, jx, jy, m) <= d)
+    print('creating edges')
+    for (x_1, y_1) in nodes:
+        for x_2 in range(max(x_1 - d, 0), min(x_1 + d + 1, m), 1):
+            for y_2 in range(max(y_1 - d, 0), min(y_1 + d + 1, m), 1):
+                # if (x_1, y_1) == (0,0) and dist(x_1, y_1, x_2, y_2)<=d:
+                #     print((0,0), (x_2, y_2), dist(x_1, y_1, x_2, y_2), dist(x_1, y_1, x_2, y_2)<=d, x_1 < x_2, ((x_1 == x_2) and (y_1 < y_2)))
+                if dist(x_1, y_1, x_2, y_2) <= d:
+                    if x_1 < x_2 or ((x_1 == x_2) and (y_1 <= y_2)):
+                        edges.add(((x_1, y_1),(x_2, y_2)))
     
+
     g.add_edges_from(edges)
-    printarr(lamda)
-    printarr(mu)
-    compatability_matrix = nx.adjacency_matrix(g).todense().A
+    print('edges added')
+    compatability_matrix = nx.adjacency_matrix(g)
 
 
 
-    return compatability_matrix, g, lamda, mu
+    # print('(x, x)', np.array([node[0] for node in nodes]))
+    # print('(x, x)', np.array([node[1] for node in nodes]))
+    # print('--'*50)
+    # for k, node in enumerate(nodes):
+    #     if node == (4, 4):
+    #         print(node, compatability_matrix[k])
+
+    workload_sets, rho_m, rho_n = bipartite_workload_decomposition(compatability_matrix, lamda.ravel(), mu.ravel(), path=None)
+
+    # for key, workload_set in workload_sets.items():
+    #     print(key, workload_set['rho'], len(workload_set['supply_nodes']), len(workload_set['demnand_nodes']))
+    # edge_count = len(compatability_matrix.nonzero()[0])
+    # i_x = np.zeros(edge_count)
+    # i_y = np.zeros(edge_count)
+    # j_x = np.zeros(edge_count)
+    # j_y = np.zeros(edge_count)
+
+    # for k, (i, j) in enumerate(zip(*compatability_matrix.nonzero())):
+
+    #     i_x[k] = node_map[i, 1]
+    #     i_y[k] = node_map[i, 2]
+        
+    #     j_x[k] = node_map[j, 1]
+    #     j_y[k] = node_map[j, 2]
+
+    return compatability_matrix, g, lamda.ravel(), mu.ravel(), workload_sets, rho_m, rho_n, node_map #, (i_x, i_y, j_x, j_y)
 
 def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):
 
@@ -114,6 +157,10 @@ def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):
     g.add_edges_from(edges)
 
     compatability_matrix = nx.adjacency_matrix(g).todense().A
+
+
+
+
 
 
 
@@ -314,13 +361,10 @@ def verify_crp_condition(compatability_matrix, alpha, beta):
 
 
     
-
-
-
 if __name__ == '__main__':  
 
     np.set_printoptions(threshold=sys.maxsize)
-    generate_grid_compatability_matrix_with_map(5,2)
+    generate_grid_compatability_matrix_with_map(100,2,0.2)
 #     # Test
 #     # Create a large sparse matrix with elements in [0, 10]
 #     A = 10*sps.random(10000, 3, 0.5, format='csr')

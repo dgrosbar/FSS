@@ -1683,18 +1683,31 @@ def bipartite_workload_decomposition(Q, lamda, mu, path=None):
     m = len(lamda)
     n = len(mu)
 
-    if path is None:
-        path = '\\Users\\dean.grosbard\\Dropbox\\Software3.0\\fss'
+    # if path is None:
+    #     path = '\\Users\\dean.grosbard\\Dropbox\\Software3.0\\fss'
+    try:
+    	os.remove('inputHPF.txt')
+    except:
+    	pass
+    
+    try:
+    	os.remove('inputHPF.txt')
+    except:
+    	pass
 
     lamda_sum = np.asscalar(lamda.sum())
+
     inputf = open('inputHPF.txt', 'w', 1)
+    outputf = open('outputHPF.txt', 'w', 1)
+    outputf.close()
+    
     theta_max = 1
     theta_min = -100
     edges = set(zip(*Q.nonzero()))
     num_nodes = m + n + 2
     num_edges = (num_nodes-2) + len(edges)
-    rn = range(0, m, 1)
-    rm = range(m, m + n, 1)
+    rn = range(1, m + 1, 1)
+    rm = range(m + 1, m + n + 1, 1)
 
     inputf.write('p ' + str(num_nodes) +
                  ' ' + str(num_edges) +
@@ -1703,6 +1716,7 @@ def bipartite_workload_decomposition(Q, lamda, mu, path=None):
                  ' 0'+'\n')
     inputf.write('n 0 s'+'\n')
     inputf.write('n ' + str(num_nodes-1) + ' t'+'\n')
+
 
     for i in rn:
         ub = lamda[i-1]
@@ -1723,6 +1737,7 @@ def bipartite_workload_decomposition(Q, lamda, mu, path=None):
     inputf.close()
 
     _ = subprocess.call('./hpf inputHPF.txt outputHPF.txt', shell=True)
+
     outputf = open('outputHPF.txt', 'r+', 1)
 
     rho_m = [0.0] * m
@@ -1739,14 +1754,15 @@ def bipartite_workload_decomposition(Q, lamda, mu, path=None):
             rank = 0
             for bp in data[1:-1]:
                 workload_sets[rank] = \
-                    {'rho': 1-float(bp),  'demnand_nodes': set(), 'supply_nodes': set()}
+                    {'rho': 1-float(bp),  'demand_nodes': set(), 'supply_nodes': set()}
                 bps.append(1-float(bp))
                 rank += 1
 
         elif data[0] == 'n':
             node = int(data[1]) - 1
 
-            if 0 < int(data[1]) < num_nodes - 1:
+            if 0 <= int(data[1]) < num_nodes - 1:
+                # print(node)
                 singleton = True
                 for i in range(3, len(data), 1):
                     if data[i] == '1':  # Check if at sum point it moves to the source set if not it is a singleton
@@ -1756,18 +1772,20 @@ def bipartite_workload_decomposition(Q, lamda, mu, path=None):
                             rho_m[node] = rho
                         else:
                             rho_n[node - m] = rho
-                        if node in rn:
-                            workload_sets[i-3]['demnand_nodes'].add(node)
-                        if node in rm:
-                            workload_sets[i-3]['supply_nodes'].add(node - m)
+                        if node + 1 in rn:
+                            # print(node, 'rn')
+                            workload_sets[i-3]['demand_nodes'].add(node - 1)
+                        if node + 1 in rm:
+                            # print(node, 'rm')
+                            workload_sets[i-3]['supply_nodes'].add(node - m - 1)
                         singleton = False
                         break
                 if singleton:
                     print( node, 'single')
                     return None, None, None
-    print( '-----------------')
-    print( 'rho_n', rho_n)
-    print( '-----------------')
+    # print( '-----------------')
+    # print( 'rho_n', rho_n)
+    # print( '-----------------')
 
     return workload_sets, np.array(rho_m), np.array(rho_n)
 
