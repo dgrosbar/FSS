@@ -1497,7 +1497,7 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                     # exp_res['mat']['local_approx'] = local_entropy(compatability_matrix, lamda, beta, s)
                     lamda_norm = lamda/lamda.sum()
                     exp_res['mat']['alis_approx'] = fast_alis_approximation(compatability_matrix, lamda_norm, beta, rho, check_every=10, max_time=600)
-                    exp_res['mat']['rho_approx'] = (1. - rho) * exp_res['mat']['local_approx'] + (rho) * exp_res['mat']['fcfs_apporx']
+                    # exp_res['mat']['rho_approx'] = (1. - rho) * exp_res['mat']['local_approx'] + (rho) * exp_res['mat']['fcfs_apporx']
                     exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + rho*exp_res['mat']['fcfs_apporx']
                     
                     print('ending - density_level: ', density_level, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' beta_dist: ', beta_dist, ' rho: ', rho,
