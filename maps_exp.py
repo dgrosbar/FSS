@@ -138,7 +138,7 @@ def create_maps(m, d, zeta, max_max_wls, min_count_wls, max_max_rho):
             continue
 
 
-def map_exp_for_parallel(p=30):
+def map_exp_for_parallel(p=30, filename='map_exps_30x30'):
 
     print_progress = True
     input_df = pd.read_csv(filename + '.csv') 
@@ -409,5 +409,5 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    create_maps(30, 3, 0.2, 450, 5, 1.2)
-    # map_exp_for_parallel(1)
+    # create_maps(30, 3, 0.2, 450, 5, 1.2)
+    map_exp_for_parallel(30)
