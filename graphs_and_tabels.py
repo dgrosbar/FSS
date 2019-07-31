@@ -2063,7 +2063,8 @@ def sbpss_gini_score(filename, base_cols ,cost=False):
 
     
     df = pd.read_csv(filename + '.csv')
-    df_i = df[['i', 'lamda','sim_waiting_times', 'sim_waiting_times_stdev'] + base_cols].drop_duplicates()
+    df['structure'] = 'grid'
+    df_i = df[base_cols + ['i', 'lamda','sim_waiting_times', 'sim_waiting_times_stdev'] ].drop_duplicates()
     df_i.loc[:, 'lamda_x_sim_waiting_times'] = df_i['lamda'] * df_i['sim_waiting_times']/df_i['rho']
     df_i = df_i.sort_values(by=base_cols + ['sim_waiting_times'])
     df_cum = df_i[base_cols + ['lamda','lamda_x_sim_waiting_times']]
