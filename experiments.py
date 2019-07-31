@@ -1332,7 +1332,7 @@ def go_back_and_approximate_sbpss_customer_dependet_lqf(filename='FZ_final_w_qp'
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf2', sbpss_df)
                 exps = []
         else:
             if len(exps) > 0:
@@ -1340,7 +1340,7 @@ def go_back_and_approximate_sbpss_customer_dependet_lqf(filename='FZ_final_w_qp'
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf2', sbpss_df)
                 exps = []   
 
   
@@ -1409,14 +1409,17 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                         'eta: ', np.array2string(eta, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x}), '\n',
                         'mu', np.array2string(mu, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x})
                         )
-                    exp_res = simulate_queueing_system(compatability_matrix, lamda, beta, s=s, sims=30, lqf=(policy == 'lqf_alis'))
+                    exp_res = simulate_queueing_system(compatability_matrix, lamda, beta, s=s, sims=30, lqf=(policy == 'lqf_alis'), per_edge=10000)
                     heavy_traffic_approx_entropy_eta =  entropy_approximation(compatability_matrix, eta, mu, pad=True)
                     heavy_traffic_approx_entropy = np.dot(np.diag(1./s), heavy_traffic_approx_entropy_eta)
+                    sim_rate_gap = lamda.sum() - exp_res['mat']['sim_matching_rates'].sum()
+                    sim_adj = lamda.sum() / exp_res['mat']['sim_matching_rates'].sum()
                     exp_res['mat']['fcfs_approx'] = heavy_traffic_approx_entropy
-                    # exp_res['mat']['local_approx'] = local_entropy(compatability_matrix, lamda, beta, s)
+
                     lamda_norm = lamda/lamda.sum()
-                    exp_res['mat']['alis_approx'] = fast_alis_approximation(compatability_matrix, lamda_norm, beta, rho, check_every=10, max_time=600)
-                    # exp_res['mat']['rho_approx'] = (1. - rho) * exp_res['mat']['local_approx'] + (rho) * exp_res['mat']['fcfs_approx']
+                    alis_approx = fast_alis_approximation(compatability_matrix, lamda_norm, beta, rho, check_every=10, max_time=600)
+                    alis_approx = alis_approx * lamda.sum()/rho
+                    exp_res['mat']['alis_approx'] = alis_approx
                     exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + rho*exp_res['mat']['fcfs_approx']
                     
                     print('ending - density_level: ', density_level, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' beta_dist: ', beta_dist, ' rho: ', rho,
@@ -1429,7 +1432,8 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                     exp_res['aux']['density_level'] =  density_level
                     exp_res['aux']['rho'] = rho
                     exp_res['aux']['policy'] = policy
-
+                    exp_res['aux']['sim_adj'] = sim_adj
+                    exp_res['aux']['sim_rate_gap'] = sim_rate_gap
                     exp_res['row']['theta'] = theta
                     exp_res['row']['eta'] = eta
 
@@ -1903,7 +1907,7 @@ if __name__ == '__main__':
 
     # go_back_and_approximate_grids_sbpss(3)
     # increasing_n_system()
-    go_back_and_approximate_sbpss_customer_dependet()
+    go_back_and_approximate_sbpss_customer_dependet_lqf()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')
     # df = go_back_and_solve_qp(df)
     # df.to_csv('erdos_renyi_exp_final_w_qp.csv', index=False)

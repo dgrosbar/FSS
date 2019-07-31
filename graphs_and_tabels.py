@@ -1716,6 +1716,93 @@ def sbpss_cd_graph1(filename='FZ_Kaplan_sbpss_cd_sum'):
     # plt.show()
 
 
+def sbpss_cd_graph1_lqf(policy, split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_lqf'):
+
+    sum_res = pd.read_csv(filename + '.csv')
+    print(sum_res)
+    sum_res = sum_res[(sum_res['policy'] == policy) & (sum_res['split'] == split)]
+
+
+
+    print(sum_res)
+
+    fig, ax = plt.subplots(1, 3)
+
+    row_plt = {'low': 0, 'medium': 1, 'high': 2}
+    
+    approx_colors = {
+        'fcfs_alis_approx': 'green',
+        'fcfs_approx': 'red',
+        'alis_approx': 'blue'
+    }
+
+    ims_errors = {
+        'low': (.115, .064, 0.028),
+        'medium': (.089, .062, 0.034),
+        'high': (.032, 0.0315, 0.02955)
+    }
+
+    cap_density_level = {
+        'low': 'Low',
+        'medium': 'Medium',
+        'high': 'High'
+    }
+
+
+    for key, grp in sum_res.groupby(by=['density_level', 'approximation'], as_index=False):
+
+        density_level, approximation = key
+        color = approx_colors[approximation]
+        row = row_plt[density_level]
+        ax[row].set_title(cap_density_level[density_level])
+        x = grp['rho']
+
+        if approximation == 'fcfs_alis_approx':
+
+            ax[row].plot(x, grp['mean_err_pct'], color=color, linewidth=1.5, label='FCFS-ALIS_Approximation', marker='x')
+            ax[row].plot(x, grp['err_pct_95_u'], color=color, linewidth=.5, linestyle = ':')
+            ax[row].plot(x, grp['err_pct_95_l'], color=color, linewidth=.5, linestyle = ':')
+
+        elif approximation == 'fcfs_approx':
+
+            ax[row].plot(x, grp['mean_err_pct'], color=color, linewidth=1, label='FCFS Approximation', marker = '.', linestyle='--')
+
+        # elif approximation == 'rho_approx':
+
+        #     ax[row].plot(x, grp['mean_err_pct'], color=color, linewidth=1, label='Old  Approximation')
+
+        # elif approximation == 'light_approx':
+
+        #     ax[row, col].plot(x, grp['mean_err_pct'], color=color, linewidth=1, label='ALIS Approximation')
+
+        elif approximation == 'alis_approx':
+
+            ax[row].plot(x, grp['mean_err_pct'], color=color, linewidth=1, label='ALIS Approximation', marker='+', linestyle='-.')
+            ax[row].plot(x, [ims_errors[density_level][0]]*len(x), color='black', linewidth=1, linestyle='--', label='Ohm Error for IMS')
+            ax[row].plot(x, [ims_errors[density_level][1]]*len(x), color='black', linewidth=1, linestyle='-.', label='QP Error for IMS')
+            ax[row].plot(x, [ims_errors[density_level][2]]*len(x), color='green', linewidth=1, linestyle='-', label='MaxEnt Error for IMS')
+
+    ax[0].set_ylabel('Sum of Absoulte Errors / Sum of Arrival Rates ', fontsize=16)
+    fig.suptitle('Graph Density', fontsize=24)
+    for i in range(3):
+        ax[i].set_xlabel('utilization', fontsize=16)
+        ax[i].set_xlim(0, 1)
+        ax[i].set_ylim(0.001, .5)
+
+    plt.rc('xtick',labelsize=14)
+    plt.rc('ytick',labelsize=14)
+
+    handles,labels = ax[0].get_legend_handles_labels()
+
+    order = [0, 4, 5, 6, 7, 1, 2, 3]
+
+    handles = [handles[v] for v in order]
+    labels = [labels[v] for v in order]
+
+    plt.legend(handles, labels)
+
+    plt.show()
+
 def sim_rates_vs_lamda(filename='FZ_Kaplan_exp_sbpss_cd4'):
 
 
@@ -2118,6 +2205,7 @@ def sbpss_gini_table(filename):
     df_comp = df_comp.reset_index()
     # print(df_comp)
     df_comp.columns = [' '.join(col).strip() for col in df_comp.columns.values]
+    print(df_comp)
     df_comp.loc[:, 'Wq_ratio'] = df_comp['Avg. Wq weighted_fcfs_alis']/df_comp['Avg. Wq fcfs_alis']
     df_comp.loc[:, 'gini_gap'] = df_comp['gini fcfs_alis'] - df_comp['gini weighted_fcfs_alis']
     df_comp.loc[:, 'scaled_Wq_weighted_fcfs_alis'] = df_comp['Avg. Wq weighted_fcfs_alis']/(1. - df_comp['rho'])
@@ -2261,12 +2349,12 @@ if __name__ == '__main__':
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
     # sbpss_cd_table1()
-    sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
+    # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
-    # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
-
+    # sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
+    sbpss_cd_graph1_lqf('fcfs_alis', 'zero')
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
 
