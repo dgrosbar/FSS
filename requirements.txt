@@ -45,7 +45,7 @@ python-debian==0.1.27
 python-systemd==231
 pytz==2019.1
 pyu2f==0.1.4
-PyYAML==3.11
+PyYAML==5.1
 requests==2.22.0
 retry-decorator==1.1.0
 rsa==4.0
