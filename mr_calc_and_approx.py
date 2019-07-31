@@ -446,7 +446,7 @@ def entropy_approximation_w_log(compatability_matrix, z, q, lamda, mu, check_eve
 	return matching_rates
 
 
-def entropy_approximation_w(compatability_matrix, z, q, lamda, mu, check_every=10**2, max_iter=10**7, epsilon=10**-7, pad=False, ret_all=False):
+def entropy_approximation_w(compatability_matrix, z, q, lamda, mu, check_every=10**2, max_iter=10**8, epsilon=10**-9, pad=False, ret_all=False):
 
 	k = 0
 	within_epsilon = True
