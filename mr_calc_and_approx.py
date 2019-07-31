@@ -486,7 +486,7 @@ def entropy_approximation_w(compatability_matrix, z, q, lamda, mu, check_every=1
 	return matching_rates
 
 
-def entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, max_iter=10**7, epsilon=10**-7, pad=False, ret_all=False):
+def entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, max_iter=10**7, epsilon=10**-7, pad=False, ret_all=False, prt=True):
 
 	k = 0
 	within_epsilon = True
@@ -519,6 +519,8 @@ def entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, ma
 						np.max(np.abs((matching_rates.sum(axis=1).T - lamda))/lamda[:np.newaxis])
 						)
 					)
+				if prt:
+					print(cur_iter, gap_pct)
 				if gap_pct < epsilon:
 					converge = True
 					break
@@ -532,7 +534,8 @@ def entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, ma
 						max(abs(lamda - matching_rates.sum(axis=1))/lamda)
 						)
 					)
-
+				if prt:
+					print(cur_iter, gap_pct)
 				if gap_pct < epsilon:
 					converge = True
 					break
@@ -1680,114 +1683,114 @@ def sinkhorn_stabilized(M, a, b, compatability_matrix, reg, numItermax=1000, tau
 
 def bipartite_workload_decomposition(Q, lamda, mu, path=None):
 
-    m = len(lamda)
-    n = len(mu)
+	m = len(lamda)
+	n = len(mu)
 
-    # if path is None:
-    #     path = '\\Users\\dean.grosbard\\Dropbox\\Software3.0\\fss'
-    try:
-    	os.remove('inputHPF.txt')
-    except:
-    	pass
-    
-    try:
-    	os.remove('inputHPF.txt')
-    except:
-    	pass
+	# if path is None:
+	#     path = '\\Users\\dean.grosbard\\Dropbox\\Software3.0\\fss'
+	try:
+		os.remove('inputHPF.txt')
+	except:
+		pass
+	
+	try:
+		os.remove('inputHPF.txt')
+	except:
+		pass
 
-    lamda_sum = np.asscalar(lamda.sum())
+	lamda_sum = np.asscalar(lamda.sum())
 
-    inputf = open('inputHPF.txt', 'w', 1)
-    outputf = open('outputHPF.txt', 'w', 1)
-    outputf.close()
-    
-    theta_max = 1
-    theta_min = -100
-    edges = set(zip(*Q.nonzero()))
-    num_nodes = m + n + 2
-    num_edges = (num_nodes-2) + len(edges)
-    rn = range(1, m + 1, 1)
-    rm = range(m + 1, m + n + 1, 1)
+	inputf = open('inputHPF.txt', 'w', 1)
+	outputf = open('outputHPF.txt', 'w', 1)
+	outputf.close()
+	
+	theta_max = 1
+	theta_min = -100
+	edges = set(zip(*Q.nonzero()))
+	num_nodes = m + n + 2
+	num_edges = (num_nodes-2) + len(edges)
+	rn = range(1, m + 1, 1)
+	rm = range(m + 1, m + n + 1, 1)
 
-    inputf.write('p ' + str(num_nodes) +
-                 ' ' + str(num_edges) +
-                 ' ' + str(theta_min) +
-                 ' ' + str(theta_max) +
-                 ' 0'+'\n')
-    inputf.write('n 0 s'+'\n')
-    inputf.write('n ' + str(num_nodes-1) + ' t'+'\n')
+	inputf.write('p ' + str(num_nodes) +
+				 ' ' + str(num_edges) +
+				 ' ' + str(theta_min) +
+				 ' ' + str(theta_max) +
+				 ' 0'+'\n')
+	inputf.write('n 0 s'+'\n')
+	inputf.write('n ' + str(num_nodes-1) + ' t'+'\n')
 
 
-    for i in rn:
-        ub = lamda[i-1]
-        inputf.write('a ' + '0' + ' ' + str(i) + ' ' + str(ub) + ' ' + '0.0' + '\n')
+	for i in rn:
+		ub = lamda[i-1]
+		inputf.write('a ' + '0' + ' ' + str(i) + ' ' + str(ub) + ' ' + '0.0' + '\n')
 
-    for edge in sorted(list(edges)):
+	for edge in sorted(list(edges)):
 
-        i = edge[0] + 1
-        j = edge[1] + m + 1
+		i = edge[0] + 1
+		j = edge[1] + m + 1
 
-        inputf.write('a ' + str(i) + ' ' + str(j) + ' ' + str(lamda_sum) + ' ' + '0.0' + '\n')
+		inputf.write('a ' + str(i) + ' ' + str(j) + ' ' + str(lamda_sum) + ' ' + '0.0' + '\n')
 
-    for j in rm:
-        ub = float(mu[j - m - 1])
-        coefficient = float(-1 * mu[j - m - 1])
-        inputf.write('a ' + str(j) + ' ' + str(num_nodes-1) + ' ' + str(ub) + ' ' + str(coefficient) + '\n')
+	for j in rm:
+		ub = float(mu[j - m - 1])
+		coefficient = float(-1 * mu[j - m - 1])
+		inputf.write('a ' + str(j) + ' ' + str(num_nodes-1) + ' ' + str(ub) + ' ' + str(coefficient) + '\n')
 
-    inputf.close()
+	inputf.close()
 
-    _ = subprocess.call('./hpf inputHPF.txt outputHPF.txt', shell=True)
+	_ = subprocess.call('./hpf inputHPF.txt outputHPF.txt', shell=True)
 
-    outputf = open('outputHPF.txt', 'r+', 1)
+	outputf = open('outputHPF.txt', 'r+', 1)
 
-    rho_m = [0.0] * m
-    rho_n = [0.0] * n
+	rho_m = [0.0] * m
+	rho_n = [0.0] * n
 
-    workload_sets = dict()
-    bps = []
+	workload_sets = dict()
+	bps = []
 
-    for line in outputf:
+	for line in outputf:
 
-        data = line.split()
+		data = line.split()
 
-        if data[0] == 'l':
-            rank = 0
-            for bp in data[1:-1]:
-                workload_sets[rank] = \
-                    {'rho': 1-float(bp),  'demand_nodes': set(), 'supply_nodes': set()}
-                bps.append(1-float(bp))
-                rank += 1
+		if data[0] == 'l':
+			rank = 0
+			for bp in data[1:-1]:
+				workload_sets[rank] = \
+					{'rho': 1-float(bp),  'demand_nodes': set(), 'supply_nodes': set()}
+				bps.append(1-float(bp))
+				rank += 1
 
-        elif data[0] == 'n':
-            node = int(data[1]) - 1
+		elif data[0] == 'n':
+			node = int(data[1]) - 1
 
-            if 0 <= int(data[1]) < num_nodes - 1:
-                # print(node)
-                singleton = True
-                for i in range(3, len(data), 1):
-                    if data[i] == '1':  # Check if at sum point it moves to the source set if not it is a singleton
-                        rho = bps[i - 3]
-                        # print(node, rho)
-                        if node < m:
-                            rho_m[node] = rho
-                        else:
-                            rho_n[node - m] = rho
-                        if node + 1 in rn:
-                            # print(node, 'rn')
-                            workload_sets[i-3]['demand_nodes'].add(node - 1)
-                        if node + 1 in rm:
-                            # print(node, 'rm')
-                            workload_sets[i-3]['supply_nodes'].add(node - m - 1)
-                        singleton = False
-                        break
-                if singleton:
-                    print( node, 'single')
-                    return None, None, None
-    # print( '-----------------')
-    # print( 'rho_n', rho_n)
-    # print( '-----------------')
+			if 0 <= int(data[1]) < num_nodes - 1:
+				# print(node)
+				singleton = True
+				for i in range(3, len(data), 1):
+					if data[i] == '1':  # Check if at sum point it moves to the source set if not it is a singleton
+						rho = bps[i - 3]
+						# print(node, rho)
+						if node < m:
+							rho_m[node] = rho
+						else:
+							rho_n[node - m] = rho
+						if node + 1 in rn:
+							# print(node, 'rn')
+							workload_sets[i-3]['demand_nodes'].add(node - 1)
+						if node + 1 in rm:
+							# print(node, 'rm')
+							workload_sets[i-3]['supply_nodes'].add(node - m - 1)
+						singleton = False
+						break
+				if singleton:
+					print( node, 'single')
+					return None, None, None
+	# print( '-----------------')
+	# print( 'rho_n', rho_n)
+	# print( '-----------------')
 
-    return workload_sets, np.array(rho_m), np.array(rho_n)
+	return workload_sets, np.array(rho_m), np.array(rho_n)
 
 
 
