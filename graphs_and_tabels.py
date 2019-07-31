@@ -1439,7 +1439,7 @@ def sbpss_graph_fixing(filename='FZ_Kaplan_exp_sbpss'):
     # plt.show()
 
 
-def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd4'):
+def sbpss_cd_table1(filename=''):
 
     df = pd.read_csv(filename + '.csv')
 
@@ -1463,7 +1463,7 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd4'):
     df.loc[:,'adj_sim_matching_rates'] = df['sim_adj'] * df['sim_matching_rates']
 
     id_vars = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'beta_dist', 'rho', 'adj_sim_matching_rates', 'sim_rate_gap', 'split', 'policy']
-    val_vars = ['rho_approx', 'fcfs_approx', 'alis_approx']
+    val_vars = ['fcfs_alis_approx', 'fcfs_approx', 'alis_approx']
 
     df = pd.melt(df, id_vars=id_vars, value_vars=val_vars, var_name='approximation', value_name='approx_match_rate')
 
@@ -2260,7 +2260,7 @@ if __name__ == '__main__':
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
     # sbpss_cd_table1()
-    sbpss_gini_score('map_exp_sbpss_ot_30x30', base_cols)
+    sbpss_gini_score('map_exp_sbpss_30x30', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
