@@ -292,9 +292,11 @@ def sbpss_exp(timestamp, exp, filename='map_exp_sbpss', ot_filename='map_exp_sbp
             exp_res['aux']['rho'] = rho
             exp_res['aux']['gamma'] = 0
             exp_res['aux']['policy'] = 'fcfs_alis'
-            exp_res['aux']['arc_kill'] = True
 
+            sbpss_df = pd.merge(left=sbpss_df, right=add_sbpss_df, on=['i', 'j'], how='left') 
             sbpss_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, exp_res, timestamp, aux_exp_data)
+
+
             write_df_to_file(filename + '_' + size, sbpss_df)
 
             print('ending - structure: ', aux_exp_data['structure'], ' exp_no: ', aux_exp_data['exp_no'], ' rho: ', rho, ' duration: ', time() - st)
