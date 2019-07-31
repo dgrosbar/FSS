@@ -18,7 +18,7 @@ from simulators import *
 from generators import *
 from utilities import *
 from mr_calc_and_approx import *
-from graphs_and_tabels import *
+# from graphs_and_tabels import *
 import gc
 
 BASE_EXAMPLES = {
