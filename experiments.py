@@ -1318,9 +1318,6 @@ def approximate_sbpss(exp, timestamp):
         return sbpss_df
 
 
-
-
-
 def go_back_and_approximate_sbpss_customer_dependet_lqf(filename='FZ_final_w_qp', p=30):
 
     df = pd.read_csv(filename + '.csv')
@@ -1413,14 +1410,14 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                         'mu', np.array2string(mu, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x})
                         )
                     exp_res = simulate_queueing_system(compatability_matrix, lamda, beta, s=s, sims=30, lqf=(policy == 'lqf_alis'))
-                    heavy_traffic_approx_entropy_eta=  entropy_approximation(compatability_matrix, eta, mu, pad=True)
+                    heavy_traffic_approx_entropy_eta =  entropy_approximation(compatability_matrix, eta, mu, pad=True)
                     heavy_traffic_approx_entropy = np.dot(np.diag(1./s), heavy_traffic_approx_entropy_eta)
-                    exp_res['mat']['fcfs_apporx'] = heavy_traffic_approx_entropy
+                    exp_res['mat']['fcfs_approx'] = heavy_traffic_approx_entropy
                     # exp_res['mat']['local_approx'] = local_entropy(compatability_matrix, lamda, beta, s)
                     lamda_norm = lamda/lamda.sum()
                     exp_res['mat']['alis_approx'] = fast_alis_approximation(compatability_matrix, lamda_norm, beta, rho, check_every=10, max_time=600)
-                    # exp_res['mat']['rho_approx'] = (1. - rho) * exp_res['mat']['local_approx'] + (rho) * exp_res['mat']['fcfs_apporx']
-                    exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + rho*exp_res['mat']['fcfs_apporx']
+                    # exp_res['mat']['rho_approx'] = (1. - rho) * exp_res['mat']['local_approx'] + (rho) * exp_res['mat']['fcfs_approx']
+                    exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + rho*exp_res['mat']['fcfs_approx']
                     
                     print('ending - density_level: ', density_level, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' beta_dist: ', beta_dist, ' rho: ', rho,
                     ' split:', split ,' duration: ', time() - st, 'pct_error'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['fcfs_alis_approx']).sum()/lamda.sum())
@@ -1776,7 +1773,7 @@ def ot_spbss(exp, timestamp):
             r_pad = sinkhorn_stabilized(-1*c_pad, lamda_pad, mu, compatability_matrix_pad, 0.01)
             max_c = (c_pad * r_pad).sum()
             c_diff = max_c - min_c
-            r_fcfs_alis = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
+            r_lis = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
 
             min_ent = (-1*lamda * np.log(lamda)).sum()
             max_ent = (-1*r_fcfs_alis * np.log(r_fcfs_alis, out=np.zeros_like(r_fcfs_alis), where= r_fcfs_alis != 0)).sum()
