@@ -1994,7 +1994,7 @@ def sbpss_gini_table(filename):
     mpl.rcParams['hatch.linewidth'] = 0.05
 
     df = pd.read_csv(filename + '.csv')
-    df_comp = df[(df['rho']>=0.6)]
+    df_comp = df[(df['rho']>=0.6) & (df['rho']< 0.99)]
     if 'grid' in filename:
         df_comp = df_comp[(df_comp['exp_no'] != 9) | (df_comp['size'] != '30x30') ]
     df_comp.loc[:, 'scaled_Wq'] = df_comp['Avg. Wq'] * (1. - df_comp['rho'])/df_comp['rho']
@@ -2057,7 +2057,7 @@ def sbpss_gini_table(filename):
 
     for k, (size, grp) in enumerate(df_comp.groupby(by=['size'])):
         # title = '(' + size + ')x(' + size  + ')' if 'x' in str(size) else str(int(size)) + 'x' + str(int(size))
-        title = str(int(size)) + 'x' + str(int(size))
+        title = '(30x30)x(30x30)'
         # ax[1,k].set_title(title)
         for v, (rho, exp_grp) in enumerate(grp.groupby(by=['exp_no'])):
             exp_grp = exp_grp.sort_values(by='rho')
@@ -2085,7 +2085,7 @@ def sbpss_gini_table(filename):
     for k, (size, grp) in enumerate(agg_res.groupby(by='size')):
 
         # title = '(' + size + ')x(' + size  + ')' if 'x' in size else str(int(size)) + 'x' + str(int(size))
-        title = str(int(size)) + 'x' + str(int(size))
+        title = '(30x30)x(30x30)'
         ax[0,k].set_title(title, fontsize=18)
         ax[0,k].plot(grp['rho'], 1. - grp['Wq_ratio'], color='red', label=r"$1-\sfrac{Wq(w)}{Wq(1)}$")#label='Wq.(weighted) / Wq.(not weighted)')
         ax[0,k].plot(grp['rho'], 1. - grp['Wq_ratio_u'], color='red', label='CI-95', linewidth=0.5, linestyle=':')
@@ -2146,11 +2146,11 @@ if __name__ == '__main__':
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
     # sbpss_cd_table1()
-    sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
+    # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
-    # sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
+    sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
     # sbpss_cd_graph1_lqf('lqf_alis', 'rand')
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')

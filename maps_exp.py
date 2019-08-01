@@ -155,7 +155,7 @@ def map_exp_for_parallel(p=30, filename='map_exps_30x30'):
             sbpss_exp(*exps[0])
 
 
-def sbpss_exp(timestamp, exp, filename='map_exp_sbpss', ot_filename='map_exp_sbpss_ot'):
+def sbpss_exp(timestamp, exp, filename='map_exp_sbpss_lqf', ot_filename='map_exp_sbpss_ot_lqf'):
 
     exp_data = exp[['m', 'n', 'exp_no', 'arc_dist', 'size']].drop_duplicates()
     alpha_data = exp[['i', 'alpha', 'eta_i_MMF']].drop_duplicates()
@@ -188,8 +188,6 @@ def sbpss_exp(timestamp, exp, filename='map_exp_sbpss', ot_filename='map_exp_sbp
     for k, row in exp.iterrows():
         compatability_matrix[int(row['i']), int(row['j'])] = 1.
 
-
-
     valid = False
     v = np.random.randint(1, 10**6)
     np.random.seed(v)
@@ -203,106 +201,106 @@ def sbpss_exp(timestamp, exp, filename='map_exp_sbpss', ot_filename='map_exp_sbp
     org_compatability_matrix = compatability_matrix
 
     print(exp_no, ': all data read in')
-    if False:
-        for rho in [0.6, 0.7, 0.8, 0.9] + [.95, .99] + [0.01, 0.05, 0.1, 0.2, 0.4]:
+    # if False:
+    for rho in [0.6, 0.7, 0.8, 0.9] + [.95, .99] + [0.01, 0.05, 0.1, 0.2, 0.4]:
 
-            st = time()
-            print('alpha.sum(): ',alpha.sum())
-            print('beta.sum(): ',beta.sum())
-            lamda = alpha * (rho/rho_mmf_max) 
-            mu = beta
-            rho_j = (rho/rho_mmf_max) * eta_j
-            print('lamda.sum(): ',lamda.sum())
-            print('mu.sum(): ',mu.sum())
+        st = time()
+        print('alpha.sum(): ',alpha.sum())
+        print('beta.sum(): ',beta.sum())
+        lamda = alpha * (rho/rho_mmf_max) 
+        mu = beta
+        rho_j = (rho/rho_mmf_max) * eta_j
+        print('lamda.sum(): ',lamda.sum())
+        print('mu.sum(): ',mu.sum())
 
-            pad_lamda = np.append(lamda, 1. - lamda.sum())
-            print('lamda_pad.sum()', pad_lamda.sum())
-            exp.loc[:, 'rho_i_MMF'] = (rho / rho_mmf_max) * exp['eta_i_MMF']
-            exp.loc[:, 'rho_j_MMF'] = (rho / rho_mmf_max) * exp['eta_j_MMF']
-            exp.loc[: ,'Wq_i_MMF'] = exp['rho_i_MMF']**(((2.0*(exp['c_i_MMF']+1.0))**0.5)-1)/(exp['c_i_MMF']*(1-exp['rho_i_MMF']))
-            exp.loc[: ,'Wq_j_MMF'] = exp['rho_j_MMF']**(((2.0*(exp['c_j_MMF']+1.0))**0.5)-1)/(exp['c_j_MMF']*(1-exp['rho_j_MMF']))
-            exp.loc[: ,'kill'] = exp['Wq_i_MMF'] < exp['Wq_j_MMF']
+        pad_lamda = np.append(lamda, 1. - lamda.sum())
+        print('lamda_pad.sum()', pad_lamda.sum())
+        exp.loc[:, 'rho_i_MMF'] = (rho / rho_mmf_max) * exp['eta_i_MMF']
+        exp.loc[:, 'rho_j_MMF'] = (rho / rho_mmf_max) * exp['eta_j_MMF']
+        exp.loc[: ,'Wq_i_MMF'] = exp['rho_i_MMF']**(((2.0*(exp['c_i_MMF']+1.0))**0.5)-1)/(exp['c_i_MMF']*(1-exp['rho_i_MMF']))
+        exp.loc[: ,'Wq_j_MMF'] = exp['rho_j_MMF']**(((2.0*(exp['c_j_MMF']+1.0))**0.5)-1)/(exp['c_j_MMF']*(1-exp['rho_j_MMF']))
+        exp.loc[: ,'kill'] = exp['Wq_i_MMF'] < exp['Wq_j_MMF']
 
-            for arc_kill in [False]:
-                
-                if arc_kill:
-                    print(compatability_matrix.sum(axis=1))
-                    print(compatability_matrix.sum(axis=0))
-                    for k, row in exp.iterrows():
-                        if row['kill']:
-                            compatability_matrix[int(row['i']), int(row['j'])] = 0
-                    print(compatability_matrix.sum(axis=1))
-                    print(compatability_matrix.sum(axis=0))
-                else:
-                    compatability_matrix = org_compatability_matrix
+        for arc_kill in [False]:
+            
+            if arc_kill:
+                print(compatability_matrix.sum(axis=1))
+                print(compatability_matrix.sum(axis=0))
+                for k, row in exp.iterrows():
+                    if row['kill']:
+                        compatability_matrix[int(row['i']), int(row['j'])] = 0
+                print(compatability_matrix.sum(axis=1))
+                print(compatability_matrix.sum(axis=0))
+            else:
+                compatability_matrix = org_compatability_matrix
 
-                # compatability_matrix = sps.csr_matrix(compatability_matrix)
+            # compatability_matrix = sps.csr_matrix(compatability_matrix)
 
-                print(exp_no, rho, ': starting fast_entropy_approximation')
-                fcfs_approx = fast_entropy_approximation(compatability_matrix, lamda, mu, pad=(rho < 1))
-                
-                print(exp_no, rho, ': ending fast_entropy_approximation')
-                if rho < 1:
-                    fcfs_approx = fcfs_approx[:m]
-                try:
-                    print(exp_no, rho, ': starting fast_alis_approximation')
-                    alis_approx = fast_alis_approximation(1. * compatability_matrix, alpha, beta, rho) if m < 100 else np.zeros((m, n))
-                    print(exp_no, rho, ': ending fast_alis_approximation')
-                except:
-                    alis_approx = np.zeros((m, n))
-                
-                q_fcfs = fcfs_approx * (1./mu - fcfs_approx.sum(axis=0))
-                q_fcfs = q_fcfs/q_fcfs.sum(axis=0)
+            print(exp_no, rho, ': starting fast_entropy_approximation')
+            fcfs_approx = fast_entropy_approximation(compatability_matrix, lamda, mu, pad=(rho < 1))
+            
+            print(exp_no, rho, ': ending fast_entropy_approximation')
+            if rho < 1:
+                fcfs_approx = fcfs_approx[:m]
+            try:
+                print(exp_no, rho, ': starting fast_alis_approximation')
+                alis_approx = fast_alis_approximation(1. * compatability_matrix, alpha, beta, rho) if m < 100 else np.zeros((m, n))
+                print(exp_no, rho, ': ending fast_alis_approximation')
+            except:
+                alis_approx = np.zeros((m, n))
+            
+            q_fcfs = fcfs_approx * (1./mu - fcfs_approx.sum(axis=0))
+            q_fcfs = q_fcfs/q_fcfs.sum(axis=0)
 
-                if rho >= 0.6 and rho < 1:
+            if rho >= 0.6 and rho < 1:
 
-                    print(exp_no, ': starting weight_calcs')
-                    print(exp_no, rho, ': starting weighted_entropy_regulerized_ot')
-                    r_fcfs_weighted, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho_j, 0, weighted=True)
-                    print(exp_no, rho, ': ending weighted_entropy_regulerized_ot')
-                    if r_fcfs_weighted is not None:
-                        r_fcfs_weighted = r_fcfs_weighted[:m, :]
-                        q_fcfs_weighted = r_fcfs_weighted * (1./mu - r_fcfs_weighted.sum(axis=0))
-                        q_fcfs_weighted = q_fcfs_weighted/q_fcfs_weighted.sum(axis=0)
-                        w_fcfs_weighted  = np.divide(q_fcfs_weighted, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
-                        w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted, prt_all=True, prt=True)
+                print(exp_no, ': starting weight_calcs')
+                print(exp_no, rho, ': starting weighted_entropy_regulerized_ot')
+                r_fcfs_weighted, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho_j, 0, weighted=True)
+                print(exp_no, rho, ': ending weighted_entropy_regulerized_ot')
+                if r_fcfs_weighted is not None:
+                    r_fcfs_weighted = r_fcfs_weighted[:m, :]
+                    q_fcfs_weighted = r_fcfs_weighted * (1./mu - r_fcfs_weighted.sum(axis=0))
+                    q_fcfs_weighted = q_fcfs_weighted/q_fcfs_weighted.sum(axis=0)
+                    w_fcfs_weighted  = np.divide(q_fcfs_weighted, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
+                    w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted, prt_all=True, prt=True, lqf=True)
 
-                        w_exp_res['mat']['fcfs_approx'] = r_fcfs_weighted
-                        w_exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
-                        w_exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * w_exp_res['mat']['alis_approx'] + (rho) * w_exp_res['mat']['fcfs_approx']
+                    w_exp_res['mat']['fcfs_approx'] = r_fcfs_weighted
+                    w_exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
+                    w_exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * w_exp_res['mat']['alis_approx'] + (rho) * w_exp_res['mat']['fcfs_approx']
 
-                        w_exp_res['aux']['rho'] = rho
-                        w_exp_res['aux']['gamma'] = 0
-                        w_exp_res['aux']['policy'] = 'weighted_fcfs_alis'
+                    w_exp_res['aux']['rho'] = rho
+                    w_exp_res['aux']['gamma'] = 0
+                    w_exp_res['aux']['policy'] = 'weighted_fcfs_alis'
 
-                        sbpss_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, w_exp_res, timestamp, aux_exp_data)
-                        add_sbpss_df = exp[['i','j','rho_j_MMF', 'rho_j_MMF', 'c_i_MMF', 'c_j_MMF', 'Wq_i_MMF', 'Wq_j_MMF', 'kill']]
-                        sbpss_df = pd.merge(left=sbpss_df, right=add_sbpss_df, on=['i', 'j'], how='left') 
-                        write_df_to_file(filename + '_' + size, sbpss_df)
-                
-                if rho == 1:
-                    exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt_all=True, prt=True)
-                else:
-                    exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=True, prt=True)
-                
-                exp_res['mat']['fcfs_approx'] = fcfs_approx
-                exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
-                exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['fcfs_approx']
-                
-                exp_res['aux']['rho'] = rho
-                exp_res['aux']['gamma'] = 0
-                exp_res['aux']['policy'] = 'fcfs_alis'
+                    sbpss_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, w_exp_res, timestamp, aux_exp_data)
+                    add_sbpss_df = exp[['i','j','rho_j_MMF', 'rho_j_MMF', 'c_i_MMF', 'c_j_MMF', 'Wq_i_MMF', 'Wq_j_MMF', 'kill']]
+                    sbpss_df = pd.merge(left=sbpss_df, right=add_sbpss_df, on=['i', 'j'], how='left') 
+                    write_df_to_file(filename + '_' + size, sbpss_df)
+            
+            if rho == 1:
+                exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt_all=True, prt=True, lqf=True)
+            else:
+                exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=True, prt=True, lqf=True)
+            
+            exp_res['mat']['fcfs_approx'] = fcfs_approx
+            exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
+            exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['fcfs_approx']
+            
+            exp_res['aux']['rho'] = rho
+            exp_res['aux']['gamma'] = 0
+            exp_res['aux']['policy'] = 'fcfs_alis'
 
-                sbpss_df = pd.merge(left=sbpss_df, right=add_sbpss_df, on=['i', 'j'], how='left') 
-                sbpss_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, exp_res, timestamp, aux_exp_data)
+            sbpss_df = pd.merge(left=sbpss_df, right=add_sbpss_df, on=['i', 'j'], how='left') 
+            sbpss_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, exp_res, timestamp, aux_exp_data)
 
 
-                write_df_to_file(filename + '_' + size, sbpss_df)
+            write_df_to_file(filename + '_' + size, sbpss_df)
 
-                print('ending - structure: ', aux_exp_data['structure'], ' exp_no: ', aux_exp_data['exp_no'], ' rho: ', rho, ' duration: ', time() - st)
-                print('pct_error_fcfs_alis_approx:'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['fcfs_alis_approx']).sum()/lamda.sum())
-                
-                gc.collect()
+            print('ending - structure: ', aux_exp_data['structure'], ' exp_no: ', aux_exp_data['exp_no'], ' rho: ', rho, ' duration: ', time() - st)
+            print('pct_error_fcfs_alis_approx:'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['fcfs_alis_approx']).sum()/lamda.sum())
+            
+            gc.collect()
 
 
     def log_ot_data(res, c, w , q, gamma, policy, rho, c_type):
@@ -375,7 +373,7 @@ def sbpss_exp(timestamp, exp, filename='map_exp_sbpss', ot_filename='map_exp_sbp
                     q_fcfs_ot = q_fcfs_ot/q_fcfs_ot.sum(axis=0)
                     w_fcfs_ot = np.divide(q_fcfs_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
 
-                    sim_res_fcfs_alis_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_ot, prt_all=True, prt=True)
+                    sim_res_fcfs_alis_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_ot, prt_all=True, prt=True, lqf=True)
                     sim_res_fcfs_alis_ot = log_ot_data(sim_res_fcfs_alis_ot, c, w_fcfs_ot , q_fcfs_ot, gamma, 'fcfs_alis_ot', rho, c_type)
                     df_fcfs_alis_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_ot, timestamp, aux_exp_data)
                     write_df_to_file(ot_filename + '_' + size, df_fcfs_alis_ot)
@@ -385,17 +383,17 @@ def sbpss_exp(timestamp, exp, filename='map_exp_sbpss', ot_filename='map_exp_sbp
                     q_fcfs_weighted_ot = q_fcfs_weighted_ot/q_fcfs_weighted_ot.sum(axis=0)
                     w_fcfs_weighted_ot  = np.divide(q_fcfs_weighted_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
 
-                    sim_res_fcfs_alis_weighted_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted_ot, prt_all=True, prt=True)
+                    sim_res_fcfs_alis_weighted_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted_ot, prt_all=True, prt=True, lqf=True)
                     sim_res_fcfs_alis_weighted_ot = log_ot_data(sim_res_fcfs_alis_weighted_ot, c, w_fcfs_weighted_ot,  q_fcfs_weighted_ot, gamma, 'weighted_fcfs_alis_ot', rho, c_type,)
                     df_fcfs_alis_weighted_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_weighted_ot, timestamp, aux_exp_data)
                     write_df_to_file(ot_filename + '_' + size, df_fcfs_alis_weighted_ot)
 
-            w_greedy = np.divide(np.ones(c.shape), c, out=np.zeros_like(c), where=(c != 0))
-            sim_res_greedy = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_greedy, w_only=True,  prt_all=True, prt=True)
-            sim_res_greedy = log_ot_data(sim_res_greedy, c, c , 0 * compatability_matrix, 1, 'greedy', rho, c_type)
+            # w_greedy = np.divide(np.ones(c.shape), c, out=np.zeros_like(c), where=(c != 0))
+            # sim_res_greedy = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_greedy, w_only=True,  prt_all=True, prt=True)
+            # sim_res_greedy = log_ot_data(sim_res_greedy, c, c , 0 * compatability_matrix, 1, 'greedy', rho, c_type)
 
-            df_greedy = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_greedy, timestamp, aux_exp_data)
-            write_df_to_file(ot_filename + '_' + size, df_greedy)
+            # df_greedy = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_greedy, timestamp, aux_exp_data)
+            # write_df_to_file(ot_filename + '_' + size, df_greedy)
 
     gc.collect()
 
