@@ -1235,7 +1235,6 @@ def sbpss_graph4(filename='FZ_Kaplan_exp_sbpss_good_w_alis_sum'):
     plt.show()
 
 
-
 def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd4_fixed'):
 
     df = pd.read_csv(filename + '.csv')
@@ -1599,6 +1598,7 @@ def sbpss_cd_graph1_lqf(policy, split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_l
     plt.legend(handles, labels)
 
     plt.show()
+
 
 def sim_rates_vs_lamda(filename='FZ_Kaplan_exp_sbpss_cd4'):
 
@@ -1994,7 +1994,7 @@ def sbpss_gini_table(filename):
     mpl.rcParams['hatch.linewidth'] = 0.05
 
     df = pd.read_csv(filename + '.csv')
-    df_comp = df[(df['rho']>=0.6) & (df['rho']< 0.99)]
+    df_comp = df[(df['rho']>=0.6)]
     if 'grid' in filename:
         df_comp = df_comp[(df_comp['exp_no'] != 9) | (df_comp['size'] != '30x30') ]
     df_comp.loc[:, 'scaled_Wq'] = df_comp['Avg. Wq'] * (1. - df_comp['rho'])/df_comp['rho']
@@ -2079,7 +2079,9 @@ def sbpss_gini_table(filename):
         ax[1 ,k].plot([0,0], [-1, 1], color='black', linewidth=1)
         abs_x = max(abs(max_x[k]),abs(min_x[k]))
         abs_y = max(abs(max_y[k]),abs(min_y[k]))
-        ax[1, k].set_xlim(min(min_x[k] * 1.1, -0.25*abs_x), max(max_x[k] * 1.1,0.25*abs_x))
+        # ax[1, k].set_xlim(min(min_x[k] * 1.1, -0.25*abs_x), max(max_x[k] * 1.1,0.25*abs_x))
+        # ax[1, k].set_ylim(min(min_y[k] * 1.1, -0.25*abs_y), max(max_y[k] * 1.1,0.25*abs_y))
+        ax[1, k].set_xlim(max(min(min_x[k] * 1.1, -0.25*abs_x), -0.1), max(max_x[k] * 1.1,0.25*abs_x))
         ax[1, k].set_ylim(min(min_y[k] * 1.1, -0.25*abs_y), max(max_y[k] * 1.1,0.25*abs_y))
 
     for k, (size, grp) in enumerate(agg_res.groupby(by='size')):
@@ -2135,6 +2137,8 @@ def sbpss_gini_table(filename):
     print(agg_res)
 
 
+
+
 if __name__ == '__main__':
 
     np.set_printoptions(threshold=sys.maxsize, precision=5)
@@ -2146,11 +2150,11 @@ if __name__ == '__main__':
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
     # sbpss_cd_table1()
-    # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
+    sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
-    sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
+    # sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
     # sbpss_cd_graph1_lqf('lqf_alis', 'rand')
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
