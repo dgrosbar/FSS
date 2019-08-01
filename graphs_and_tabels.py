@@ -2146,12 +2146,12 @@ if __name__ == '__main__':
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
     # sbpss_cd_table1()
-    # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
+    sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
     # sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
-    sbpss_cd_graph1_lqf('fcfs_alis', 'zero')
+    # sbpss_cd_graph1_lqf('lqf_alis', 'rand')
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
 
