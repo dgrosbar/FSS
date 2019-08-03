@@ -1695,7 +1695,7 @@ def sbpss_cd_graph1_lqf(policy, split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_l
     plt.show()
 
 
-def sbpss_cd_graph1_lqf_both(split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_lqf'):
+def sbpss_cd_graph1_lqf_both(split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_2'):
 
     sum_res = pd.read_csv(filename + '.csv')
     print(sum_res)
@@ -1710,10 +1710,10 @@ def sbpss_cd_graph1_lqf_both(split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_lqf'
     row_plt = {'low': 0, 'medium': 1, 'high': 2}
     
     approx_colors = {
-        ('fcfs_alis_approx', 'fcfs_alis'): 'green',
-        ('fcfs_approx', 'fcfs_alis'): 'red',
-        ('alis_approx', 'fcfs_alis'): 'blue',
-        ('fcfs_alis_approx', 'lqf_alis'): 'purple',
+        ('fcfs_alis_approx', 'fcfs_alis'): COLORS[0],
+        ('fcfs_approx', 'fcfs_alis'): COLORS[1],
+        ('alis_approx', 'fcfs_alis'): COLORS[2],
+        ('fcfs_alis_approx', 'lqf_alis'): COLORS[3],
         ('fcfs_approx', 'lqf_alis'): 'red',
         ('alis_approx', 'lqf_alis'): 'blue'
     }
@@ -1790,6 +1790,7 @@ def sbpss_cd_graph1_lqf_both(split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_lqf'
     # plt.legend(handles, labels)
 
     plt.show()
+
 
 def sim_rates_vs_lamda(filename='FZ_Kaplan_exp_sbpss_cd4'):
 
@@ -2349,7 +2350,7 @@ if __name__ == '__main__':
     # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
     # sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
-    # sbpss_cd_graph1_lqf_both('one')
+    sbpss_cd_graph1_lqf_both('one')
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
 
