@@ -1240,18 +1240,20 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     df = pd.read_csv(filename + '.csv')
 
     base_cols = ['timestamp','rho','split', 'policy']
+
+    total_rates = df[base_cols + ['i', 'lamda']].drop_duplicates()[base_cols +['lamda']].groupby(by=base_cols, as_index=False).sum().rename(columns={'lamda':'total_lamda'})
     total_sim_rates = df[base_cols + ['sim_matching_rates']].groupby(by=base_cols, as_index=False).sum().rename(columns={'sim_matching_rates':'total_sim_rates'})
     df = pd.merge(
             left=df, 
-            right = total_sim_rates,
-            on = ['timestamp', 'rho', 'split', 'policy'],
+            right = pd.merge(left=total_rates, right=total_sim_rates, on=base_cols, how='left'),
+            on = base_cols,
             how='left'
         )
 
-    df.loc[:, 'sim_rate_gap'] = df['lamda_total'] - df['total_sim_rates']
-    df.loc[:, 'sim_adj'] = df['lamda_total'] / df['total_sim_rates']
+    df.loc[:, 'sim_rate_gap'] = df['total_lamda'] - df['total_sim_rates']
+    df.loc[:, 'sim_adj'] = df['total_lamda'] / df['total_sim_rates']
 
-    df.to_csv('FZ_Kaplan_exp_sbpss_cd5.csv', index=False)
+    df.to_csv(filename + '_rates.csv', index=False)
 
     df.loc[:,'sim_rate_gap'] = np.abs(df['sim_adj'] - 1.)
     df = df[df['sim_rate_gap'] < 0.03]

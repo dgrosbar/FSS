@@ -639,9 +639,7 @@ def compare_approximations(compatability_matrix, alpha, beta, density, k, dist, 
 
     return res_df
 
-
 def compare_approximations_generic(compatability_matrix, alpha, beta, jt_perms=None, exact=False, print_progress=False, seed=None, **kwargs):
-
 
     m, n = compatability_matrix.shape
     nnz = compatability_matrix.nonzero()
