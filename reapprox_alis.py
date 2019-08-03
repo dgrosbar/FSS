@@ -26,24 +26,25 @@ def go_back_and_approximate_alis(filename, p=30):
     pool = mp.Pool(processes=p)
     exps = []
     newfilename = filename + '_alis'
-
+    z = 1
     for (size, exp_no), exp in main_df.groupby(by=['size','exp_no'], as_index=False):
 
-        print()
-        exps.append([exp, size, exp_no, newfilename])
+        
+        exps.append([exp, size, exp_no, newfilename, z])
+        z = z+1
     if p > 1:
         exps_res = pool.starmap(approximate_alis_exp, exps)
     else:
         approximate_alis_exp(*exps[0])
 
             
-def approximate_alis_exp(exp_df, size, exp_no, newfilename):
+def approximate_alis_exp(exp_df, size, exp_no, newfilename, z):
 
     alis_rho_dfs = []
 
     for rho, rho_exp_df in exp_df.groupby(by='rho'):
 
-        print(rho_exp_df)
+        # print(rho_exp_df)
 
         exp_data = rho_exp_df[['m', 'n']].drop_duplicates()
         alpha_data = rho_exp_df[['i', 'alpha']].drop_duplicates()
@@ -67,12 +68,12 @@ def approximate_alis_exp(exp_df, size, exp_no, newfilename):
         # print(alpha.sum())
         # print(beta.sum())
         # print(compatability_matrix.sum())
-
+        print('z: ',z, ' size: ',size, ' exp_no: ',exp_no, 'rho: ',rho)
         alis_approx = fast_sparse_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=10, max_time=6000)
 
         res_dict = {'mat': {'alis_approx': alis_approx}, 'aux': {'exp_no': exp_no, 'size': size, 'rho': rho}}
         alis_rho_df = log_res_to_df(compatability_matrix, result_dict=res_dict)
-        print(alis_rho_df)
+        # print(alis_rho_df)
         alis_rho_dfs.append(alis_rho_df)
 
     alis_exp_df = pd.concat(alis_rho_dfs, axis=0)
