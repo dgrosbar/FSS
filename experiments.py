@@ -12,7 +12,6 @@ import functools
 from scipy import sparse as sps
 from math import floor, ceil, log, exp
 import multiprocessing as mp
-
 from simulators import *
 from generators import *
 from utilities import *
@@ -1445,7 +1444,6 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
         return sbpss_df
 
 
-
 def find_bad_sum():
 
     df_full = pd.read_csv('FZ_Kaplan_exp_sbpss_fixed_adj.csv')
@@ -1907,7 +1905,7 @@ if __name__ == '__main__':
 
     # go_back_and_approximate_grids_sbpss(3)
     # increasing_n_system()
-    go_back_and_approximate_sbpss_customer_dependet_lqf()
+    # go_back_and_approximate_sbpss_customer_dependet_lqf()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')
     # df = go_back_and_solve_qp(df)
     # df.to_csv('erdos_renyi_exp_final_w_qp.csv', index=False)
@@ -1944,15 +1942,20 @@ if __name__ == '__main__':
     # for key,val in workload_sets.items():
     #     print(key, val)
 
-    # rho = 0.9
-    # compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
-    # m , n = compatability_matrix.shape
-    # lamda = alpha * rho
+    rho = 0.01
+    compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
+    m , n = compatability_matrix.shape
+    lamda = alpha * rho
+    mu = beta
     # mu = beta
     # # sim_len = 2*10**6
     # # warm_up = 1*10**6
-    # res = simulate_queueing_system(compatability_matrix, lamda, mu)
-
+    res = simulate_queueing_system(compatability_matrix, lamda, mu)
+    printarr(res['mat']['sim_matching_rates'], 'sim')
+    alis = fast_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=10, max_time=600)
+    printarr(alis, 'not_sparse')
+    sparse_alis = fast_sparse_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=10, max_time=600)
+    printarr(sparse_alis, 'sparse')
     # res_lqf = simulate_queueing_system(compatability_matrix, lamda, mu)
     # printarr(res['mat']['sim_matching_rates'], 'fcfs')
 

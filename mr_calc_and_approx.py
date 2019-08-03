@@ -1,5 +1,8 @@
 import numpy as np
 from numba import jit
+from numba import typeof
+from numba import types
+from numba.typed import Dict, List
 import cplex
 from cplex.exceptions import CplexError
 from math import exp
@@ -599,10 +602,10 @@ def fast_entropy_approximation(compatability_matrix, lamda, mu, check_every=10**
 
 
 @jit(nopython=True, cache=True)
-def fast_matrix_scaling(compatability_matrix, lamda, mu, m, n):
+def fast_matrix_scaling(compatability_matrix, lamda, mu, m, n, check_every):
 
 	max_iter = 10**7
-	check_every = 10**2
+	# check_every = 10**2
 	epsilon = 10**-7
 	matching_rates = compatability_matrix
 
@@ -1059,6 +1062,8 @@ def fast_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=
 
 	m, n = compatability_matrix.shape
 
+	compatability_matrix = 1. * compatability_matrix
+
 	col_sums = n * (np.ones(n)/n * (1 - rho) + beta * rho)
 
 	p = np.vstack([beta for _ in range(n)])
@@ -1086,11 +1091,104 @@ def fast_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=
 
 	q = p_to_q(p, compatability_matrix, alpha, m, n)
 
+	# printarr(p, 'p not_sparse')
+	# printarr(q, 'q not_sparse')
+
 	r = p[:, None, :] * q[..., None] 
 	r = r * compatability_matrix
 	r = rho * r.sum(axis=0)
 
 	return r
+
+
+def fast_sparse_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=10, max_time=600):
+
+	print('fast_sparse_alis_approximation')
+	m, n = compatability_matrix.shape
+	compatability_matrix = 1.* compatability_matrix
+	col_sums = n * (np.ones(n)/n * (1 - rho) + beta * rho)
+
+	p = np.vstack([beta for _ in range(n)])
+	p = fast_matrix_scaling(p, np.ones(n), col_sums, m, n, 2)
+	# q_time = 0
+	# p_time = 0
+	# s_time = 0
+	# c_time = 0
+	converge = False
+	timed_out = False
+
+	iter_k = 1
+	start_time = time()
+	nnz  = compatability_matrix.nonzero()
+
+	nnz = np.array(np.vstack([nnz[0], nnz[1]]).T)
+	len_nnz  = nnz.shape[0]
+
+	while not converge and not timed_out:
+		prev_p = p
+		# t_q = time()
+		q = p_to_q(p, compatability_matrix, alpha, m, n)
+		# q_time = q_time + (time() - t_q)
+
+		# t_p = time()
+		p = r_to_p_sparse(q, p, n, nnz, len_nnz)
+
+		# t_s = time()
+		p = fast_matrix_scaling(p, np.ones(n), col_sums, m, n, 2)
+		# s_time = s_time + (time() - t_s)
+
+		# t_c = time()
+		if iter_k > 0 and iter_k % check_every == 0:
+			print(iter_k, np.abs(prev_p - p).sum())
+			if np.abs(prev_p - p).sum() < 10**-6:
+
+				converge = True
+			if time() - start_time > max_time:
+				timed_out = True
+		# c_time = c_time + (t_c - time())
+		iter_k = iter_k + 1
+
+
+	q = p_to_q(p, compatability_matrix, alpha, m, n)
+
+	r = p_q_to_r_sparse(q, p, m, n, nnz, len_nnz, rho)
+
+	# print('q_time: ', q_time) 
+	# print('p_time: ', p_time) 
+	# print('s_time: ', s_time) 
+	# print('c_time: ', c_time) 
+	print('completed alis approximation in ' + str((time() - start_time)) + ' seconds')
+
+	return r
+
+
+def p_to_p_sparse(p, alpha, m, n, nnz, len_nnz):
+
+	q = (np.ones((n, m)) - np.dot(compatability_matrix, p.T).T)
+	# q = np.ones((n, m)) - compatability_matrix.dot(p.T).T
+	
+	for ell in range(1, n, 1):
+		q[ell, :] = q[ell, :] * q[ell - 1, :] 
+
+	c = 1. / (np.ones((1, m)) - q[-1, :])
+
+	q = np.vstack((np.ones((1, m)), q[:-1, :]))
+
+	q = q * c * alpha
+
+	r = np.zeros((n,n))
+	for ell in range(n):
+		for k in range(len_nnz):
+			j = nnz[k, 1]
+			i = nnz[k, 0]
+			r[ell, j] = r[ell, j] + p[ell, j] * q[ell, i] 
+
+	r_ell = r[0, :]
+	for ell in range(1, n, 1):
+		p[ell, :] = r_ell/r_ell.sum()
+		r_ell = r_ell + r[ell]
+
+	return p
 
 	
 @jit(nopython=True, cache=True)
@@ -1098,7 +1196,7 @@ def p_to_q(p, compatability_matrix, alpha, m, n):
 
 
 	q = (np.ones((n, m)) - np.dot(compatability_matrix, p.T).T)
-	
+	# q = np.ones((n, m)) - compatability_matrix.dot(p.T).T
 	for ell in range(1, n, 1):
 		q[ell, :] = q[ell, :] * q[ell - 1, :] 
 
@@ -1110,11 +1208,35 @@ def p_to_q(p, compatability_matrix, alpha, m, n):
 
 	return q
 
-# @jit(nopython=True, cache=True)
+@jit(nopython=True, cache=True)
+def p_to_q(p, compatability_matrix, alpha, m, n):
+
+
+	q = (np.ones((n, m)) - np.dot(compatability_matrix, p.T).T)
+	# q = np.ones((n, m)) - compatability_matrix.dot(p.T).T
+	for ell in range(1, n, 1):
+		q[ell, :] = q[ell, :] * q[ell - 1, :] 
+
+	c = 1. / (np.ones((1, m)) - q[-1, :])
+
+	q = np.vstack((np.ones((1, m)), q[:-1, :]))
+
+	q = q * c * alpha
+
+	return q
+
+
+@jit(nopython=True, cache=True)
 def r_to_p(compatability_matrix, pp, qq, p, n):
+
+	# ------------------------------------ #
+	# ------------------------------------ #
 
 	r = qq * pp
 	r = r * compatability_matrix
+	# ------------------------------------ #
+	# ------------------------------------ #
+
 	r = r.sum(axis=1)
 	r_ell = r[0]
 	for ell in range(1, n, 1):
@@ -1122,6 +1244,41 @@ def r_to_p(compatability_matrix, pp, qq, p, n):
 		r_ell = r_ell + r[ell]
 
 	return p
+
+
+@jit(nopython=True, cache=True)
+def r_to_p_sparse(q, p, n, nnz, len_nnz):
+
+
+	r = np.zeros((n,n))
+	for ell in range(n):
+		for k in range(len_nnz):
+			j = nnz[k, 1]
+			i = nnz[k, 0]
+			r[ell, j] = r[ell, j] + p[ell, j] * q[ell, i] 
+
+	r_ell = r[0, :]
+	for ell in range(1, n, 1):
+		p[ell, :] = r_ell/r_ell.sum()
+		r_ell = r_ell + r[ell]
+
+	return p
+
+
+@jit(nopython=True, cache=True)
+def p_q_to_r_sparse(q, p, m, n, nnz, len_nnz, rho):
+
+	r = np.zeros((m,n))
+	
+	for ell in range(n):
+		for k in range(len_nnz):
+			j = nnz[k, 1]
+			i = nnz[k, 0]
+			r[i, j] = r[i, j] + p[ell, j] * q[ell, i] 
+
+	r = rho * r
+
+	return r
 
 
 def convert_to_normal_form(c, z, w, q):

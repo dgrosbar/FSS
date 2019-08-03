@@ -1994,18 +1994,20 @@ def sbpss_gini_table(filename):
     mpl.rcParams['hatch.linewidth'] = 0.05
 
     df = pd.read_csv(filename + '.csv')
-    df_comp = df[(df['rho']>=0.6)]
+    df_comp = df[(df['rho']>=0.6) & (df['exp_no'] != 18) & (df['exp_no'] != 15) & (df['exp_no'] != 7)]
     if 'grid' in filename:
         df_comp = df_comp[(df_comp['exp_no'] != 9) | (df_comp['size'] != '30x30') ]
     df_comp.loc[:, 'scaled_Wq'] = df_comp['Avg. Wq'] * (1. - df_comp['rho'])/df_comp['rho']
     df_comp = df_comp.pivot_table(index=['size', 'exp_no', 'rho'], values=['Avg. Wq', 'gini', 'scaled_Wq'], columns=['policy'], aggfunc=np.mean)
     df_comp = df_comp.reset_index()
-    # print(df_comp)
+
     df_comp.columns = [' '.join(col).strip() for col in df_comp.columns.values]
-    print(df_comp)
+    # df_comp[df_comp['rho']==0.99]
     df_comp.loc[:, 'Wq_ratio'] = df_comp['Avg. Wq weighted_fcfs_alis']/df_comp['Avg. Wq fcfs_alis']
     df_comp.loc[:, 'gini_gap'] = df_comp['gini fcfs_alis'] - df_comp['gini weighted_fcfs_alis']
-    df_comp.loc[:, 'scaled_Wq_weighted_fcfs_alis'] = df_comp['Avg. Wq weighted_fcfs_alis']/(1. - df_comp['rho'])
+    df_comp.loc[:, 'scaled_Wq_weighted_fcfs_alis'] = df_comp['Avg. Wq weighted_fcfs_alis']*(1. - df_comp['rho'])
+    df_comp.loc[:, 'scaled_Wq_fcfs_alis'] = df_comp['Avg. Wq fcfs_alis']*(1. - df_comp['rho'])
+    print(df_comp)
     # print(df_comp[df_comp['rho']== .99][['size','exp_no' ,'rho', 'gini_gap', 'Wq_ratio']])
     # print(df_comp[df_comp['exp_no']== 9][['size','exp_no' ,'rho', 'gini_gap', 'Wq_ratio']])
     
@@ -2063,7 +2065,7 @@ def sbpss_gini_table(filename):
             exp_grp = exp_grp.sort_values(by='rho')
             ax[1, k].plot(1.-exp_grp['Wq_ratio'], exp_grp['gini_gap'], color='black', linestyle=':', linewidth=0.5, alpha=0.3, label='_nolegend_')
         for v, (rho, rho_grp) in enumerate(grp.groupby(by=['rho'])):
-            ax[1, k].scatter(1.- rho_grp['Wq_ratio'], rho_grp['gini_gap'], color=COLORS[v], marker=MARKERS[v], label="{:.2}".format(rho), s=12)
+            ax[1, k].scatter(1.- rho_grp['Wq_ratio'], rho_grp['gini_gap'], color=COLORS[v], marker=MARKERS[v],label="{:.2}".format(rho), s=3.**rho_grp['scaled_Wq_fcfs_alis'])
             rho_max_x = (1.-rho_grp['Wq_ratio']).max()
             rho_max_y = rho_grp['gini_gap'].max()
             max_x[k] = rho_max_x if rho_max_x > max_x[k] else max_x[k]
@@ -2079,10 +2081,10 @@ def sbpss_gini_table(filename):
         ax[1 ,k].plot([0,0], [-1, 1], color='black', linewidth=1)
         abs_x = max(abs(max_x[k]),abs(min_x[k]))
         abs_y = max(abs(max_y[k]),abs(min_y[k]))
-        # ax[1, k].set_xlim(min(min_x[k] * 1.1, -0.25*abs_x), max(max_x[k] * 1.1,0.25*abs_x))
-        # ax[1, k].set_ylim(min(min_y[k] * 1.1, -0.25*abs_y), max(max_y[k] * 1.1,0.25*abs_y))
-        ax[1, k].set_xlim(max(min(min_x[k] * 1.1, -0.25*abs_x), -0.1), max(max_x[k] * 1.1,0.25*abs_x))
+        ax[1, k].set_xlim(min(min_x[k] * 1.1, -0.25*abs_x), max(max_x[k] * 1.1,0.25*abs_x))
         ax[1, k].set_ylim(min(min_y[k] * 1.1, -0.25*abs_y), max(max_y[k] * 1.1,0.25*abs_y))
+        # ax[1, k].set_xlim(max(min(min_x[k] * 1.1, -0.25*abs_x), -0.1), max(max_x[k] * 1.1,0.25*abs_x))
+        # ax[1, k].set_ylim(min(min_y[k] * 1.1, -0.25*abs_y), max(max_y[k] * 1.1,0.25*abs_y))
 
     for k, (size, grp) in enumerate(agg_res.groupby(by='size')):
 
@@ -2150,11 +2152,11 @@ if __name__ == '__main__':
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
     # sbpss_cd_table1()
-    sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
+    # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
-    # sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
+    sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
     # sbpss_cd_graph1_lqf('lqf_alis', 'rand')
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
