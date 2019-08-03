@@ -16,10 +16,10 @@ from simulators import *
 from generators import *
 from utilities import *
 from mr_calc_and_approx import *
-#from graphs_and_tabels import *
+
 import gc
 
-def go_back_and_approximate_alis(filename, p=1):
+def go_back_and_approximate_alis(filename, p=30):
 
     main_df = pd.read_csv(filename + '.csv')
     main_df = main_df[(main_df['gamma'] == 0) & (main_df['policy'] == 'fcfs_alis')]
