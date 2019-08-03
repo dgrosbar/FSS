@@ -1329,6 +1329,100 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf.csv', index=False)
 
 
+def sbpss_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
+
+    df = pd.read_csv(filename + '.csv')
+
+    base_cols = ['timestamp','rho','policy']
+
+    total_rates = df[base_cols + ['i', 'lamda']].drop_duplicates()[base_cols +['lamda']].groupby(by=base_cols, as_index=False).sum().rename(columns={'lamda':'total_lamda'})
+    total_sim_rates = df[base_cols + ['sim_matching_rates']].groupby(by=base_cols, as_index=False).sum().rename(columns={'sim_matching_rates':'total_sim_rates'})
+    df = pd.merge(
+            left=df, 
+            right = pd.merge(left=total_rates, right=total_sim_rates, on=base_cols, how='left'),
+            on = base_cols,
+            how='left'
+        )
+
+    df.loc[:, 'sim_rate_gap'] = df['total_lamda'] - df['total_sim_rates']
+    df.loc[:, 'sim_adj'] = df['total_lamda'] / df['total_sim_rates']
+
+    df.to_csv(filename + '_rates.csv', index=False)
+
+    df.loc[:,'sim_rate_gap'] = np.abs(df['sim_adj'] - 1.)
+    df = df[df['sim_rate_gap'] < 0.03]
+    df.loc[:,'adj_sim_matching_rates'] = df['sim_adj'] * df['sim_matching_rates']
+
+    id_vars = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'beta_dist', 'rho', 'adj_sim_matching_rates', 'sim_rate_gap', 'split', 'policy']
+    val_vars = ['fcfs_alis_approx', 'fcfs_approx', 'alis_approx']
+
+    df = pd.melt(df, id_vars=id_vars, value_vars=val_vars, var_name='approximation', value_name='approx_match_rate')
+
+    df.loc[:, 'abs_error_sim'] = np.abs(df['approx_match_rate'] - df['adj_sim_matching_rates'])
+    df.loc[:, 'abs_error_pct_sim'] = np.abs(df['approx_match_rate'] - df['adj_sim_matching_rates'])/df['approx_match_rate']
+
+    def f(df):
+
+        x = '_sim'
+        d = {}
+        
+        d['total_rate'] = df['adj_sim_matching_rates'].sum()
+        d['sum_abs_error_sim'] = df['abs_error_sim'].sum()
+        d['mean_abs_error_sim'] = df['abs_error_sim'].mean()
+        d['max_abs_error_sim'] = df['abs_error_sim'].max()
+        d['mean_abs_error_pct_sim'] = df['abs_error_pct_sim'].mean()
+        d['max_abs_error_pct_sim'] = df['abs_error_pct_sim'].max()
+
+        index = [
+            'total_rate',
+            'sum_abs_error_sim',
+            'mean_abs_error_sim',
+            'max_abs_error_sim',
+            'mean_abs_error_pct_sim',
+            'max_abs_error_pct_sim'
+        ]
+
+        return pd.Series(d, index=index)
+
+    base_cols = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'beta_dist', 'rho', 'split' ,'approximation', 'policy']
+    agg_res = df.groupby(by=base_cols, as_index=False).apply(f).reset_index()
+
+    agg_res.sort_values(by=['approximation', 'graph_no', 'exp_no', 'beta_dist','density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_agg_w_alis._lqfcsv', index=False)
+
+    agg_res.loc[:, 'err_pct_of_rate'] = agg_res['sum_abs_error_sim']/agg_res['total_rate']
+   
+    def g(df):
+        
+        d = {}
+
+        d['mean_err_pct'] = df['err_pct_of_rate'].mean()
+        d['max_err_pct'] = df['err_pct_of_rate'].max()
+        d['min_err_pct'] = df['err_pct_of_rate'].min()
+        d['err_pct_of_rate_std'] = df['err_pct_of_rate'].std()
+        d['err_pct_95_u'] = df['err_pct_of_rate'].mean() + 1.96 * df['err_pct_of_rate'].std()
+        d['err_pct_95_l'] = df['err_pct_of_rate'].mean() - 1.96 * df['err_pct_of_rate'].std()
+
+        index = [
+            'mean_err_pct',
+            'max_err_pct',
+            'min_err_pct',
+            'err_pct_of_rate_std',
+            'err_pct_95_u',
+            'err_pct_95_l'
+        ]
+
+        return pd.Series(d, index=index) 
+
+    sum_base_cols = ['density_level', 'rho', 'approximation', 'split', 'policy']
+
+    sum_res = agg_res[sum_base_cols + ['err_pct_of_rate']].sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split'])
+    sum_res = sum_res.groupby(by=sum_base_cols, as_index=False).apply(g).reset_index()
+    
+    print(sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']))
+
+    sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf.csv', index=False)
+
+
 def sbpss_cd_table2(filename='FZ_Kaplan_exp_sbpss_cd_agg'):
 
     df = pd.read_csv(filename + '.csv')
@@ -1600,6 +1694,102 @@ def sbpss_cd_graph1_lqf(policy, split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_l
 
     plt.show()
 
+
+def sbpss_cd_graph1_lqf_both(split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_lqf'):
+
+    sum_res = pd.read_csv(filename + '.csv')
+    print(sum_res)
+    sum_res = sum_res[(sum_res['split'] == split)]
+
+
+
+    print(sum_res)
+
+    fig, ax = plt.subplots(1, 3)
+
+    row_plt = {'low': 0, 'medium': 1, 'high': 2}
+    
+    approx_colors = {
+        ('fcfs_alis_approx', 'fcfs_alis'): 'green',
+        ('fcfs_approx', 'fcfs_alis'): 'red',
+        ('alis_approx', 'fcfs_alis'): 'blue',
+        ('fcfs_alis_approx', 'lqf_alis'): 'purple',
+        ('fcfs_approx', 'lqf_alis'): 'red',
+        ('alis_approx', 'lqf_alis'): 'blue'
+    }
+
+    ims_errors = {
+        'low': (.115, .064, 0.028),
+        'medium': (.089, .062, 0.034),
+        'high': (.032, 0.0315, 0.02955)
+    }
+
+    cap_density_level = {
+        'low': 'Low',
+        'medium': 'Medium',
+        'high': 'High'
+    }
+
+
+    for key, grp in sum_res.groupby(by=['density_level', 'approximation', 'policy'], as_index=False):
+
+        density_level, approximation, policy = key
+        color = approx_colors[(approximation, policy)]
+        row = row_plt[density_level]
+        ax[row].set_title(cap_density_level[density_level])
+        x = grp['rho']
+
+        if approximation == 'fcfs_alis_approx' and policy == 'fcfs_alis':
+
+            ax[row].plot(x, grp['mean_err_pct'], color=color, linewidth=1.5, label='FCFS-ALIS_Approximation - FCFS-ALIS', marker='x')
+            ax[row].plot(x, grp['err_pct_95_u'], color=color, linewidth=.5, linestyle = ':')
+            ax[row].plot(x, grp['err_pct_95_l'], color=color, linewidth=.5, linestyle = ':')
+
+        if approximation == 'fcfs_alis_approx' and policy == 'lqf_alis':
+
+            ax[row].plot(x, grp['mean_err_pct'], color=color, linewidth=1.5, label='FCFS-ALIS_Approximation - LQF-ALIS', marker='x')
+            ax[row].plot(x, grp['err_pct_95_u'], color=color, linewidth=.5, linestyle = ':')
+            ax[row].plot(x, grp['err_pct_95_l'], color=color, linewidth=.5, linestyle = ':')
+
+        elif approximation == 'fcfs_approx' and policy == 'fcfs_alis':
+
+            ax[row].plot(x, grp['mean_err_pct'], color=color, linewidth=1, label='FCFS Approximation', marker = '.', linestyle='--')
+
+        # elif approximation == 'rho_approx':
+
+        #     ax[row].plot(x, grp['mean_err_pct'], color=color, linewidth=1, label='Old  Approximation')
+
+        # elif approximation == 'light_approx':
+
+        #     ax[row, col].plot(x, grp['mean_err_pct'], color=color, linewidth=1, label='ALIS Approximation')
+
+        elif approximation == 'alis_approx' and policy == 'fcfs_alis':
+
+            ax[row].plot(x, grp['mean_err_pct'], color=color, linewidth=1, label='ALIS Approximation', marker='+', linestyle='-.')
+            ax[row].plot(x, [ims_errors[density_level][0]]*len(x), color='black', linewidth=1, linestyle='--', label='Ohm Error for IMS')
+            ax[row].plot(x, [ims_errors[density_level][1]]*len(x), color='black', linewidth=1, linestyle='-.', label='QP Error for IMS')
+            ax[row].plot(x, [ims_errors[density_level][2]]*len(x), color='green', linewidth=1, linestyle='-', label='MaxEnt Error for IMS')
+
+    ax[0].set_ylabel('Sum of Absoulte Errors / Sum of Arrival Rates ', fontsize=16)
+    fig.suptitle('Graph Density', fontsize=24)
+    for i in range(3):
+        ax[i].set_xlabel('utilization', fontsize=16)
+        ax[i].set_xlim(0, 1)
+        ax[i].set_ylim(0.001, .5)
+
+    plt.rc('xtick',labelsize=14)
+    plt.rc('ytick',labelsize=14)
+
+    # handles,labels = ax[0].get_legend_handles_labels()
+
+    # order = [0, 4, 5, 6, 7, 1, 2, 3]
+
+    # handles = [handles[v] for v in order]
+    # labels = [labels[v] for v in order]
+
+    # plt.legend(handles, labels)
+
+    plt.show()
 
 def sim_rates_vs_lamda(filename='FZ_Kaplan_exp_sbpss_cd4'):
 
@@ -2152,13 +2342,13 @@ if __name__ == '__main__':
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
-    sbpss_cd_table1('erdos_renyi_sbpss_comp_alis')
+    sbpss_table1('erdos_renyi_sbpss_comp_alis')
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
     # sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
-    # sbpss_cd_graph1_lqf('lqf_alis', 'rand')
+    # sbpss_cd_graph1_lqf_both('one')
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
 
