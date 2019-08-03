@@ -2342,7 +2342,8 @@ if __name__ == '__main__':
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
-    sbpss_table1('erdos_renyi_sbpss_comp_alis')
+    sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
+
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
