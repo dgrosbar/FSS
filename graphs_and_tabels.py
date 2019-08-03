@@ -1235,12 +1235,11 @@ def sbpss_graph4(filename='FZ_Kaplan_exp_sbpss_good_w_alis_sum'):
     plt.show()
 
 
-def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd4_fixed'):
+def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
 
     df = pd.read_csv(filename + '.csv')
 
     base_cols = ['timestamp','rho','split', 'policy']
-    # total_rates = df[base_cols + ['i', 'lamda']].drop_duplicates()[base_cols + ['lamda']].groupby(by=base_cols, as_index=False).sum().rename(columns={'lamda':'total_lamda'})
     total_sim_rates = df[base_cols + ['sim_matching_rates']].groupby(by=base_cols, as_index=False).sum().rename(columns={'sim_matching_rates':'total_sim_rates'})
     df = pd.merge(
             left=df, 
@@ -2151,12 +2150,12 @@ if __name__ == '__main__':
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
-    # sbpss_cd_table1()
+    sbpss_cd_table1()
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
-    sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
+    # sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
     # sbpss_cd_graph1_lqf('lqf_alis', 'rand')
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
