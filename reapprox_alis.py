@@ -86,7 +86,7 @@ def approximate_alis_exp(exp_df, size, exp_no, newfilename):
 if __name__ == '__main__':
 
 
-    go_back_and_approximate_alis('grid_sbpss_comp')
+    go_back_and_approximate_alis('erdos_renyi_sbpss_comp')
 
 
 
