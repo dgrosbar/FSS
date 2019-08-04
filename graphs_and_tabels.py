@@ -1369,10 +1369,11 @@ def sbpss_table3(filename='erdos_renyi_sbpss_comp_alis_rates_test'):
 
         return pd.Series(d, index=index)
 
-    base_cols = ['timestamp', 'exp_no', 'rho']
+    base_cols = ['timestamp', 'exp_no', 'rho', 'approximation']
     agg_res = df.groupby(by=base_cols, as_index=False).apply(f).reset_index()
 
     agg_res.sort_values(by=['approximation', 'timestamp', 'size', 'exp_no', 'rho']).to_csv(filename + '_agg.csv', index=False)
+    print(agg_res)
 
     agg_res.loc[:, 'err_pct_of_rate'] = agg_res['sum_abs_error_sim']/agg_res['total_rate']
    
