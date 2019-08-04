@@ -1330,7 +1330,7 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf.csv', index=False)
 
 
-def sbpss_table3(filename='erdos_renyi_sbpss_comp_alis_rates_test'):
+def sbpss_table3(filename='erdos_renyi_sbpss_comp_alis_rates'):
 
     df = pd.read_csv(filename + '.csv')
 
