@@ -1330,11 +1330,11 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf.csv', index=False)
 
 
-def sbpss_table3(filename='erdos_renyi_sbpss_comp_alis_rates'):
+def sbpss_table3(filename='grid_sbpss_comp_alis'):
 
     df = pd.read_csv(filename + '.csv')
 
-    base_cols = ['timestamp', 'szie', 'exp_no', 'rho', 'policy']
+    base_cols = ['timestamp', 'size', 'exp_no', 'rho', 'policy']
 
     total_rates = df[base_cols + ['i', 'lamda']].drop_duplicates()[base_cols +['lamda']].groupby(by=base_cols, as_index=False).sum().rename(columns={'lamda':'total_lamda'})
     total_sim_rates = df[base_cols + ['sim_matching_rates']].groupby(by=base_cols, as_index=False).sum().rename(columns={'sim_matching_rates':'total_sim_rates'})
@@ -1353,7 +1353,7 @@ def sbpss_table3(filename='erdos_renyi_sbpss_comp_alis_rates'):
 
     df.to_csv(filename + '_rates.csv', index=False)
 
-    df_slim = df[['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'adj_sim_matching_rates', 'fcfs_alis_approx', 'fcfs_approx', 'alis_approx']]
+    df_slim = df[['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'plicy','adj_sim_matching_rates', 'fcfs_alis_approx', 'fcfs_approx', 'alis_approx']]
 
     id_vars = ['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'adj_sim_matching_rates']
     val_vars = ['fcfs_alis_approx', 'fcfs_approx', 'alis_approx']
@@ -2437,8 +2437,8 @@ if __name__ == '__main__':
     pd.set_option('display.width', 10000)
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
-    sbpss_approx_graph()
-    # sbpss_table3()
+    # sbpss_approx_graph()
+    sbpss_table3()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
 
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
