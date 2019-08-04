@@ -1330,34 +1330,18 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf.csv', index=False)
 
 
-def sbpss_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
+def sbpss_table3(filename='erdos_renyi_sbpss_comp_alis_rates'):
 
     df = pd.read_csv(filename + '.csv')
 
-    base_cols = ['timestamp','rho','policy']
-
-    total_rates = df[base_cols + ['i', 'lamda']].drop_duplicates()[base_cols +['lamda']].groupby(by=base_cols, as_index=False).sum().rename(columns={'lamda':'total_lamda'})
-    total_sim_rates = df[base_cols + ['sim_matching_rates']].groupby(by=base_cols, as_index=False).sum().rename(columns={'sim_matching_rates':'total_sim_rates'})
-    df = pd.merge(
-            left=df, 
-            right = pd.merge(left=total_rates, right=total_sim_rates, on=base_cols, how='left'),
-            on = base_cols,
-            how='left'
-        )
-
-    df.loc[:, 'sim_rate_gap'] = df['total_lamda'] - df['total_sim_rates']
-    df.loc[:, 'sim_adj'] = df['total_lamda'] / df['total_sim_rates']
-
-    df.to_csv(filename + '_rates.csv', index=False)
-
-    df.loc[:,'sim_rate_gap'] = np.abs(df['sim_adj'] - 1.)
-    df = df[df['sim_rate_gap'] < 0.03]
     df.loc[:,'adj_sim_matching_rates'] = df['sim_adj'] * df['sim_matching_rates']
 
-    id_vars = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'beta_dist', 'rho', 'adj_sim_matching_rates', 'sim_rate_gap', 'split', 'policy']
+    df_slim = df[['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'adj_sim_matching_rates', 'fcfs_alis_approx', 'fcfs_approx', 'alis_approx']]
+
+    id_vars = ['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'adj_sim_matching_rates']
     val_vars = ['fcfs_alis_approx', 'fcfs_approx', 'alis_approx']
 
-    df = pd.melt(df, id_vars=id_vars, value_vars=val_vars, var_name='approximation', value_name='approx_match_rate')
+    df = pd.melt(df_slim, id_vars=id_vars, value_vars=val_vars, var_name='approximation', value_name='approx_match_rate')
 
     df.loc[:, 'abs_error_sim'] = np.abs(df['approx_match_rate'] - df['adj_sim_matching_rates'])
     df.loc[:, 'abs_error_pct_sim'] = np.abs(df['approx_match_rate'] - df['adj_sim_matching_rates'])/df['approx_match_rate']
@@ -1385,10 +1369,10 @@ def sbpss_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
 
         return pd.Series(d, index=index)
 
-    base_cols = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'beta_dist', 'rho', 'split' ,'approximation', 'policy']
+    base_cols = ['timestamp', 'exp_no', 'rho']
     agg_res = df.groupby(by=base_cols, as_index=False).apply(f).reset_index()
 
-    agg_res.sort_values(by=['approximation', 'graph_no', 'exp_no', 'beta_dist','density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_agg_w_alis_lqf.csv', index=False)
+    agg_res.sort_values(by=['approximation', 'timestamp', 'size', 'exp_no', 'rho']).to_csv(filename + '_agg.csv', index=False)
 
     agg_res.loc[:, 'err_pct_of_rate'] = agg_res['sum_abs_error_sim']/agg_res['total_rate']
    
@@ -1414,14 +1398,14 @@ def sbpss_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
 
         return pd.Series(d, index=index) 
 
-    sum_base_cols = ['density_level', 'rho', 'approximation', 'split', 'policy']
+    sum_base_cols = ['size', 'rho', 'approximation']
 
-    sum_res = agg_res[sum_base_cols + ['err_pct_of_rate']].sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split'])
+    sum_res = agg_res[sum_base_cols + ['err_pct_of_rate']].sort_values(by=['size', 'rho', 'approximation'])
     sum_res = sum_res.groupby(by=sum_base_cols, as_index=False).apply(g).reset_index()
     
-    print(sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']))
+    print(sum_res.sort_values(by=['size', 'rho', 'approximation']))
 
-    sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf.csv', index=False)
+    sum_res.sort_values(by=['size', 'rho', 'approximation']).to_csv(filename + '_sum.csv', index=False)
 
 
 def sbpss_cd_table2(filename='FZ_Kaplan_exp_sbpss_cd_agg'):
@@ -2344,13 +2328,14 @@ if __name__ == '__main__':
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
+    sbpss_table3()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
 
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
-    sbpss_gini_score('map_exp_sbpss_lqf_30x30', base_cols)
+    # sbpss_gini_score('map_exp_sbpss_lqf_30x30', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
-    # sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
+    # sbpss_gini_table('map_exp_sbpss_lqf_30x30_gini')
     # sbpss_cd_graph1_lqf_both('zero')
     # sbpss_graph4()
     # make_test_file('grid_sbpss_comp')
