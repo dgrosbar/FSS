@@ -29,7 +29,6 @@ def go_back_and_approximate_alis(filename, p=30):
     z = 1
     for (size, exp_no), exp in main_df.groupby(by=['size','exp_no'], as_index=False):
 
-        
         exps.append([exp, size, exp_no, newfilename, z])
         z = z+1
     if p > 1:

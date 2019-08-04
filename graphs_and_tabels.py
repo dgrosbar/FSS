@@ -1155,6 +1155,7 @@ def sbpss_graph4(filename='FZ_Kaplan_exp_sbpss_good_w_alis_sum'):
 
     sum_res = pd.read_csv('./Results/' + filename + '.csv')
 
+
     fig, ax = plt.subplots(1, 3)
 
     row_plt = {'low': 0, 'medium': 1, 'high': 2}
@@ -1387,7 +1388,7 @@ def sbpss_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     base_cols = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'beta_dist', 'rho', 'split' ,'approximation', 'policy']
     agg_res = df.groupby(by=base_cols, as_index=False).apply(f).reset_index()
 
-    agg_res.sort_values(by=['approximation', 'graph_no', 'exp_no', 'beta_dist','density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_agg_w_alis._lqfcsv', index=False)
+    agg_res.sort_values(by=['approximation', 'graph_no', 'exp_no', 'beta_dist','density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_agg_w_alis_lqf.csv', index=False)
 
     agg_res.loc[:, 'err_pct_of_rate'] = agg_res['sum_abs_error_sim']/agg_res['total_rate']
    
@@ -1780,14 +1781,14 @@ def sbpss_cd_graph1_lqf_both(split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_
     plt.rc('xtick',labelsize=14)
     plt.rc('ytick',labelsize=14)
 
-    # handles,labels = ax[0].get_legend_handles_labels()
+    handles,labels = ax[0].get_legend_handles_labels()
 
-    # order = [0, 4, 5, 6, 7, 1, 2, 3]
+    order = [4,5,6,7,8,9,10,0,1,2,3]
 
-    # handles = [handles[v] for v in order]
-    # labels = [labels[v] for v in order]
+    handles = [handles[v] for v in order]
+    labels = [labels[v] for v in order]
 
-    # plt.legend(handles, labels)
+    plt.legend(handles, labels)
 
     plt.show()
 
@@ -2343,14 +2344,15 @@ if __name__ == '__main__':
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
 
-    sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
+    # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
 
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
-    # sbpss_gini_score('erdos_renyi_sbpss_comp', base_cols)
+    sbpss_gini_score('map_exp_sbpss_lqf_30x30', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
     # sbpss_gini_table('map_exp_sbpss_30x30_comp_gini')
-    sbpss_cd_graph1_lqf_both('one')
+    # sbpss_cd_graph1_lqf_both('zero')
+    # sbpss_graph4()
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
 
