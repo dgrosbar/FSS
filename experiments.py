@@ -1415,7 +1415,7 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                     exp_res['mat']['fcfs_approx'] = heavy_traffic_approx_entropy
 
                     lamda_norm = lamda/lamda.sum()
-                    alis_approx = fast_alis_approximation(compatability_matrix, lamda_norm, beta, rho, check_every=10, max_time=600)
+                    alis_approx = fast_sparse_alis_approximation(compatability_matrix, lamda_norm, beta, rho, check_every=10, max_time=600)
                     alis_approx = alis_approx * lamda.sum()/rho
                     exp_res['mat']['alis_approx'] = alis_approx
                     exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + rho * exp_res['mat']['fcfs_approx']
