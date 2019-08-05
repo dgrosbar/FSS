@@ -1330,28 +1330,28 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf.csv', index=False)
 
 
-def sbpss_table3(filename='erdos_renyi_sbpss_uni_mu_comp_alis'):
+def sbpss_table3(filename='erdos_renyi_sbpss_uni_mu_comp_alis_rates'):
 
     df = pd.read_csv(filename + '.csv')
 
-    base_cols = ['timestamp', 'size', 'exp_no', 'rho', 'policy']
+    # base_cols = ['timestamp', 'size', 'exp_no', 'rho', 'policy']
 
-    total_rates = df[base_cols + ['i', 'lamda']].drop_duplicates()[base_cols +['lamda']].groupby(by=base_cols, as_index=False).sum().rename(columns={'lamda':'total_lamda'})
-    total_sim_rates = df[base_cols + ['sim_matching_rates']].groupby(by=base_cols, as_index=False).sum().rename(columns={'sim_matching_rates':'total_sim_rates'})
-    df = pd.merge(
-            left=df, 
-            right = pd.merge(left=total_rates, right=total_sim_rates, on=base_cols, how='left'),
-            on = base_cols,
-            how='left'
-        )
+    # total_rates = df[base_cols + ['i', 'lamda']].drop_duplicates()[base_cols +['lamda']].groupby(by=base_cols, as_index=False).sum().rename(columns={'lamda':'total_lamda'})
+    # total_sim_rates = df[base_cols + ['sim_matching_rates']].groupby(by=base_cols, as_index=False).sum().rename(columns={'sim_matching_rates':'total_sim_rates'})
+    # df = pd.merge(
+    #         left=df, 
+    #         right = pd.merge(left=total_rates, right=total_sim_rates, on=base_cols, how='left'),
+    #         on = base_cols,
+    #         how='left'
+    #     )
 
-    df.loc[:, 'sim_rate_gap'] = df['total_lamda'] - df['total_sim_rates']
-    df.loc[:, 'sim_adj'] = df['total_lamda'] / df['total_sim_rates']
+    # df.loc[:, 'sim_rate_gap'] = df['total_lamda'] - df['total_sim_rates']
+    # df.loc[:, 'sim_adj'] = df['total_lamda'] / df['total_sim_rates']
 
 
-    df.loc[:,'adj_sim_matching_rates'] = df['sim_adj'] * df['sim_matching_rates']
+    # df.loc[:,'adj_sim_matching_rates'] = df['sim_adj'] * df['sim_matching_rates']
 
-    df.to_csv(filename + '_rates.csv', index=False)
+    df = pd.read_csv(filename + '.csv')
 
     df_slim = df[['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'policy','adj_sim_matching_rates', 'fcfs_alis_approx', 'fcfs_approx', 'alis_approx']]
 
