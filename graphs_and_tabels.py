@@ -1236,7 +1236,7 @@ def sbpss_graph4(filename='FZ_Kaplan_exp_sbpss_good_w_alis_sum'):
     plt.show()
 
 
-def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
+def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf3'):
 
     df = pd.read_csv(filename + '.csv')
 
@@ -2442,6 +2442,7 @@ if __name__ == '__main__':
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
     # sbpss_approx_graph()
     # sbpss_table3()
+    sbpss_cd_table1()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
 
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)

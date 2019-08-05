@@ -1380,7 +1380,7 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
 
         for policy in ['fcfs_alis']:
 
-            for split in ['zero']:
+            for split in ['zero', 'one', 'half', 'rand']:
 
                 if split == 'zero':
                     theta = np.zeros(m)
@@ -1391,7 +1391,7 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                 else:
                     theta = np.random.uniform(0.1, 0.9, m)
 
-                for rho in [.99, .95]:
+                for rho in [.99, .95, .9, .8, .7, .6, .5, .4, .3, .2, .1, .05, .01]:
                     
                     lamda = (alpha * rho)**(1.- theta)
                     s = (alpha * rho)**theta
