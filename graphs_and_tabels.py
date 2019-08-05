@@ -1353,7 +1353,7 @@ def sbpss_table3(filename='erdos_renyi_sbpss_uni_mu_comp_alis'):
 
     df.to_csv(filename + '_rates.csv', index=False)
 
-    df_slim = df[['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'plicy','adj_sim_matching_rates', 'fcfs_alis_approx', 'fcfs_approx', 'alis_approx']]
+    df_slim = df[['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'policy','adj_sim_matching_rates', 'fcfs_alis_approx', 'fcfs_approx', 'alis_approx']]
 
     id_vars = ['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'adj_sim_matching_rates']
     val_vars = ['fcfs_alis_approx', 'fcfs_approx', 'alis_approx']
