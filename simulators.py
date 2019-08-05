@@ -543,7 +543,7 @@ def parse_sim_data(compatability_matrix, matching_ratios, matching_rates, waitin
     results['mat']['sim_matching_rates_stdev'] = (sum((matching_rates[k] - matching_rates_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5 if sims > 1 else 0 * matching_rates_mean
 
     results['mat']['sim_matching_ratios'] = sum(matching_ratios)*(1./sims)
-    matching_ratios_mean = results['mat']['matching_ratios']
+    matching_ratios_mean = results['mat']['sim_matching_ratios']
     results['mat']['sim_matching_ratios_stdev'] = (sum((matching_ratios[k] - matching_ratios_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5 if sims > 1 else 0 * matching_ratios_mean
 
 
