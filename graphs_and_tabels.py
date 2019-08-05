@@ -1332,7 +1332,7 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
 
 def sbpss_table3(filename='erdos_renyi_sbpss_uni_mu_comp_alis_rates'):
 
-    df = pd.read_csv(filename + '.csv')
+    # df = pd.read_csv(filename + '.csv')
 
     # base_cols = ['timestamp', 'size', 'exp_no', 'rho', 'policy']
 
@@ -1352,6 +1352,7 @@ def sbpss_table3(filename='erdos_renyi_sbpss_uni_mu_comp_alis_rates'):
     # df.loc[:,'adj_sim_matching_rates'] = df['sim_adj'] * df['sim_matching_rates']
 
     df = pd.read_csv(filename + '.csv')
+    df = df[df['policy']=='fcfs_alis']
 
     df_slim = df[['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'policy','adj_sim_matching_rates', 'fcfs_alis_approx', 'fcfs_approx', 'alis_approx']]
 
@@ -1389,7 +1390,7 @@ def sbpss_table3(filename='erdos_renyi_sbpss_uni_mu_comp_alis_rates'):
     base_cols = ['timestamp', 'size', 'exp_no', 'rho', 'approximation']
     agg_res = df.groupby(by=base_cols, as_index=False).apply(f).reset_index()
 
-    agg_res.sort_values(by=['approximation', 'timestamp', 'size', 'exp_no', 'rho']).to_csv(filename + '_agg.csv', index=False)
+    agg_res.sort_values(by=['approximation', 'timestamp', 'size','exp_no', 'rho']).to_csv(filename + '_agg.csv', index=False)
     print(agg_res)
 
     agg_res.loc[:, 'err_pct_of_rate'] = agg_res['sum_abs_error_sim']/agg_res['total_rate']
