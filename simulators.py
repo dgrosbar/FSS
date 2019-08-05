@@ -233,12 +233,13 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_
                 w = compatability_matrix
             
             if lqf: 
-                match_rates_k, wait_k, idle_k = queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only)
+                match_ratios_k, match_rates_k, wait_k, idle_k = queueing_sim_loop_lqf(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only)
             else:
-                match_rates_k, wait_k, idle_k = queueing_sim_loop_lqf(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only)
+                match_ratios_k, match_rates_k, wait_k, idle_k = queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only)
 
 
-            match_rates.append(match_rates_k)
+            match_rates.append(match_ratios_k)
+            match_props.append(matching_counter_k)
             wait_times, wait_times_stdev = get_mean_and_stdev(wait_times, wait_times_stdev, wait_k)
             idle_times, idle_times_stdev = get_mean_and_stdev(idle_times, idle_times_stdev, idle_k)
 
@@ -272,7 +273,7 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_
 
     aux_sim_data = {'no_of_sims' : sims, 'sim_duration' : total_duration, 'sim_len' : sim_len, 'warm_up' : warm_up, 'seed' : seed}
     
-    return parse_sim_data(compatability_matrix, match_rates, wait_times, wait_times_stdev, idle_times, idle_times_stdev, aux_sim_data)
+    return parse_sim_data(compatability_matrix, match_ratios, match_rates, wait_times, wait_times_stdev, idle_times, idle_times_stdev, aux_sim_data)
 
 
 @jit(nopython=True, cache=True)
@@ -289,7 +290,6 @@ def queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_a
     server_idled_at = np.zeros(n, dtype=np.float64)
     interarrival = 1./lamda
     matches = 0
-    arrivals = 0
     record = False
     record_stat_time = 0
 
@@ -300,7 +300,7 @@ def queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_a
         customer_queues[i].pop()
         heappush(event_stream, (np.random.exponential(interarrival[i]), np.int16(i), np.int16(-1)))
 
-    while arrivals < sim_len:
+    while matches < sim_len:
 
         event = heappop(event_stream)
 
@@ -309,8 +309,6 @@ def queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_a
         j = event[2]
 
         if j == -1:
-
-            arrivals = arrivals + 1
 
             if len(customer_queues[i]) > 0:
                 customer_queues[i].append(cur_time)
@@ -386,7 +384,7 @@ def queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_a
                 server_states[j] = 0
                 server_idled_at[j] = cur_time
 
-    return matching_counter/(cur_time - record_stat_time), waiting_times, idle_times
+    return matching_counter/matching_counter.sum(), matching_counter/(cur_time - record_stat_time), waiting_times, idle_times
 
 
 @jit(nopython=True, cache=True)
@@ -414,7 +412,7 @@ def queueing_sim_loop_lqf(customer_queues, event_stream, lamda, s, mu, w, s_adj,
         customer_queues[i].pop()
         heappush(event_stream, (np.random.exponential(interarrival[i]), np.int16(i), np.int16(-1)))
 
-    while arrivals < sim_len:
+    while matches < sim_len:
 
         event = heappop(event_stream)
 
@@ -423,8 +421,6 @@ def queueing_sim_loop_lqf(customer_queues, event_stream, lamda, s, mu, w, s_adj,
         j = event[2]
 
         if j == -1:
-
-            arrivals = arrivals + 1
 
             if len(customer_queues[i]) > 0:
                 customer_queues[i].append(cur_time)
@@ -501,7 +497,7 @@ def queueing_sim_loop_lqf(customer_queues, event_stream, lamda, s, mu, w, s_adj,
                 server_states[j] = 0
                 server_idled_at[j] = cur_time
 
-    return matching_counter/(cur_time - record_stat_time), waiting_times, idle_times
+    return matching_counter/matching_counter.sum(), matching_counter/(cur_time - record_stat_time), waiting_times, idle_times
 
 
 @jit(nopython=True, cache=True)
@@ -533,7 +529,7 @@ def get_mean_and_stdev(data_mean, data_stdev, data_k):
     return data_mean, data_stdev
 
 
-def parse_sim_data(compatability_matrix, matching_rates, waiting_times=None, waiting_times_stdev=None, idle_times=None, idle_times_stdev=None, aux_sim_data=None):
+def parse_sim_data(compatability_matrix, matching_ratios, matching_rates, waiting_times=None, waiting_times_stdev=None, idle_times=None, idle_times_stdev=None, aux_sim_data=None):
 
     results = {'mat': dict(), 'col': dict(), 'row': dict(), 'aux': dict()}
 
@@ -544,7 +540,12 @@ def parse_sim_data(compatability_matrix, matching_rates, waiting_times=None, wai
     results['mat']['sim_matching_rates'] = sum(matching_rates)*(1./sims)
     matching_rates_mean = results['mat']['sim_matching_rates']
     results['mat']['sim_matching_rates_stdev'] = (sum((matching_rates[k] - matching_rates_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5 if sims > 1 else 0 * matching_rates_mean
-    
+
+    results['mat']['sim_matching_ratios'] = sum(matching_ratios)*(1./sims)
+    matching_ratios_mean = results['mat']['matching_ratios']
+    results['mat']['sim_matching_ratios_stdev'] = (sum((matching_ratios[k] - matching_ratios_mean)**2 for k in range(sims))*(1./(sims-1)))**0.5 if sims > 1 else 0 * matching_ratios_mean
+
+
     if waiting_times is not None:
         results['row']['sim_waiting_times'] = sum(waiting_times)*(1./sims)
         waiting_times_mean = results['row']['sim_waiting_times']

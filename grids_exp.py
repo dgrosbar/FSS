@@ -39,7 +39,7 @@ def grids_exp_for_parallel(p=30):
                 sbpss_exp(*exps[0])
 
 
-def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='new_grid_sbpss_ot3'):
+def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='new_grid_sbpss_ot3', lqf=True):
 
     compatability_matrix, g = generate_grid_compatability_matrix(sqrt_m, d)
     m, n = compatability_matrix.shape
@@ -142,8 +142,8 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
                     q_fcfs_ot = q_fcfs_ot/q_fcfs_ot.sum(axis=0)
                     w_fcfs_ot = np.divide(q_fcfs_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
 
-                    sim_res_fcfs_alis_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_ot, prt_all=True, prt=True)
-                    sim_res_fcfs_alis_ot = log_ot_data(sim_res_fcfs_alis_ot, c, w_fcfs_ot , q_fcfs_ot, gamma, 'fcfs_alis_ot', rho, c_type)
+                    sim_res_fcfs_alis_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_ot, prt_all=True, prt=True, lqf=True)
+                    sim_res_fcfs_alis_ot = log_ot_data(sim_res_fcfs_alis_ot, c, w_fcfs_ot , q_fcfs_ot, gamma, 'lqf_alis_ot', rho, c_type)
                     df_fcfs_alis_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_ot, timestamp, aux_exp_data)
                     write_df_to_file(ot_filename, df_fcfs_alis_ot)
 
@@ -152,8 +152,8 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
                     q_fcfs_weighted_ot = q_fcfs_weighted_ot/q_fcfs_weighted_ot.sum(axis=0)
                     w_fcfs_weighted_ot  = np.divide(q_fcfs_weighted_ot, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
 
-                    sim_res_fcfs_alis_weighted_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted_ot, prt_all=True, prt=True)
-                    sim_res_fcfs_alis_weighted_ot = log_ot_data(sim_res_fcfs_alis_weighted_ot, c, w_fcfs_weighted_ot,  q_fcfs_weighted_ot, gamma, 'weighted_fcfs_alis_ot', rho, c_type,)
+                    sim_res_fcfs_alis_weighted_ot = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted_ot, prt_all=True, prt=True,  lqf=True)
+                    sim_res_fcfs_alis_weighted_ot = log_ot_data(sim_res_fcfs_alis_weighted_ot, c, w_fcfs_weighted_ot,  q_fcfs_weighted_ot, gamma, 'weighted_lqf_alis_ot', rho, c_type,)
                     df_fcfs_alis_weighted_ot = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, sim_res_fcfs_alis_weighted_ot, timestamp, aux_exp_data)
                     write_df_to_file(ot_filename, df_fcfs_alis_weighted_ot)
 
@@ -167,7 +167,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
     gc.collect()
 
 
-    for rho in [0.6, 0.7, 0.8, 0.9] + [.95, .99, 1] + [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
+    for rho in [0.6, 0.7, 0.8, 0.9] + [.95, .99] + [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
 
         st = time()
 
@@ -193,7 +193,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
                 q_fcfs_weighted = r_fcfs_weighted * (1./mu - r_fcfs_weighted.sum(axis=0))
                 q_fcfs_weighted = q_fcfs_weighted/q_fcfs_weighted.sum(axis=0)
                 w_fcfs_weighted  = np.divide(q_fcfs_weighted, q_fcfs, out=np.zeros_like(q_fcfs), where=(q_fcfs != 0))
-                w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted, prt_all=True, prt=True)
+                w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w_fcfs_weighted, prt_all=True, prt=True, lqf=True)
 
                 w_exp_res['mat']['fcfs_approx'] = r_fcfs_weighted
                 w_exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
@@ -201,7 +201,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
 
                 w_exp_res['aux']['rho'] = rho
                 w_exp_res['aux']['gamma'] = 0
-                w_exp_res['aux']['policy'] = 'weighted_fcfs_alis'
+                w_exp_res['aux']['policy'] = 'weighted_lqf_alis'
 
                 sbpss_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, w_exp_res, timestamp, aux_exp_data)
                 write_df_to_file(filename, sbpss_df)
@@ -211,7 +211,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
         if rho == 1:
             exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt_all=True, prt=True)
         else:
-            exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=True, prt=True)
+            exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, prt_all=True, prt=True, lqf=True)
         
         exp_res['mat']['fcfs_approx'] = fcfs_approx
         exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
@@ -219,7 +219,7 @@ def sbpss_exp(sqrt_m, d, k, structure, filename='new_grid_sbpss3', ot_filename='
         
         exp_res['aux']['rho'] = rho
         exp_res['aux']['gamma'] = 0
-        exp_res['aux']['policy'] = 'fcfs_alis'
+        exp_res['aux']['policy'] = 'lqf_alis'
 
         sbpss_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, exp_res, timestamp, aux_exp_data)
         write_df_to_file(filename, sbpss_df)

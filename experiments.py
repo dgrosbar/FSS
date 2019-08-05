@@ -639,6 +639,7 @@ def compare_approximations(compatability_matrix, alpha, beta, density, k, dist, 
 
     return res_df
 
+
 def compare_approximations_generic(compatability_matrix, alpha, beta, jt_perms=None, exact=False, print_progress=False, seed=None, **kwargs):
 
     m, n = compatability_matrix.shape
@@ -1390,7 +1391,7 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                 else:
                     theta = np.random.uniform(0.1, 0.9, m)
 
-                for rho in [.99, 0.01] + [0.05] + [0.1*i for i in range(1, 10, 1)] + [.95]:
+                for rho in [.99, .95]:
                     
                     lamda = (alpha * rho)**(1.- theta)
                     s = (alpha * rho)**theta
@@ -1417,23 +1418,22 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                     alis_approx = fast_alis_approximation(compatability_matrix, lamda_norm, beta, rho, check_every=10, max_time=600)
                     alis_approx = alis_approx * lamda.sum()/rho
                     exp_res['mat']['alis_approx'] = alis_approx
-                    exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + rho*exp_res['mat']['fcfs_approx']
+                    exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + rho * exp_res['mat']['fcfs_approx']
                     
                     print('ending - density_level: ', density_level, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' beta_dist: ', beta_dist, ' rho: ', rho,
                     ' split:', split ,' duration: ', time() - st, 'pct_error'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['fcfs_alis_approx']).sum()/lamda.sum())
 
-                    exp_res['aux']['split'] =  split
-                    exp_res['aux']['graph_no'] =  graph_no
-                    exp_res['aux']['exp_no'] =  exp_no
-                    exp_res['aux']['beta_dist'] =  beta_dist
-                    exp_res['aux']['density_level'] =  density_level
+                    exp_res['aux']['split'] = split
+                    exp_res['aux']['graph_no'] = graph_no
+                    exp_res['aux']['exp_no'] = exp_no
+                    exp_res['aux']['beta_dist'] = beta_dist
+                    exp_res['aux']['density_level'] = density_level
                     exp_res['aux']['rho'] = rho
                     exp_res['aux']['policy'] = policy
                     exp_res['aux']['sim_adj'] = sim_adj
                     exp_res['aux']['sim_rate_gap'] = sim_rate_gap
                     exp_res['row']['theta'] = theta
                     exp_res['row']['eta'] = eta
-
 
                     sbpss_rho_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu,  result_dict=exp_res)
 
