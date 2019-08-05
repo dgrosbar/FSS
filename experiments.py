@@ -1330,7 +1330,7 @@ def go_back_and_approximate_sbpss_customer_dependet_lqf(filename='FZ_final_w_qp'
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf2', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf3', sbpss_df)
                 exps = []
         else:
             if len(exps) > 0:
@@ -1338,7 +1338,7 @@ def go_back_and_approximate_sbpss_customer_dependet_lqf(filename='FZ_final_w_qp'
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf2', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf3', sbpss_df)
                 exps = []   
 
   
@@ -1378,9 +1378,9 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
 
         sbpss_df = []
 
-        for policy in ['fcfs_alis', 'lqf_alis']:
+        for policy in ['fcfs_alis']:
 
-            for split in ['zero', 'one', 'half', 'rand']:
+            for split in ['zero']:
 
                 if split == 'zero':
                     theta = np.zeros(m)
@@ -1903,7 +1903,7 @@ if __name__ == '__main__':
 
     # go_back_and_approximate_grids_sbpss(3)
     # increasing_n_system()
-    # go_back_and_approximate_sbpss_customer_dependet_lqf()
+    go_back_and_approximate_sbpss_customer_dependet_lqf()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')
     # df = go_back_and_solve_qp(df)
     # df.to_csv('erdos_renyi_exp_final_w_qp.csv', index=False)
@@ -1940,20 +1940,20 @@ if __name__ == '__main__':
     # for key,val in workload_sets.items():
     #     print(key, val)
 
-    rho = 0.01
-    compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
-    m , n = compatability_matrix.shape
-    lamda = alpha * rho
-    mu = beta
+    # rho = 0.01
+    # compatability_matrix, alpha, beta = BASE_EXAMPLES[6]
+    # m , n = compatability_matrix.shape
+    # lamda = alpha * rho
+    # mu = beta
     # mu = beta
     # # sim_len = 2*10**6
     # # warm_up = 1*10**6
-    res = simulate_queueing_system(compatability_matrix, lamda, mu)
-    printarr(res['mat']['sim_matching_rates'], 'sim')
-    alis = fast_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=10, max_time=600)
-    printarr(alis, 'not_sparse')
-    sparse_alis = fast_sparse_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=10, max_time=600)
-    printarr(sparse_alis, 'sparse')
+    # res = simulate_queueing_system(compatability_matrix, lamda, mu)
+    # printarr(res['mat']['sim_matching_rates'], 'sim')
+    # alis = fast_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=10, max_time=600)
+    # printarr(alis, 'not_sparse')
+    # sparse_alis = fast_sparse_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=10, max_time=600)
+    # printarr(sparse_alis, 'sparse')
     # res_lqf = simulate_queueing_system(compatability_matrix, lamda, mu)
     # printarr(res['mat']['sim_matching_rates'], 'fcfs')
 
