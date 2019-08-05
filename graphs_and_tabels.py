@@ -1330,7 +1330,7 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf.csv', index=False)
 
 
-def sbpss_table3(filename='erdos_renyi_sbpss_uni_mu_comp_alis_rates'):
+def sbpss_table3(filename='grid_sbpss_comp_alis'):
 
     # df = pd.read_csv(filename + '.csv')
 
@@ -1354,7 +1354,7 @@ def sbpss_table3(filename='erdos_renyi_sbpss_uni_mu_comp_alis_rates'):
     df = pd.read_csv(filename + '.csv')
     df = df[df['policy']=='fcfs_alis']
 
-    df_slim = df[['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'policy','adj_sim_matching_rates', 'fcfs_alis_approx', 'fcfs_approx', 'alis_approx']]
+    df_slim = df[['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'adj_sim_matching_rates', 'fcfs_alis_approx', 'fcfs_approx', 'alis_approx']]
 
     id_vars = ['timestamp', 'size', 'exp_no', 'rho' ,'i', 'j', 'adj_sim_matching_rates']
     val_vars = ['fcfs_alis_approx', 'fcfs_approx', 'alis_approx']
