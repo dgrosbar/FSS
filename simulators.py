@@ -187,6 +187,7 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_
     idle_times = []
     wait_times_stdev = []
     idle_times_stdev = []
+    match_ratios = []
     edge_count = int(np.asscalar(compatability_matrix.sum()))
 
     if sim_len is None:
@@ -239,7 +240,7 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_
 
 
             match_rates.append(match_ratios_k)
-            match_props.append(matching_counter_k)
+            match_ratios.append(matching_counter_k)
             wait_times, wait_times_stdev = get_mean_and_stdev(wait_times, wait_times_stdev, wait_k)
             idle_times, idle_times_stdev = get_mean_and_stdev(idle_times, idle_times_stdev, idle_k)
 
