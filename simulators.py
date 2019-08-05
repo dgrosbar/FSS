@@ -239,8 +239,8 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_
                 match_ratios_k, match_rates_k, wait_k, idle_k = queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only)
 
 
-            match_rates.append(match_ratios_k)
-            match_ratios.append(matching_counter_k)
+            match_rates.append(match_rates_k)
+            match_ratios.append(match_ratios_k)
             wait_times, wait_times_stdev = get_mean_and_stdev(wait_times, wait_times_stdev, wait_k)
             idle_times, idle_times_stdev = get_mean_and_stdev(idle_times, idle_times_stdev, idle_k)
 
