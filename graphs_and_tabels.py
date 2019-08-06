@@ -1256,9 +1256,8 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
 
     df.to_csv(filename + '_rates_x.csv', index=False)
 
-    df.loc[:,'sim_rate_gap'] = np.abs(df['sim_adj'] - 1.)
     df = df[df['sim_rate_gap'] < 0.03]
-    df.loc[:,'adj_sim_matching_rates'] = df['rho'] * df['sim_matching_ratios']
+    df.loc[:,'adj_sim_matching_rates'] = df.loc[:, 'sim_adj'] * df['sim_matching_rates']
 
     id_vars = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'beta_dist', 'rho', 'adj_sim_matching_rates', 'sim_rate_gap', 'split', 'policy']
     val_vars = ['fcfs_alis_approx', 'fcfs_approx', 'alis_approx']
