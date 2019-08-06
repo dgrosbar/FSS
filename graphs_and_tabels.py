@@ -2428,6 +2428,8 @@ def sbpss_gini_table(filename):
     print(agg_res)
 
 
+def waiting_time_map(filename, exo_no, rho):
+
 
 
 if __name__ == '__main__':
@@ -2439,9 +2441,9 @@ if __name__ == '__main__':
     pd.set_option('display.width', 10000)
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
-    # sbpss_approx_graph()
+    sbpss_approx_graph()
     # sbpss_table3()
-    sbpss_cd_table1()
+    # sbpss_cd_table1()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
 
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
@@ -2449,7 +2451,7 @@ if __name__ == '__main__':
     # sbpss_gini_score('map_exp_sbpss_lqf_30x30', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
     # sbpss_gini_table('map_exp_sbpss_lqf_30x30_gini')
-    # sbpss_graph4()
+    # bpss_graph4()
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
 
