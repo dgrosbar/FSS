@@ -2543,7 +2543,7 @@ if __name__ == '__main__':
     # sbpss_cd_table1()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
     # sbpss_cd_graph1_lqf_both('one')
-    sbpss_table1()
+    sbpss_cd_table2()
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('map_exp_sbpss_lqf_30x30', base_cols)
