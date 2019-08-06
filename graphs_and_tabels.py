@@ -1236,7 +1236,7 @@ def sbpss_graph4(filename='FZ_Kaplan_exp_sbpss_good_w_alis_sum'):
     plt.show()
 
 
-def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf3'):
+def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
 
     df = pd.read_csv(filename + '.csv')
 
@@ -1251,10 +1251,10 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf3'):
             how='left'
         )
 
-    df.loc[:, 'sim_rate_gap'] = df['total_lamda'] - df['total_sim_rates']
+    df.loc[:, 'sim_rate_gap'] = np.abs(df['total_lamda'] - df['total_sim_rates'])
     df.loc[:, 'sim_adj'] = df['total_lamda'] / df['total_sim_rates']
 
-    df.to_csv(filename + '_rates.csv', index=False)
+    df.to_csv(filename + '_rates_x.csv', index=False)
 
     df.loc[:,'sim_rate_gap'] = np.abs(df['sim_adj'] - 1.)
     df = df[df['sim_rate_gap'] < 0.03]
@@ -1294,7 +1294,7 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf3'):
     base_cols = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'beta_dist', 'rho', 'split' ,'approximation', 'policy']
     agg_res = df.groupby(by=base_cols, as_index=False).apply(f).reset_index()
 
-    agg_res.sort_values(by=['approximation', 'graph_no', 'exp_no', 'beta_dist','density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_agg_w_alis._lqfcsv', index=False)
+    agg_res.sort_values(by=['approximation', 'graph_no', 'exp_no', 'beta_dist','density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_agg_w_alis_lqf_x.csv', index=False)
 
     agg_res.loc[:, 'err_pct_of_rate'] = agg_res['sum_abs_error_sim']/agg_res['total_rate']
    
@@ -1327,7 +1327,7 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf3'):
     
     print(sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']))
 
-    sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf.csv', index=False)
+    sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_x.csv', index=False)
 
 
 def sbpss_table3(filename='erdos_renyi_sbpss_uni_mu_comp_alis_rates'):
@@ -2450,7 +2450,6 @@ if __name__ == '__main__':
     # sbpss_gini_score('map_exp_sbpss_lqf_30x30', base_cols)
     # sbpss_gini_table('erdos_renyi_sbpss_comp_gini')
     # sbpss_gini_table('map_exp_sbpss_lqf_30x30_gini')
-    # sbpss_cd_graph1_lqf_both('zero')
     # sbpss_graph4()
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
