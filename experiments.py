@@ -1378,7 +1378,7 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
 
         sbpss_df = []
 
-        for policy in ['fcfs_alis']:
+        for policy in ['fcfs_alis', 'lqf-alis']:
 
             for split in ['zero', 'one', 'half', 'rand']:
 

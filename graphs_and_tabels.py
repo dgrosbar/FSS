@@ -1329,6 +1329,103 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_x.csv', index=False)
 
 
+def sbpss_cd_table2(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
+
+    df = pd.read_csv(filename + '.csv')
+
+    base_cols = ['timestamp','rho','split', 'policy']
+
+    total_rates = df[base_cols + ['i', 'lamda']].drop_duplicates()[base_cols +['lamda']].groupby(by=base_cols, as_index=False).sum().rename(columns={'lamda':'total_lamda'})
+    total_sim_rates = df[base_cols + ['sim_matching_rates']].groupby(by=base_cols, as_index=False).sum().rename(columns={'sim_matching_rates':'total_sim_rates'})
+
+    df = pd.merge(
+            left=df, 
+            right = pd.merge(left=total_rates, right=total_sim_rates, on=base_cols, how='left'),
+            on = base_cols,
+            how='left'
+        )
+
+    total_sim_rates_i = df[base_cols + ['i','sim_matching_rates']].groupby(by=base_cols + ['i'], as_index=False).sum().rename(columns={'sim_matching_rates':'total_sim_rate_i'})
+    df = pd.merge(left=df, right = total_sim_rates_i, on=base_cols + ['i'], how='left')
+
+    df.loc[:, 'sim_rate_gap'] = np.abs(df['total_lamda'] - df['total_sim_rates'])
+    
+    df.loc[:, 'sim_adj'] = df['lamda'] / df['total_sim_rate_i']
+
+    df.to_csv(filename + '_rates_x.csv', index=False)
+
+    df = df[df['sim_rate_gap'] < 0.03]
+    df.loc[:,'adj_sim_matching_rates'] = df.loc[:, 'sim_adj'] * df['sim_matching_rates']
+
+    id_vars = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'beta_dist', 'rho', 'adj_sim_matching_rates', 'sim_rate_gap', 'split', 'policy']
+    val_vars = ['fcfs_alis_approx', 'fcfs_approx', 'alis_approx']
+
+    df = pd.melt(df, id_vars=id_vars, value_vars=val_vars, var_name='approximation', value_name='approx_match_rate')
+
+    df.loc[:, 'abs_error_sim'] = np.abs(df['approx_match_rate'] - df['adj_sim_matching_rates'])
+    df.loc[:, 'abs_error_pct_sim'] = np.abs(df['approx_match_rate'] - df['adj_sim_matching_rates'])/df['approx_match_rate']
+
+    def f(df):
+
+        x = '_sim'
+        d = {}
+        
+        d['total_rate'] = df['adj_sim_matching_rates'].sum()
+        d['sum_abs_error_sim'] = df['abs_error_sim'].sum()
+        d['mean_abs_error_sim'] = df['abs_error_sim'].mean()
+        d['max_abs_error_sim'] = df['abs_error_sim'].max()
+        d['mean_abs_error_pct_sim'] = df['abs_error_pct_sim'].mean()
+        d['max_abs_error_pct_sim'] = df['abs_error_pct_sim'].max()
+
+        index = [
+            'total_rate',
+            'sum_abs_error_sim',
+            'mean_abs_error_sim',
+            'max_abs_error_sim',
+            'mean_abs_error_pct_sim',
+            'max_abs_error_pct_sim'
+        ]
+
+        return pd.Series(d, index=index)
+
+    base_cols = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'beta_dist', 'rho', 'split' ,'approximation', 'policy']
+    agg_res = df.groupby(by=base_cols, as_index=False).apply(f).reset_index()
+
+    agg_res.sort_values(by=['approximation', 'graph_no', 'exp_no', 'beta_dist','density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_agg_w_alis_lqf_y.csv', index=False)
+
+    agg_res.loc[:, 'err_pct_of_rate'] = agg_res['sum_abs_error_sim']/agg_res['total_rate']
+   
+    def g(df):
+        
+        d = {}
+
+        d['mean_err_pct'] = df['err_pct_of_rate'].mean()
+        d['max_err_pct'] = df['err_pct_of_rate'].max()
+        d['min_err_pct'] = df['err_pct_of_rate'].min()
+        d['err_pct_of_rate_std'] = df['err_pct_of_rate'].std()
+        d['err_pct_95_u'] = df['err_pct_of_rate'].mean() + 1.96 * df['err_pct_of_rate'].std()
+        d['err_pct_95_l'] = df['err_pct_of_rate'].mean() - 1.96 * df['err_pct_of_rate'].std()
+
+        index = [
+            'mean_err_pct',
+            'max_err_pct',
+            'min_err_pct',
+            'err_pct_of_rate_std',
+            'err_pct_95_u',
+            'err_pct_95_l'
+        ]
+
+        return pd.Series(d, index=index) 
+
+    sum_base_cols = ['density_level', 'rho', 'approximation', 'split', 'policy']
+
+    sum_res = agg_res[sum_base_cols + ['err_pct_of_rate']].sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split'])
+    sum_res = sum_res.groupby(by=sum_base_cols, as_index=False).apply(g).reset_index()
+    
+    print(sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']))
+
+    sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_y.csv', index=False)
+
 def sbpss_table3(filename='erdos_renyi_sbpss_uni_mu_comp_alis_rates'):
 
     # df = pd.read_csv(filename + '.csv')
@@ -1698,7 +1795,7 @@ def sbpss_cd_graph1_lqf(policy, split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_l
     plt.show()
 
 
-def sbpss_cd_graph1_lqf_both(split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_2'):
+def sbpss_cd_graph1_lqf_both(split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_x'):
 
     sum_res = pd.read_csv(filename + '.csv')
     print(sum_res)
@@ -2428,7 +2525,7 @@ def sbpss_gini_table(filename):
     print(agg_res)
 
 
-def waiting_time_map(filename, exo_no, rho):
+# def waiting_time_map(filename, exo_no, rho):
 
 
 
@@ -2441,11 +2538,12 @@ if __name__ == '__main__':
     pd.set_option('display.width', 10000)
 
     base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
-    sbpss_approx_graph()
+    # sbpss_approx_graph()
     # sbpss_table3()
     # sbpss_cd_table1()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
-
+    # sbpss_cd_graph1_lqf_both('one')
+    sbpss_table1()
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('map_exp_sbpss_lqf_30x30', base_cols)
