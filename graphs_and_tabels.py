@@ -1329,7 +1329,7 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_x.csv', index=False)
 
 
-def sbpss_cd_table2(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
+def sbpss_cd_table2x(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
 
     df = pd.read_csv(filename + '.csv')
 
@@ -2543,7 +2543,7 @@ if __name__ == '__main__':
     # sbpss_cd_table1()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
     # sbpss_cd_graph1_lqf_both('one')
-    sbpss_cd_table2()
+    sbpss_cd_tablex()
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('map_exp_sbpss_lqf_30x30', base_cols)
