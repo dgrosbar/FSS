@@ -102,6 +102,8 @@ def approximate_sbpss_pure_alis(exp, timestamp):
 
 	alis_df.append(alis_exp_df)
 
+	return alis_df
+
 
 if __name__ == '__main__':
 
