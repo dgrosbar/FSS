@@ -80,12 +80,9 @@ def approximate_sbpss_pure_alis(exp, timestamp):
 	no_of_edges = len(nnz[0])
 
 	alis_df = []
-	rho =.0001
-	# exp_res = simulate_queueing_system(compatability_matrix, alpha*.0001, beta, sims=30, per_edge=10000)
+
 	exp_res = simulate_queueing_system(compatability_matrix, alpha, beta, sims=30, per_edge=10000, alis=True)
-	# exp_res['mat']['sim_matching_rates'] = exp_res['mat']['sim_matching_rates']/.0001
-	# sim_rate_gap = alpha.sum() - exp_res['mat']['sim_matching_rates'].sum()
-	# sim_adj = alpha.sum() / exp_res['mat']['sim_matching_rates'].sum()
+
 	alis_approx = fast_sparse_alis_approximation(compatability_matrix, alpha, beta, 0, check_every=10, max_time=600)
 	exp_res['mat']['alis_approx'] = alis_approx
 	
@@ -98,7 +95,7 @@ def approximate_sbpss_pure_alis(exp, timestamp):
 	exp_res['aux']['density_level'] = density_level
 	exp_res['aux']['rho'] = 0
 	exp_res['aux']['policy'] = 'alis'
-	exp_res['mat']['alis_sim_rates'] = exp_res2['mat']['sim_matching_rates']
+	# exp_res['mat']['alis_sim_rates'] = exp_res2['mat']['sim_matching_rates']
 	# exp_res['aux']['sim_adj'] = sim_adj
 	# exp_res['aux']['sim_rate_gap'] = sim_rate_gap
 	alis_exp_df = log_res_to_df(compatability_matrix, alpha, beta, alpha, np.zeros(m), beta, result_dict=exp_res, timestamp=timestamp)
