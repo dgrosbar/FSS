@@ -429,12 +429,12 @@ def queueing_sim_loop_alis(customer_queues, event_stream, lamda, s, mu, w, s_adj
                     j = s_j
                     longest_idle = w[i, s_j]
             else:
-                idle_s_j = w[i, s_j] * (cur_time - server_idled_at[s_j])
-                if idle_j > longest_idle:
+                idle_s_j = (cur_time - server_idled_at[s_j])
+                if idle_s_j > longest_idle:
                     j = s_j
-                    longest_idle = idle_j
+                    longest_idle = idle_s_j
 
-        server_idled_at[j] = cur_time
+        
         matches = matches + 1
         if matches > warm_up:
             if not record:
@@ -443,7 +443,7 @@ def queueing_sim_loop_alis(customer_queues, event_stream, lamda, s, mu, w, s_adj
             matching_counter[i, j] = matching_counter[i, j] + 1
             idle_time = cur_time - server_idled_at[j]
             idle_times[j, :] = idle_times[j, :] + np.array([1, idle_time, idle_time**2])
-                
+        server_idled_at[j] = cur_time        
         heappush(event_stream, (cur_time + np.random.exponential(interarrival[i]), np.int16(i), np.int16(-1)))
         
     return matching_counter/matching_counter.sum(), matching_counter/(cur_time - record_stat_time), waiting_times, idle_times

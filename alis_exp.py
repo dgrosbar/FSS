@@ -20,7 +20,10 @@ import gc
 
 def go_back_and_approximate_alis(filename='FZ_final_w_qp', p=30):
 
-	df = pd.read_csv(filename + '.csv')
+	try:
+		df = pd.read_csv(filename + '.csv')
+	except:
+		df = pd.read_csv('./Results/' + filename + '.csv')
 	pool = mp.Pool(processes=p)
 
 	for n in range(7,11,1):
@@ -32,18 +35,15 @@ def go_back_and_approximate_alis(filename='FZ_final_w_qp', p=30):
 				print('starting work with {} cpus'.format(p))
 				if p > 1:
 					sbpss_dfs = pool.starmap(approximate_sbpss_pure_alis, exps)
-					sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
 				else:
 					approximate_sbpss_pure_alis(*exps[0])
-				write_df_to_file('FZ_Kaplan_exp_pure_alis', sbpss_df)
+				
 				exps = []
 		else:
 			if len(exps) > 0:
 				print('no_of_exps:', len(exps), 'n:', n)
 				print('starting work with {} cpus'.format(p))
 				sbpss_dfs = pool.starmap(approximate_sbpss_pure_alis, exps)
-				sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-				write_df_to_file('FZ_Kaplan_exp_pure_alis', sbpss_df)
 				exps = [] 
 
 def approximate_sbpss_pure_alis(exp, timestamp):
@@ -80,11 +80,13 @@ def approximate_sbpss_pure_alis(exp, timestamp):
 	no_of_edges = len(nnz[0])
 
 	alis_df = []
-
+	rho =.0001
+	# exp_res = simulate_queueing_system(compatability_matrix, alpha*.0001, beta, sims=30, per_edge=10000)
 	exp_res = simulate_queueing_system(compatability_matrix, alpha, beta, sims=30, per_edge=10000, alis=True)
-	sim_rate_gap = alpha.sum() - exp_res['mat']['sim_matching_rates'].sum()
-	sim_adj = alpha.sum() / exp_res['mat']['sim_matching_rates'].sum()
-	alis_approx = fast_sparse_alis_approximation(compatability_matrix, alpha, beta, 1, check_every=10, max_time=600)
+	# exp_res['mat']['sim_matching_rates'] = exp_res['mat']['sim_matching_rates']/.0001
+	# sim_rate_gap = alpha.sum() - exp_res['mat']['sim_matching_rates'].sum()
+	# sim_adj = alpha.sum() / exp_res['mat']['sim_matching_rates'].sum()
+	alis_approx = fast_sparse_alis_approximation(compatability_matrix, alpha, beta, 0, check_every=10, max_time=600)
 	exp_res['mat']['alis_approx'] = alis_approx
 	
 	print('ending - density_level: ', density_level, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' beta_dist: ', beta_dist, ' rho: ', 1, ' duration: ', time() - st, 'pct_error', 
@@ -96,13 +98,14 @@ def approximate_sbpss_pure_alis(exp, timestamp):
 	exp_res['aux']['density_level'] = density_level
 	exp_res['aux']['rho'] = 0
 	exp_res['aux']['policy'] = 'alis'
-	exp_res['aux']['sim_adj'] = sim_adj
-	exp_res['aux']['sim_rate_gap'] = sim_rate_gap
+	exp_res['mat']['alis_sim_rates'] = exp_res2['mat']['sim_matching_rates']
+	# exp_res['aux']['sim_adj'] = sim_adj
+	# exp_res['aux']['sim_rate_gap'] = sim_rate_gap
 	alis_exp_df = log_res_to_df(compatability_matrix, alpha, beta, alpha, np.zeros(m), beta, result_dict=exp_res, timestamp=timestamp)
+	# print(alis_exp_df[['i', 'j', 'alpha', 'beta', 'sim_matching_rates', 'alis_approx', 'alis_sim_rates']])
+	write_df_to_file('FZ_Kaplan_exp_pure_alis', alis_exp_df)
 
-	alis_df.append(alis_exp_df)
-
-	return alis_df
+	return None
 
 
 if __name__ == '__main__':

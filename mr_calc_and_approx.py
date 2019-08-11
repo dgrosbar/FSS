@@ -1276,7 +1276,8 @@ def p_q_to_r_sparse(q, p, m, n, nnz, len_nnz, rho):
 			i = nnz[k, 0]
 			r[i, j] = r[i, j] + p[ell, j] * q[ell, i] 
 
-	r = rho * r
+	if rho > 0:
+		r = rho * r
 
 	return r
 
