@@ -20,7 +20,7 @@ import gc
 
 def go_back_and_approximate_alis(filename='FZ_final_w_qp', p=30):
 
-	df = pd.read_csv('./Results/' + filename + '.csv')
+	df = pd.read_csv(filename + '.csv')
 	pool = mp.Pool(processes=p)
 
 	for n in range(7,11,1):
