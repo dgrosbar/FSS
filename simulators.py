@@ -177,7 +177,7 @@ def matching_sim_loop(customer_queues, server_queues, cum_alpha, cum_beta, s_adj
     return matching_counter/matching_counter.sum()
 
 
-def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_only=False, prt=False, sims=30, sim_len=None, warm_up=None, seed=None, per_edge=1000, prt_all=False, p=None, lqf=False):
+def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_only=False, prt=False, sims=30, sim_len=None, warm_up=None, seed=None, per_edge=1000, prt_all=False, p=None, lqf=False, alis=False):
 
 
     m = len(lamda)  # m- number of servers
@@ -235,6 +235,8 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_
             
             if lqf: 
                 match_ratios_k, match_rates_k, wait_k, idle_k = queueing_sim_loop_lqf(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only)
+            elif alis:
+                match_ratios_k, match_rates_k, wait_k, idle_k = queueing_sim_loop_alis(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only)
             else:
                 match_ratios_k, match_rates_k, wait_k, idle_k = queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only)
 
@@ -386,6 +388,66 @@ def queueing_sim_loop(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_a
                 server_idled_at[j] = cur_time
 
     return matching_counter/matching_counter.sum(), matching_counter/(cur_time - record_stat_time), waiting_times, idle_times
+
+
+@jit(nopython=True, cache=True)
+def queueing_sim_loop_alis(customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len, w_only):
+
+    heapify = hq.heapify
+    heappop = hq.heappop
+    heappush = hq.heappush
+
+    matching_counter = np.zeros((m,n))
+    idle_times = np.zeros((n, 3))
+    waiting_times = np.ones((m, 3))
+    server_states = np.zeros(n, dtype=np.int8)
+    server_idled_at = np.zeros(n, dtype=np.float64)
+    interarrival = 1./lamda
+    matches = 0
+    record = False
+    record_stat_time = 0
+    idle_j = 0.0
+
+
+    heapify(event_stream)
+    heappop(event_stream)
+
+    for i in range(m):
+        customer_queues[i].pop()
+        heappush(event_stream, (np.random.exponential(interarrival[i]), np.int16(i), np.int16(-1)))
+
+    while matches < sim_len:
+
+        event = heappop(event_stream)
+
+        cur_time = event[0]
+        i = event[1]
+        longest_idle = -1
+        for s_j in c_adj[i]:
+            if w_only:
+                if w[i, s_j] > longest_idle:
+                    j = s_j
+                    longest_idle = w[i, s_j]
+            else:
+                idle_s_j = w[i, s_j] * (cur_time - server_idled_at[s_j])
+                if idle_j > longest_idle:
+                    j = s_j
+                    longest_idle = idle_j
+
+        server_idled_at[j] = cur_time
+        matches = matches + 1
+        if matches > warm_up:
+            if not record:
+                record = True
+                record_stat_time = cur_time
+            matching_counter[i, j] = matching_counter[i, j] + 1
+            idle_time = cur_time - server_idled_at[j]
+            idle_times[j, :] = idle_times[j, :] + np.array([1, idle_time, idle_time**2])
+                
+        heappush(event_stream, (cur_time + np.random.exponential(interarrival[i]), np.int16(i), np.int16(-1)))
+        
+    return matching_counter/matching_counter.sum(), matching_counter/(cur_time - record_stat_time), waiting_times, idle_times
+
 
 
 @jit(nopython=True, cache=True)

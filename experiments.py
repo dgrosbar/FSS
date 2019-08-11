@@ -1903,7 +1903,7 @@ if __name__ == '__main__':
 
     # go_back_and_approximate_grids_sbpss(3)
     # increasing_n_system()
-    go_back_and_approximate_sbpss_customer_dependet_lqf()
+    # go_back_and_approximate_sbpss_customer_dependet_lqf()
     # df = pd.read_csv('erdos_renyi_exp_final.csv')
     # df = go_back_and_solve_qp(df)
     # df.to_csv('erdos_renyi_exp_final_w_qp.csv', index=False)

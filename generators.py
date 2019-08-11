@@ -12,9 +12,7 @@ import matplotlib.pyplot as plt
 import sys
 
 
-
-
-def generate_grid_compatability_matrix_with_map(m, d, zeta, structure='grid', prt=True):
+def generate_map_exp(m, d, zeta, structure='grid', prt=True):
 
 
     num_of_centers_lamda = int(m**0.5)
@@ -65,6 +63,8 @@ def generate_grid_compatability_matrix_with_map(m, d, zeta, structure='grid', pr
 
     dist_func = dist_mod_k if structure == 'tours' else dist
 
+
+def generate_grid_compatability_matrix
     edges = set()
         # ((ix, iy), (jx, jy)) 
         # for ((ix, iy), (jx, jy)) in product(nodes, nodes)
@@ -79,7 +79,6 @@ def generate_grid_compatability_matrix_with_map(m, d, zeta, structure='grid', pr
                     if x_1 < x_2 or ((x_1 == x_2) and (y_1 <= y_2)):
                         edges.add(((x_1, y_1),(x_2, y_2)))
     
-
     g.add_edges_from(edges)
     print('edges added')
     compatability_matrix = nx.adjacency_matrix(g)
@@ -112,6 +111,7 @@ def generate_grid_compatability_matrix_with_map(m, d, zeta, structure='grid', pr
     #     j_y[k] = node_map[j, 2]
 
     return compatability_matrix, g, lamda.ravel(), mu.ravel(), workload_sets, rho_m, rho_n, node_map #, (i_x, i_y, j_x, j_y)
+
 
 def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):
 
@@ -157,12 +157,6 @@ def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):
     g.add_edges_from(edges)
 
     compatability_matrix = nx.adjacency_matrix(g).todense().A
-
-
-
-
-
-
 
     return compatability_matrix, g
 
@@ -364,7 +358,7 @@ def verify_crp_condition(compatability_matrix, alpha, beta):
 if __name__ == '__main__':  
 
     np.set_printoptions(threshold=sys.maxsize)
-    generate_grid_compatability_matrix_with_map(100,2,0.2)
+    generate_grid_compatability_matrix_with_map(100, 2, 0.2)
 #     # Test
 #     # Create a large sparse matrix with elements in [0, 10]
 #     A = 10*sps.random(10000, 3, 0.5, format='csr')
