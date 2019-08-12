@@ -110,7 +110,7 @@ def generate_map_exp(m, d, zeta, structure='grid', prt=True):
     #     j_x[k] = node_map[j, 1]
     #     j_y[k] = node_map[j, 2]
 
-    return compatability_matrix, g, lamda.ravel(), mu.ravel(), workload_sets, rho_m, rho_n, node_map #, (i_x, i_y, j_x, j_y)
+    # return compatability_matrix, g, lamda.ravel(), mu.ravel(), workload_sets, rho_m, rho_n, node_map #, (i_x, i_y, j_x, j_y)
 
 
 def generate_grid_compatability_matrix(m, d=None, structure='tours', prt=True):
