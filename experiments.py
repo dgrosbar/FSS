@@ -306,7 +306,7 @@ def growing_chains_exp(filename='growing_chains_new2_7'):
 
             print('-'*30 + str(n) +','+str(k) + '-'*30)
 
-            exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt=False, sims=30, per_edge=1000, p=3)
+            exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt=False, sims=30, per_edge=1000, p=30)
             exp_res['aux']['k'] = k
             cur_res_df = log_res_to_df(compatability_matrix, alpha=alpha, beta=beta, result_dict=exp_res)
 
