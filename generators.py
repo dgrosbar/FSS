@@ -64,35 +64,35 @@ def generate_map_exp(m, d, zeta, structure='grid', prt=True):
     dist_func = dist_mod_k if structure == 'tours' else dist
 
 
-def generate_grid_compatability_matrix
-    edges = set()
-        # ((ix, iy), (jx, jy)) 
-        # for ((ix, iy), (jx, jy)) in product(nodes, nodes)
-        # if dist_func(ix, iy, jx, jy, m) <= d)
-    print('creating edges')
-    for (x_1, y_1) in nodes:
-        for x_2 in range(max(x_1 - d, 0), min(x_1 + d + 1, m), 1):
-            for y_2 in range(max(y_1 - d, 0), min(y_1 + d + 1, m), 1):
-                # if (x_1, y_1) == (0,0) and dist(x_1, y_1, x_2, y_2)<=d:
-                #     print((0,0), (x_2, y_2), dist(x_1, y_1, x_2, y_2), dist(x_1, y_1, x_2, y_2)<=d, x_1 < x_2, ((x_1 == x_2) and (y_1 < y_2)))
-                if dist(x_1, y_1, x_2, y_2) <= d:
-                    if x_1 < x_2 or ((x_1 == x_2) and (y_1 <= y_2)):
-                        edges.add(((x_1, y_1),(x_2, y_2)))
+# def generate_grid_compatability_matrix():
+#     edges = set()
+#         # ((ix, iy), (jx, jy)) 
+#         # for ((ix, iy), (jx, jy)) in product(nodes, nodes)
+#         # if dist_func(ix, iy, jx, jy, m) <= d)
+#     print('creating edges')
+#     for (x_1, y_1) in nodes:
+#         for x_2 in range(max(x_1 - d, 0), min(x_1 + d + 1, m), 1):
+#             for y_2 in range(max(y_1 - d, 0), min(y_1 + d + 1, m), 1):
+#                 # if (x_1, y_1) == (0,0) and dist(x_1, y_1, x_2, y_2)<=d:
+#                 #     print((0,0), (x_2, y_2), dist(x_1, y_1, x_2, y_2), dist(x_1, y_1, x_2, y_2)<=d, x_1 < x_2, ((x_1 == x_2) and (y_1 < y_2)))
+#                 if dist(x_1, y_1, x_2, y_2) <= d:
+#                     if x_1 < x_2 or ((x_1 == x_2) and (y_1 <= y_2)):
+#                         edges.add(((x_1, y_1),(x_2, y_2)))
     
-    g.add_edges_from(edges)
-    print('edges added')
-    compatability_matrix = nx.adjacency_matrix(g)
+#     g.add_edges_from(edges)
+#     print('edges added')
+#     compatability_matrix = nx.adjacency_matrix(g)
 
 
 
-    # print('(x, x)', np.array([node[0] for node in nodes]))
-    # print('(x, x)', np.array([node[1] for node in nodes]))
-    # print('--'*50)
-    # for k, node in enumerate(nodes):
-    #     if node == (4, 4):
-    #         print(node, compatability_matrix[k])
+#     # print('(x, x)', np.array([node[0] for node in nodes]))
+#     # print('(x, x)', np.array([node[1] for node in nodes]))
+#     # print('--'*50)
+#     # for k, node in enumerate(nodes):
+#     #     if node == (4, 4):
+#     #         print(node, compatability_matrix[k])
 
-    workload_sets, rho_m, rho_n = bipartite_workload_decomposition(compatability_matrix, lamda.ravel(), mu.ravel(), path=None)
+#     workload_sets, rho_m, rho_n = bipartite_workload_decomposition(compatability_matrix, lamda.ravel(), mu.ravel(), path=None)
 
     # for key, workload_set in workload_sets.items():
     #     print(key, workload_set['rho'], len(workload_set['supply_nodes']), len(workload_set['demnand_nodes']))
