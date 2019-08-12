@@ -292,32 +292,31 @@ def erdos_renyi_exp_for_parallel(filename='erdos_renyi_exp3'):
                         res_df.to_csv(filename + '.csv', index=False)
 
 
-def growing_chains_exp(filename='growing_chains_new2'):
+def growing_chains_exp(filename='growing_chains_new2_7'):
 
 
     #jt = dict((v, [(x[0] , x[1]) for x in jpermute(range(v))]) for v in [5,7,9])
 
     # for k, n in [(3,5), (3,7),(5,7), (3, 9), (5, 9), (7,9), (3, 30), (5, 30), (7, 30), (9, 30), (11, 30), (3, 100), (5, 100), (7, 100), (9, 100), (11, 100)]:
-    for n in [100, 150, 200]:
-        for k in [45, 55 ,65, 75, 85, 95, 105]:
-            if k <= n - 2 and (n,k) in list(product([50], [3, 5, 7, 9, 11, 15, 19, 23, 31])):
-                compatability_matrix = 1*np.array([[(0<=(j-i)<k) or (0<=(j+n-i)<k) for j in range(n)] for i in range(n)])
-                alpha = np.array([1./n]*n)
-                beta = np.array([1./n]*n)
+    for n in [10, 15, 25, 50, 100, 150, 200]:
+        for k in [7]:
+            compatability_matrix = 1*np.array([[(0<=(j-i)<k) or (0<=(j+n-i)<k) for j in range(n)] for i in range(n)])
+            alpha = np.array([1./n]*n)
+            beta = np.array([1./n]*n)
 
-                print('-'*30 + str(n) +','+str(k) + '-'*30)
+            print('-'*30 + str(n) +','+str(k) + '-'*30)
 
-                exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt=False, sims=30, per_edge=1000, p=3)
-                exp_res['aux']['k'] = k
-                cur_res_df = log_res_to_df(compatability_matrix, alpha=alpha, beta=beta, result_dict=exp_res)
+            exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt=False, sims=30, per_edge=1000, p=3)
+            exp_res['aux']['k'] = k
+            cur_res_df = log_res_to_df(compatability_matrix, alpha=alpha, beta=beta, result_dict=exp_res)
 
-                if os.path.exists(filename + '.csv'):
-                    res_df = pd.read_csv(filename + '.csv')
-                    res_df = pd.concat([res_df, cur_res_df], axis=0)
-                    res_df.to_csv(filename + '.csv', index=False)
-                else:
-                    res_df = cur_res_df
-                    res_df.to_csv(filename + '.csv', index=False)
+            if os.path.exists(filename + '.csv'):
+                res_df = pd.read_csv(filename + '.csv')
+                res_df = pd.concat([res_df, cur_res_df], axis=0)
+                res_df.to_csv(filename + '.csv', index=False)
+            else:
+                res_df = cur_res_df
+                res_df.to_csv(filename + '.csv', index=False)
 
 
 def compare_entropy_and_ohn_law_approximation(filename='FZ_Kaplan_exp_100'):

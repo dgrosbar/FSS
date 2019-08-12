@@ -628,15 +628,25 @@ def growing_chains_graph(filename='./Results/growing_chains_new2'):
     print(res_agg.sort_values(by=['k','n']))
     print(res_agg.sort_values(by=['n','k']))
 
-    fig, (ax1, ax2) = plt.plot()
+    res_agg = res_agg[res_agg['k']!=7]
 
-    for k, res in enumerate(res_agg.groupby('k')):
+    fig, (ax1, ax2) = plt.subplots(1,2)
 
-        ax1.scatter(res['n'], res['abs_error'], label='k='+str(k))
+    for k, res in res_agg.groupby('k'):
 
-    for k, res in enumerate(res_agg.groupby('n')): 
+        ax1.plot(res['n'], res['abs_error'], '-o',label='k='+str(k))
+        ax1.set_xlabel('n')
+        ax1.set_ylabel('Sum of Absoulte Error')
+        ax1.legend()
 
-        ax2.scatter(res['k'], res['abs_error'], label='n='+str(n))
+    for n, res in res_agg.groupby('n'): 
+
+        ax2.plot(res['k'], res['abs_error'], '-o' ,label='n='+str(n))
+        ax2.set_xlabel('k')
+        ax2.set_ylabel('Sum of Absoulte Error')
+        ax2.legend()
+
+    plt.show()
 
 def ims_table(filename='./Results/FZ_final_w_qp'):
 
@@ -947,9 +957,6 @@ def alis_table(filename='FZ_Kaplan_exp_pure_alis'):
     # agg_res_sum = agg_res['sum_abs_error']
     # agg_res_sum.reset_index(inplace=True) 
     # print(agg_res_sum)
-
-
-
 
 
 def sbpss_table1(filename='FZ_Kaplan_exp_sbpss_good_w_alis_adj'):
