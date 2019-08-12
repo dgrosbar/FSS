@@ -84,7 +84,7 @@ def simulate_matching_sequance(compatability_matrix, alpha, beta, prt=True, prt_
             print('starting parallel simulation')
         exps = []
         for k in range(sims):
-            exps.append([copy(customer_queues), copy(server_queues), cum_alpha, cum_beta, s_adj, c_adj, m, n, sim_len, warm_up])
+            exps.append([customer_queues, server_queues, cum_alpha, cum_beta, s_adj, c_adj, m, n, sim_len, warm_up])
         pool = mp.Pool(processes=p)
         matching_rates = pool.starmap(matching_sim_loop, exps)
         if prt:
@@ -267,15 +267,15 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_
         if w is None:
             for k in range(sims):
                 exps.append([customer_queues, event_stream, lamda, s, mu, s_adj, c_adj, m, n, warm_up, sim_len])
-                reses = pool.starmap(queueing_sim_loop, exps)
+            reses = pool.starmap(queueing_sim_loop, exps)
         elif only_w:
             for k in range(sims):
                 exps.append([customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len])
-                reses = pool.starmap(queueing_sim_loop_with_only_w, exps)
+            reses = pool.starmap(queueing_sim_loop_with_only_w, exps)
         else:
             for k in range(sims):
                 exps.append([customer_queues, event_stream, lamda, s, mu, w, s_adj, c_adj, m, n, warm_up, sim_len])
-                reses = pool.starmap(queueing_sim_loop_with_w, exps)
+            reses = pool.starmap(queueing_sim_loop_with_w, exps)
 
         pool.terminate()
 
