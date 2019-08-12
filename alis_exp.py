@@ -95,9 +95,7 @@ def approximate_sbpss_pure_alis(exp, timestamp):
 	exp_res['aux']['density_level'] = density_level
 	exp_res['aux']['rho'] = 0
 	exp_res['aux']['policy'] = 'alis'
-	# exp_res['mat']['alis_sim_rates'] = exp_res2['mat']['sim_matching_rates']
-	# exp_res['aux']['sim_adj'] = sim_adj
-	# exp_res['aux']['sim_rate_gap'] = sim_rate_gap
+
 	alis_exp_df = log_res_to_df(compatability_matrix, alpha, beta, alpha, np.zeros(m), beta, result_dict=exp_res, timestamp=timestamp)
 	# print(alis_exp_df[['i', 'j', 'alpha', 'beta', 'sim_matching_rates', 'alis_approx', 'alis_sim_rates']])
 	write_df_to_file('FZ_Kaplan_exp_pure_alis', alis_exp_df)

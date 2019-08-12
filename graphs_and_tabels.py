@@ -637,7 +637,7 @@ def growing_chains_graph(filename='growing_chains_new2'):
     print(res_agg.sort_values(by=['n','k']))
 
 
-def ims_table(filename):
+def ims_table(filename='./Results/FZ_final_w_qp'):
 
 
     df = pd.read_csv(filename + '.csv')
@@ -662,8 +662,13 @@ def ims_table(filename):
         d['max_abs_error'] = df['abs_error'].max()
         d['mean_abs_error_pct'] = df['abs_error_pct'].mean()
         d['max_abs_error_pct'] = df['abs_error_pct'].max()
+        d['min_match_rate'] = df['approx_match_rate'].min()
+        d['negatvie_flows'] = ((df['approx_match_rate'] < 0)).sum()
+        d['sum_negatvie_flow'] = ((df['approx_match_rate'] < 0) * (-1 * df['approx_match_rate'])).sum()
 
         index = [
+            'negatvie_flows',
+            'sum_negatvie_flow',
             'sum_abs_error',
             'mean_abs_error',
             'max_abs_error',
@@ -676,7 +681,8 @@ def ims_table(filename):
     base_cols = ['timestamp', 'graph_no', 'exp_num', 'density_level', 'beta_dist', 'approximation']
     agg_res = df.groupby(by=base_cols, as_index=False).apply(f).reset_index()
 
-    print(agg_res)
+    for col in agg_res.columns.values:
+        print(col)
 
     # agg_res.sort_values(by=['approximation', 'graph_no', 'exp_no', 'beta_dist','density_level', 'rho']).to_csv('FZ_Kaplan_exp_sbpss_good_w_alis_agg.csv', index=False)
 
@@ -687,7 +693,9 @@ def ims_table(filename):
         d = {}
 
         d['mean_max_abs_error'] = df['max_abs_error'].mean()
-
+        d['avg_mean_abs_error'] = df['mean_abs_error'].mean()
+        d['mean_sum_negative_flow'] = df['sum_negatvie_flow'].mean()
+        d['negative_flows'] = df['negatvie_flows'].mean()
 
         d['mean_err_pct'] = df['err_pct_of_rate'].mean()
         d['max_err_pct'] = df['err_pct_of_rate'].max()
@@ -696,19 +704,22 @@ def ims_table(filename):
         d['err_pct_95_l'] = df['err_pct_of_rate'].mean() - 1.96 * df['err_pct_of_rate'].std()
 
         index = [
+            'mean_sum_negative_flow',
+            'negative_flows',
             'mean_err_pct',
             'max_err_pct',
             'min_err_pct',
             'err_pct_95_u',
             'err_pct_95_l',
-            'mean_max_abs_error'
+            'mean_max_abs_error',
+            'avg_mean_abs_error'
         ]
 
         return pd.Series(d, index=index) 
 
     sum_base_cols = ['density_level', 'approximation']
 
-    sum_res = agg_res[sum_base_cols + ['err_pct_of_rate', 'max_abs_error']].sort_values(by=['approximation', 'density_level'])
+    sum_res = agg_res[sum_base_cols + ['err_pct_of_rate', 'max_abs_error', 'mean_abs_error', 'negatvie_flows', 'sum_negatvie_flow']].sort_values(by=['approximation', 'density_level'])
     sum_res = sum_res.groupby(by=sum_base_cols, as_index=False).apply(g).reset_index()
     
     print(sum_res.sort_values(by=['approximation', 'density_level']))
@@ -716,6 +727,223 @@ def ims_table(filename):
     print(sum_res.pivot(index='approximation', columns='density_level', values=['mean_err_pct','max_err_pct' ,'mean_max_abs_error', 'err_pct_95_u', 'err_pct_95_l']))
 
     # sum_res.sort_values(by=['approximation', 'density_level']).to_csv('FZ_Kaplan_exp_sbpss_good_w_alis_sum.csv', index=False)
+
+
+def ims_table2(filename='./Results/FZ_final_w_qp'):
+
+
+    df = pd.read_csv(filename + '.csv')
+
+    id_vars = ['timestamp','density_level','graph_no','m','n','max_edges','edge_count','edge_density','exp_num','alph_dist','beta_dist','utilization','exact','i','j','alpha','beta','exact_matching_rate','sim_matching_rate', 'no_of_sims', 'sim_matching_rate_stdev']
+    
+    val_vars = ['ohm_approx','entropy_approx','quad_approx']
+    
+    df = pd.melt(df, id_vars=id_vars, value_vars=val_vars, var_name='approximation', value_name='approx_match_rate')
+
+    df.loc[:, 'abs_error'] = np.abs(df['approx_match_rate'] - df['exact_matching_rate'])
+    df.loc[:, 'abs_error_pct'] = np.abs(df['approx_match_rate'] - df['exact_matching_rate'])/df['exact_matching_rate']
+
+    def f(df):
+
+        d = {}
+
+        d['sum_abs_error'] = df['abs_error'].sum()
+        d['mean_abs_error'] = df['abs_error'].mean()
+        d['max_abs_error'] = df['abs_error'].max()
+        d['mean_abs_error_pct'] = df['abs_error_pct'].mean()
+        d['max_abs_error_pct'] = df['abs_error_pct'].max()
+
+        index = [
+            'sum_abs_error',
+            'mean_abs_error',
+            'max_abs_error',
+            'mean_abs_error_pct',
+            'max_abs_error_pct'
+        ]
+
+        return pd.Series(d, index=index)
+
+    base_cols = ['timestamp', 'graph_no', 'exp_num', 'density_level', 'beta_dist']
+    agg_res = df.groupby(by=base_cols + ['approximation'], as_index=False).apply(f).reset_index()
+    # agg_res = agg_res.set_index(base_cols)
+    agg_res = agg_res.pivot_table(index=base_cols, columns='approximation', values=['sum_abs_error', 'mean_abs_error', 'max_abs_error', 'mean_abs_error_pct', 'max_abs_error_pct'])
+    # agg_res = agg_res.reset_index()
+    agg_res_sum = agg_res['sum_abs_error']
+    agg_res_sum.reset_index(inplace=True) 
+    print(agg_res_sum)
+
+    agg_res_sum.loc[:, 'entropy'] = 1. * (agg_res_sum['entropy_approx'] < agg_res_sum['quad_approx'])
+    agg_res_sum.loc[:, 'quad'] = 1. * (agg_res_sum['entropy_approx'] > agg_res_sum['quad_approx'])
+    agg_res_sum.loc[:, 'diff'] = np.abs(agg_res_sum['entropy_approx'] - agg_res_sum['quad_approx'])
+    agg_res_sum.loc[:, 'diff_entropy'] = agg_res_sum['diff'] * agg_res_sum['entropy']
+    agg_res_sum.loc[:, 'diff_quad'] = agg_res_sum['diff'] * agg_res_sum['quad']
+
+    def g(df):
+
+        d = {}
+
+        d['quad<entropy'] = df['quad'].sum()
+        d['entropy<quad'] = df['entropy'].sum()
+        d['avg_quad_diff'] = df['diff_quad'].sum()/df['quad'].sum()
+        d['avg_entropy_diff'] = df['diff_entropy'].sum()/df['entropy'].sum()
+        d['max_quad_diff'] = df['diff_quad'].max()
+        d['max_entropy_diff'] = df['diff_entropy'].max()
+        d['quad_max_sum_err'] = df['quad_approx'].max()
+        d['entropy_max_sum_err'] = df['entropy_approx'].max()
+
+        index = [
+            'quad<entropy',
+            'max_entropy_diff',
+            'avg_entropy_diff',
+            'entropy_max_sum_err', 
+            'entropy<quad',
+            'max_quad_diff',
+            'avg_quad_diff',
+            'quad_max_sum_err'
+        ]
+
+        return pd.Series(d, index=index)
+
+    sum_res = agg_res_sum.groupby(by='density_level').apply(g)
+    # sum_res.loc[:,'diff_entropy'] = sum_res['diff_entropy']/sum_res['entropy<quad']
+    # sum_res.loc[:,'diff_quad'] = sum_res['diff_quad']/sum_res['quad<entropy']
+    print(sum_res)
+    print(sum_res.to_latex())
+
+    # agg_res.sort_values(by=['approximation', 'graph_no', 'exp_no', 'beta_dist','density_level', 'rho']).to_csv('FZ_Kaplan_exp_sbpss_good_w_alis_agg.csv', index=False)
+
+    # agg_res.loc[:, 'err_pct_of_rate'] = agg_res['sum_abs_error']
+   
+    # def g(df):
+        
+    #     d = {}
+
+    #     d['mean_max_abs_error'] = df['max_abs_error'].mean()
+
+
+    #     d['mean_err_pct'] = df['err_pct_of_rate'].mean()
+    #     d['max_err_pct'] = df['err_pct_of_rate'].max()
+    #     d['min_err_pct'] = df['err_pct_of_rate'].min()
+    #     d['err_pct_95_u'] = df['err_pct_of_rate'].mean() + 1.96 * df['err_pct_of_rate'].std()
+    #     d['err_pct_95_l'] = df['err_pct_of_rate'].mean() - 1.96 * df['err_pct_of_rate'].std()
+
+    #     index = [
+    #         'mean_err_pct',
+    #         'max_err_pct',
+    #         'min_err_pct',
+    #         'err_pct_95_u',
+    #         'err_pct_95_l',
+    #         'mean_max_abs_error'
+    #     ]
+
+    #     return pd.Series(d, index=index) 
+
+    # sum_base_cols = ['density_level', 'approximation']
+
+    # sum_res = agg_res[sum_base_cols + ['err_pct_of_rate', 'max_abs_error']].sort_values(by=['approximation', 'density_level'])
+    # sum_res = sum_res.groupby(by=sum_base_cols, as_index=False).apply(g).reset_index()
+    
+    # print(sum_res.sort_values(by=['approximation', 'density_level']))
+
+    # print(sum_res.pivot(index='approximation', columns='density_level', values=['mean_err_pct','max_err_pct' ,'mean_max_abs_error', 'err_pct_95_u', 'err_pct_95_l']))
+
+    # sum_res.sort_values(by=['approximation', 'density_level']).to_csv('FZ_Kaplan_exp_sbpss_good_w_alis_sum.csv', index=False)
+
+
+def alis_table(filename='FZ_Kaplan_exp_pure_alis_full'):
+
+    df = pd.read_csv(filename + '.csv')
+
+    for col in df.columns.values:
+        print(col)
+
+    id_vars = ['timestamp','density_level','graph_no','exp_no','beta_dist','i','j','alpha','beta','sim_matching_rates', 'no_of_sims', 'sim_matching_rates_stdev']
+
+    print(df[id_vars].head())
+    
+    val_vars = ['alis_approx']
+    
+    df = pd.melt(df, id_vars=id_vars, value_vars=val_vars, var_name='approximation', value_name='approx_match_rate')
+
+
+
+    df.loc[:, 'abs_error'] = np.abs(df['approx_match_rate'] - df['sim_matching_rates'])
+    df.loc[:, 'abs_error_pct'] = np.abs(df['approx_match_rate'] - df['sim_matching_rates'])/df['sim_matching_rates']
+
+    def f(df):
+
+        d = {}
+
+        d['sum_abs_error'] = df['abs_error'].sum()
+        d['mean_abs_error'] = df['abs_error'].mean()
+        d['max_abs_error'] = df['abs_error'].max()
+        d['mean_abs_error_pct'] = df['abs_error_pct'].mean()
+        d['max_abs_error_pct'] = df['abs_error_pct'].max()
+
+        index = [
+            'sum_abs_error',
+            'mean_abs_error',
+            'max_abs_error',
+            'mean_abs_error_pct',
+            'max_abs_error_pct'
+        ]
+
+        return pd.Series(d, index=index)
+
+    base_cols = ['timestamp', 'graph_no', 'exp_no', 'density_level', 'beta_dist', 'approximation']
+    agg_res = df.groupby(by=base_cols, as_index=False).apply(f).reset_index()
+
+    agg_res.loc[:, 'err_pct_of_rate'] = agg_res['sum_abs_error']
+
+    print(agg_res)
+
+   
+    def g(df):
+        
+        d = {}
+
+        d['mean_max_abs_error'] = df['max_abs_error'].mean()
+
+        d['mean_err_pct'] = df['err_pct_of_rate'].mean()
+        d['max_err_pct'] = df['err_pct_of_rate'].max()
+        d['min_err_pct'] = df['err_pct_of_rate'].min()
+        d['err_pct_95_u'] = df['err_pct_of_rate'].mean() + 1.96 * df['err_pct_of_rate'].std()
+        d['err_pct_95_l'] = df['err_pct_of_rate'].mean() - 1.96 * df['err_pct_of_rate'].std()
+
+        index = [
+
+            'mean_err_pct',
+            'max_err_pct',
+            'min_err_pct',
+            'err_pct_95_u',
+            'err_pct_95_l',
+            'mean_max_abs_error',
+            'avg_mean_abs_error'
+        ]
+
+        return pd.Series(d, index=index) 
+
+    sum_base_cols = ['density_level', 'approximation']
+
+    sum_res = agg_res[sum_base_cols + ['err_pct_of_rate', 'max_abs_error', 'mean_abs_error']].sort_values(by=['approximation', 'density_level'])
+    sum_res = sum_res.groupby(by=sum_base_cols, as_index=False).apply(g).reset_index()
+    
+    print(sum_res.sort_values(by=['approximation', 'density_level']))
+
+    print(sum_res.pivot(index='approximation', columns='density_level', values=['mean_err_pct','max_err_pct' ,'mean_max_abs_error', 'err_pct_95_u', 'err_pct_95_l']))
+
+
+    # base_cols = ['timestamp', 'graph_no', 'exp_no', 'density_level', 'beta_dist']
+    # agg_res = df.groupby(by=base_cols + ['approximation'], as_index=False).apply(f).reset_index()
+    # # agg_res = agg_res.set_index(base_cols)
+    # agg_res = agg_res.pivot_table(index=base_cols, columns='approximation', values=['sum_abs_error', 'mean_abs_error', 'max_abs_error', 'mean_abs_error_pct', 'max_abs_error_pct'])
+    # # agg_res = agg_res.reset_index()
+    # agg_res_sum = agg_res['sum_abs_error']
+    # agg_res_sum.reset_index(inplace=True) 
+    # print(agg_res_sum)
+
+
+
 
 
 def sbpss_table1(filename='FZ_Kaplan_exp_sbpss_good_w_alis_adj'):
@@ -2840,8 +3068,9 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
-    sbpss_approx_graph()
+    alis_table()
+    # base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
+    # sbpss_approx_graph()
     # sbpss_table3()
     # sbpss_cd_table1()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
