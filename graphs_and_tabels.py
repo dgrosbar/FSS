@@ -594,19 +594,11 @@ def comparison_table_grids(filename='grid_final_w_qp'):
     # print(df)
 
 
-def growing_chains_graph(filename='growing_chains_new2'):
+def growing_chains_graph(filename='./Results/growing_chains_new2'):
     
     res_df = pd.read_csv(filename + '.csv')
 
     res_df.loc[:, 'arc_type'] = np.where(res_df['i']<=res_df['j'], res_df['j'] - res_df['i'], res_df['j'] + res_df['n'] - res_df['i'])
-    # for col in res_df.columns.values:
-    #     print(col)
-    # print(res_df[res_df['n'] == 5])
-
-    # res_df_max = res_df[['timestamp','arc_type']].groupby(by=['timestamp'], as_index=False).max().rename(columns={'arc_type': 'k'})
-    # res_df = pd.merge(left=res_df, right=res_df_max, on='timestamp', how='left')
-    # for col in res_df.columns.values:
-    #     print(col)
 
     def f(df):
 
@@ -636,6 +628,15 @@ def growing_chains_graph(filename='growing_chains_new2'):
     print(res_agg.sort_values(by=['k','n']))
     print(res_agg.sort_values(by=['n','k']))
 
+    fig, (ax1, ax2) = plt.plot()
+
+    for k, res in enumerate(res_agg.groupby('k')):
+
+        ax1.scatter(res['n'], res['abs_error'], label='k='+str(k))
+
+    for k, res in enumerate(res_agg.groupby('n')): 
+
+        ax2.scatter(res['k'], res['abs_error'], label='n='+str(n))
 
 def ims_table(filename='./Results/FZ_final_w_qp'):
 
@@ -650,6 +651,7 @@ def ims_table(filename='./Results/FZ_final_w_qp'):
 
     df.loc[:, 'abs_error'] = np.abs(df['approx_match_rate'] - df['exact_matching_rate'])
     df.loc[:, 'abs_error_pct'] = np.abs(df['approx_match_rate'] - df['exact_matching_rate'])/df['exact_matching_rate']
+    df.loc[:, 'abs_error_abs'] = np.abs(np.abs(df['approx_match_rate']) - df['exact_matching_rate'])
 
     def f(df):
 
@@ -659,6 +661,7 @@ def ims_table(filename='./Results/FZ_final_w_qp'):
 
         d['sum_abs_error'] = df['abs_error'].sum()
         d['mean_abs_error'] = df['abs_error'].mean()
+        d['mean_abs_error_abs'] = df['abs_error_abs'].mean()
         d['max_abs_error'] = df['abs_error'].max()
         d['mean_abs_error_pct'] = df['abs_error_pct'].mean()
         d['max_abs_error_pct'] = df['abs_error_pct'].max()
@@ -673,7 +676,8 @@ def ims_table(filename='./Results/FZ_final_w_qp'):
             'mean_abs_error',
             'max_abs_error',
             'mean_abs_error_pct',
-            'max_abs_error_pct'
+            'max_abs_error_pct',
+            'mean_abs_error_abs'
         ]
 
         return pd.Series(d, index=index)
@@ -694,6 +698,7 @@ def ims_table(filename='./Results/FZ_final_w_qp'):
 
         d['mean_max_abs_error'] = df['max_abs_error'].mean()
         d['avg_mean_abs_error'] = df['mean_abs_error'].mean()
+        d['avg_mean_abs_error_abs'] = df['mean_abs_error_abs'].mean()
         d['mean_sum_negative_flow'] = df['sum_negatvie_flow'].mean()
         d['negative_flows'] = df['negatvie_flows'].mean()
 
@@ -712,14 +717,15 @@ def ims_table(filename='./Results/FZ_final_w_qp'):
             'err_pct_95_u',
             'err_pct_95_l',
             'mean_max_abs_error',
-            'avg_mean_abs_error'
+            'avg_mean_abs_error',
+            'avg_mean_abs_error_abs'
         ]
 
         return pd.Series(d, index=index) 
 
     sum_base_cols = ['density_level', 'approximation']
 
-    sum_res = agg_res[sum_base_cols + ['err_pct_of_rate', 'max_abs_error', 'mean_abs_error', 'negatvie_flows', 'sum_negatvie_flow']].sort_values(by=['approximation', 'density_level'])
+    sum_res = agg_res[sum_base_cols + ['err_pct_of_rate', 'max_abs_error', 'mean_abs_error', 'negatvie_flows', 'sum_negatvie_flow', 'mean_abs_error_abs']].sort_values(by=['approximation', 'density_level'])
     sum_res = sum_res.groupby(by=sum_base_cols, as_index=False).apply(g).reset_index()
     
     print(sum_res.sort_values(by=['approximation', 'density_level']))
@@ -850,7 +856,7 @@ def ims_table2(filename='./Results/FZ_final_w_qp'):
     # sum_res.sort_values(by=['approximation', 'density_level']).to_csv('FZ_Kaplan_exp_sbpss_good_w_alis_sum.csv', index=False)
 
 
-def alis_table(filename='FZ_Kaplan_exp_pure_alis_full'):
+def alis_table(filename='FZ_Kaplan_exp_pure_alis'):
 
     df = pd.read_csv(filename + '.csv')
 
@@ -3068,7 +3074,9 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    alis_table()
+    growing_chains_graph()
+    # ims_table()
+    # alis_table()
     # base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
     # sbpss_approx_graph()
     # sbpss_table3()

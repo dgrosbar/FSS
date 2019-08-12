@@ -1889,7 +1889,7 @@ if __name__ == '__main__':
     pd.set_option('display.width', 10000)
 
     # ot_sbpss_exp()
-
+    growing_chains_exp()
     # run_assignmet(1000, 10**6)
     # growing_chains_exp()
     # n = 12
