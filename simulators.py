@@ -74,11 +74,17 @@ def simulate_matching_sequance(compatability_matrix, alpha, beta, prt=True, prt_
             if prt_all:
                 print('ending sim ', k, 'duration:', time() - start_time)
     else:
+        server_queues = tuple(List() for j in range(n))
+        for j in range(n):
+            server_queues[j].append(-1.)
+        customer_queues = tuple(List() for i in range(m))
+        for i in range(m):
+            customer_queues[i].append(-1.)
         if prt:
             print('starting parallel simulation')
         exps = []
         for k in range(sims):
-            exps.append([customer_queues, server_queues, cum_alpha, cum_beta, s_adj, c_adj, m, n, sim_len, warm_up])
+            exps.append([copy(customer_queues), copy(server_queues), cum_alpha, cum_beta, s_adj, c_adj, m, n, sim_len, warm_up])
         pool = mp.Pool(processes=p)
         matching_rates = pool.starmap(matching_sim_loop_pairs, exps)
         if prt:
