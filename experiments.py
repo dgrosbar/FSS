@@ -292,31 +292,31 @@ def erdos_renyi_exp_for_parallel(filename='erdos_renyi_exp3'):
                         res_df.to_csv(filename + '.csv', index=False)
 
 
-def growing_chains_exp(filename='growing_chains_new2_7'):
+def growing_chains_exp(filename='growing_chaines_new3', p=30):
 
-
-    #jt = dict((v, [(x[0] , x[1]) for x in jpermute(range(v))]) for v in [5,7,9])
-
-    # for k, n in [(3,5), (3,7),(5,7), (3, 9), (5, 9), (7,9), (3, 30), (5, 30), (7, 30), (9, 30), (11, 30), (3, 100), (5, 100), (7, 100), (9, 100), (11, 100)]:
+    exps = []
+    pool = mp.Pool(processes=p)
     for n in [10, 15, 25, 50, 100, 150, 200]:
-        for k in [7]:
-            compatability_matrix = 1*np.array([[(0<=(j-i)<k) or (0<=(j+n-i)<k) for j in range(n)] for i in range(n)])
-            alpha = np.array([1./n]*n)
-            beta = np.array([1./n]*n)
+        for k in [4, 6, 7, 8]:
+            for sim_no in range(p):
+                compatability_matrix = 1*np.array([[(0<=(j-i)<k) or (0<=(j+n-i)<k) for j in range(n)] for i in range(n)])
+                alpha = np.array([1./n]*n)
+                beta = np.array([1./n]*n)
+                exps.append([compatability_matrix, alpha, beta, k, sim_no, filename])
+            dfs_k_n = pool.starmap(simulate_parallel_growing_chains, exps)
+            df_k_n = pd.concat(dfs_k_n, axis=0)
+            df_sum_k_n = df_k_n[['n','k','i','j','sim_matching_rates']].groupby(by=['n','k','i','j'], as_index=False).mean()
+            write_df_to_file(filename, df_sum_k_n)
 
-            print('-'*30 + str(n) +','+str(k) + '-'*30)
+def simulate_parallel_growing_chains(compatability_matrix, alpha, beta, k, sim_no, filename):
 
-            exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt=False, sims=30, per_edge=1000, p=30)
-            exp_res['aux']['k'] = k
-            cur_res_df = log_res_to_df(compatability_matrix, alpha=alpha, beta=beta, result_dict=exp_res)
-
-            if os.path.exists(filename + '.csv'):
-                res_df = pd.read_csv(filename + '.csv')
-                res_df = pd.concat([res_df, cur_res_df], axis=0)
-                res_df.to_csv(filename + '.csv', index=False)
-            else:
-                res_df = cur_res_df
-                res_df.to_csv(filename + '.csv', index=False)
+                print('-'*30 + str(compatability_matrix.shape[1]) +','+str(k) + '-'*30)
+                exp_res = simulate_matching_sequance(compatability_matrix, alpha, beta, prt=False, sims=1, per_edge=1000)
+                exp_res['aux']['k'] = k
+                exp_res['aux']['sim_no'] = sim_no
+                print(exp_res['mat']['sim_matching_rates'])
+                cur_res_df = log_res_to_df(compatability_matrix, alpha=alpha, beta=beta, result_dict=exp_res)
+                return cur_res_df
 
 
 def compare_entropy_and_ohn_law_approximation(filename='FZ_Kaplan_exp_100'):
@@ -1587,7 +1587,7 @@ def increasing_n_system():
                 s = np.ones(n)
                 mu = np.ones(n)/n
                 beta = mu
-                exp_res = simulate_queueing_system(compatability_matrix, alpha, beta, lamda, s, mu, prt=True, per_edge=5000, prt_all=True, sims=30)
+                exp_res = simulate_queueing_system(compatability_matrix, alpha, beta, lamda, s, mu, prt=True, per_edge=1000, prt_all=True, sims=30)
                 _, ent_mr,_ = entropy_approximation(compatability_matrix, lamda, mu, pad=True)
                 exp_res['mat']['entropy_approx'] = ent_mr
                 res_df = log_res_to_df(compatability_matrix, lamda, mu, res_dict, alpha_beta=False)

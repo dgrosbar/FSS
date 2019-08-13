@@ -10,7 +10,7 @@ from math import exp
 
 prop_cycle = plt.rcParams['axes.prop_cycle']
 COLORS = prop_cycle.by_key()['color']
-MARKERS = ["|", "v", "*", "x", "+", "D", "s"]
+MARKERS = ["o", "v", "*", "x", "H", "D", "s", "X", "P"]
 
 
 def comparison_graph(filename):
@@ -628,23 +628,29 @@ def growing_chains_graph(filename='./Results/growing_chains_new2'):
     print(res_agg.sort_values(by=['k','n']))
     print(res_agg.sort_values(by=['n','k']))
 
-    res_agg = res_agg[res_agg['k']!=7]
+    res_agg = res_agg[(res_agg['k']!=7) & (res_agg['n']!=10)]
 
     fig, (ax1, ax2) = plt.subplots(1,2)
 
-    for k, res in res_agg.groupby('k'):
+    for v , (k, res) in enumerate(res_agg.groupby('k')):
 
-        ax1.plot(res['n'], res['abs_error'], '-o',label='k='+str(k))
-        ax1.set_xlabel('n')
-        ax1.set_ylabel('Sum of Absoulte Error')
+        ax1.plot(res['n'], res['abs_error'], linewidth=1, marker=MARKERS[v] ,label='k='+str(k))
+        ax1.set_xlabel('n', fontsize=24)
+        ax1.set_ylabel('Sum of Absoulte Error', fontsize=16)
         ax1.legend()
 
-    for n, res in res_agg.groupby('n'): 
+    ax1.set_xticks([5, 15, 25, 50, 100, 150, 200])
+    ax1.xaxis.grid(True)
 
-        ax2.plot(res['k'], res['abs_error'], '-o' ,label='n='+str(n))
-        ax2.set_xlabel('k')
-        ax2.set_ylabel('Sum of Absoulte Error')
+    for v, (n, res) in enumerate(res_agg.groupby('n')): 
+
+        ax2.plot(res['k'], res['abs_error'], linewidth=1, marker=MARKERS[v] ,label='n='+str(n))
+        ax2.set_xlabel('k', fontsize=24)
+        ax2.set_ylabel('Sum of Absoulte Error', fontsize=16)
         ax2.legend()
+
+    ax2.set_xticks([3, 5, 7, 9, 11, 15, 19, 23, 31, 39])
+    ax2.xaxis.grid(True)
 
     plt.show()
 
