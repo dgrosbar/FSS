@@ -258,7 +258,7 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_
         total_duration = time() - start_time
         
         if prt:
-            print('ending ',k, ' sims. duration: {:.4f}'.format(total_duration))
+            print('ending ',k, ' sims', ' lqf: ', lqf ,' duration: {:.4f}'.format(total_duration))
 
     else:
 

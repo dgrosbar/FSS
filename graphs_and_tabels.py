@@ -2043,7 +2043,7 @@ def sbpss_cd_graph1_lqf(policy, split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_l
     plt.show()
 
 
-def sbpss_cd_graph1_lqf_both(split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_x'):
+def sbpss_cd_graph1_lqf_both(split, filename='./Results/FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_x'):
 
     sum_res = pd.read_csv(filename + '.csv')
     print(sum_res)
@@ -2949,7 +2949,7 @@ def sbpss_gini_table_maps(filename):
 
 # def waiting_time_map(filename, exo_no, rho):
 
-def sbpss_cd_graph1_lqf_both_fix(split, filename='FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_2'):
+def sbpss_cd_graph1_lqf_both_fix(split, filename='./Results/FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_2'):
 
     sum_res = pd.read_csv(filename + '.csv')
     print(sum_res)
@@ -3087,7 +3087,7 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    growing_chains_graph()
+    # growing_chains_graph()
     # ims_table()
     # alis_table()
     # base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
@@ -3096,7 +3096,7 @@ if __name__ == '__main__':
     # sbpss_cd_table1()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
     # sbpss_cd_graph1_lqf_both('one')
-    # sbpss_cd_graph1_lqf_both_fix('one')
+    sbpss_cd_graph1_lqf_both_fix('rand')
     # sbpss_cd_table2x()
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')

@@ -32,7 +32,9 @@ def adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha, beta, jt_pe
 	#                          |__                                                                                        __|
 
 	if pad:
-		compatability_matrix = np.vstack([compatability_matrix, np.ones(len(beta))])
+		one_pad = np.ones(len(beta)).reshape((1, len(beta)))
+		print(compatability_matrix.shape, one_pad.shape)
+		compatability_matrix = np.vstack([compatability_matrix, one_pad])
 		alpha = np.append(alpha, beta.sum() - alpha.sum())
 
 
@@ -502,10 +504,11 @@ def entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, ma
 
 	if pad:
 		if is_sps:
-			compatability_matrix = sps.vstack([compatability_matrix, np.ones(len(mu))])
+			compatability_matrix = sps.vstack([compatability_matrix, np.ones(len(mu)).reshape((1, len(mu)))])
 			lamda = np.append(lamda, mu.sum() - lamda.sum())
 		else:
-			compatability_matrix = np.vstack([compatability_matrix, np.ones(len(mu))])
+			print(compatability_matrix.shape, np.ones(len(mu)).shape)
+			compatability_matrix = np.vstack([compatability_matrix, np.ones(len(mu)).reshape((1, len(mu)))])
 			lamda = np.append(lamda, mu.sum() - lamda.sum())			
 
 	matching_rates = compatability_matrix
@@ -561,7 +564,7 @@ def entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, ma
 			return None
 
 
-def fast_entropy_approximation(compatability_matrix, lamda, mu, check_every=10**2, max_iter=10**7, epsilon=10**-7, pad=False, ret_all=False):
+def fast_entropy_approximation(compatability_matrix, lamda, mu, check_every=10**3, max_iter=10**7, epsilon=10**-7, pad=False, ret_all=False):
 
 	k = 0
 	within_epsilon = True
@@ -1191,23 +1194,6 @@ def p_to_p_sparse(p, alpha, m, n, nnz, len_nnz):
 	return p
 
 	
-@jit(nopython=True, cache=True)
-def p_to_q(p, compatability_matrix, alpha, m, n):
-
-
-	q = (np.ones((n, m)) - np.dot(compatability_matrix, p.T).T)
-	# q = np.ones((n, m)) - compatability_matrix.dot(p.T).T
-	for ell in range(1, n, 1):
-		q[ell, :] = q[ell, :] * q[ell - 1, :] 
-
-	c = 1. / (np.ones((1, m)) - q[-1, :])
-
-	q = np.vstack((np.ones((1, m)), q[:-1, :]))
-
-	q = q * c * alpha
-
-	return q
-
 @jit(nopython=True, cache=True)
 def p_to_q(p, compatability_matrix, alpha, m, n):
 

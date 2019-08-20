@@ -22,7 +22,7 @@ import gc
 def go_back_and_approximate_alis(filename, p=30):
 
     main_df = pd.read_csv(filename + '.csv')
-    main_df = main_df[(main_df['gamma'] == 0) & (main_df['policy'] == 'fcfs_alis')]
+    main_df.loc[:, 'rho'] = 0.001
     pool = mp.Pool(processes=p)
     exps = []
     newfilename = filename + '_alis'
@@ -56,17 +56,40 @@ def approximate_alis_exp(exp_df, size, exp_no, newfilename, z):
         compatability_matrix = np.zeros((m,n))
         
         for k, row in alpha_data.iterrows():
-            alpha[int(row['i'])] = float(row['alpha'])
+            alpha[int(row['i'])] = float(row['alpha']) 
 
         for k, row in beta_data.iterrows():
             beta[int(row['j'])] = float(row['beta'])
 
+
+        print(np.histogram(np.log(alpha)))
+
         for k, row in rho_exp_df.iterrows():
-            compatability_matrix[int(row['i']), int(row['j'])] = 1.
+            compatability_matrix[int(row['i']), int(row['j'])] = 1. if alpha[int(row['i'])] > 10**-5 and beta[int(row['i'])] > 10**-5 else 0
+
+        for i in range(m):
+             if compatability_matrix[i, :].sum() == 0:
+                alpha[i] = 0
+        for j in range(n):
+             if compatability_matrix[:, j].sum() == 0:
+                beta[j] = 0
         
+        print(compatability_matrix.shape)
+        compatability_matrix = compatability_matrix[~(compatability_matrix==0).all(1)]
+        compatability_matrix = compatability_matrix.T
+        compatability_matrix = compatability_matrix[~(compatability_matrix==0).all(1)]
+        compatability_matrix = compatability_matrix.T
+        alpha = alpha[~(alpha==0)]
+        beta = beta[~(beta==0)]
+        print(compatability_matrix.shape)
+        print(alpha.shape)
+        print(beta.shape)
+        alpha = alpha/alpha.sum()
+        beta = beta/beta.sum()
         # print(alpha.sum())
         # print(beta.sum())
         # print(compatability_matrix.sum())
+        # compatability_matrix, _ = generate_grid_compatability_matrix(30, d=5, structure='tours', prt=True)
         print('z: ',z, ' size: ',size, ' exp_no: ',exp_no, 'rho: ',rho)
         alis_approx = fast_sparse_alis_approximation(compatability_matrix, alpha, beta, rho, check_every=10, max_time=6000)
 
@@ -86,7 +109,7 @@ def approximate_alis_exp(exp_df, size, exp_no, newfilename, z):
 if __name__ == '__main__':
 
 
-    go_back_and_approximate_alis('erdos_renyi_sbpss_uni_mu_comp')
+    go_back_and_approximate_alis('./Results/map_exps_30x30', 1)
 
 
 
