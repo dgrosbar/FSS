@@ -1330,7 +1330,7 @@ def go_back_and_approximate_sbpss_customer_dependet_lqf(filename='FZ_final_w_qp'
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_fcfs5', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_lqf5', sbpss_df)
                 exps = []
         else:
             if len(exps) > 0:
@@ -1338,7 +1338,7 @@ def go_back_and_approximate_sbpss_customer_dependet_lqf(filename='FZ_final_w_qp'
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_fcfs5', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_lqf5', sbpss_df)
                 exps = []   
 
   
@@ -1378,7 +1378,7 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
 
         sbpss_df = []
 
-        for policy in ['fcfs_alis']:#'fcfs_alis']:#, 'lqf_alis']:
+        for policy in ['lqf_alis']:#'fcfs_alis']:#, 'lqf_alis']:
 
             for rho in [.99, .95, .9, .8, .7, .6, .5, .4, .3, .2, .1, .05, .01]:
 
