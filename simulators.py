@@ -282,7 +282,7 @@ def simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_
 
     aux_sim_data = {'no_of_sims' : sims, 'sim_duration' : total_duration, 'sim_len' : sim_len, 'warm_up' : warm_up, 'seed' : seed}
     
-    return parse_sim_data(compatability_matrix, match_ratios, match_rates, wait_times, wait_times_stdev, idle_times, idle_times_stdev, aux_sim_data)
+    return parse_sim_data(compatability_matrix,  match_rates, match_ratios, wait_times, wait_times_stdev, idle_times, idle_times_stdev, aux_sim_data)
 
 
 @jit(nopython=True, cache=True)

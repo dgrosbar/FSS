@@ -1330,7 +1330,7 @@ def go_back_and_approximate_sbpss_customer_dependet_lqf(filename='FZ_final_w_qp'
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_fcfs5', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf3', sbpss_df)
                 exps = []
         else:
             if len(exps) > 0:
@@ -1338,7 +1338,7 @@ def go_back_and_approximate_sbpss_customer_dependet_lqf(filename='FZ_final_w_qp'
                 print('starting work with {} cpus'.format(p))
                 sbpss_dfs = pool.starmap(approximate_sbpss_customer_dependent, exps)
                 sbpss_df = pd.concat([df for dfs in sbpss_dfs for df in dfs], axis=0)
-                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_fcfs5', sbpss_df)
+                write_df_to_file('FZ_Kaplan_exp_sbpss_cd_w_lqf3', sbpss_df)
                 exps = []   
 
   
@@ -1378,24 +1378,21 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
 
         sbpss_df = []
 
-        for policy in ['fcfs_alis']:#'fcfs_alis']:#, 'lqf_alis']:
+        for policy in ['lqf_alis']:#, 'fcfs_alis']:
 
-            for rho in [.99, .95, .9, .8, .7, .6, .5, .4, .3, .2, .1, .05, .01]:
+            for split in [ 'one', 'zero','half', 'rand']:
 
-                heavy_traffic_approx_entropy_eta = entropy_approximation(compatability_matrix, alpha*rho, beta,  pad=True)
-                exact_entropy_approximation_eta = adan_weiss_fcfs_alis_matching_rates(compatability_matrix, alpha*rho, beta, pad=True, print_progress=True)
+                if split == 'zero':
+                    theta = np.zeros(m)
+                elif split == 'one':
+                    theta = np.ones(m)
+                elif split == 'half':
+                    theta = 0.5 * np.ones(m)
+                else:
+                    theta = np.random.uniform(0.1, 0.9, m)
 
-                for split in ['zero', 'one', 'half', 'rand']:
-
-                    if split == 'zero':
-                        theta = np.zeros(m)
-                    elif split == 'one':
-                        theta = np.ones(m)
-                    elif split == 'half':
-                        theta = 0.5 * np.ones(m)
-                    else:
-                        theta = np.random.uniform(0.1, 0.9, m)
-
+                for rho in [.99, .95, .9, .8, .7, .6, .5, .4, .3, .2, .1, .05, .01]:
+                    
                     lamda = (alpha * rho)**(1.- theta)
                     s = (alpha * rho)**theta
 
@@ -1410,24 +1407,26 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
                         'eta: ', np.array2string(eta, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x}), '\n',
                         'mu', np.array2string(mu, max_line_width=np.inf, formatter={'float_kind': lambda x: "%.3f" % x})
                         )
-                    exp_res = simulate_queueing_system(compatability_matrix, lamda, beta, s=s, sims=30, lqf=(policy == 'lqf_alis'), per_edge=10000)
+                    exp_res = simulate_queueing_system(compatability_matrix, lamda, beta, s=s, sims=30, lqf=(policy == 'fcfs_alis'), per_edge=10000)
+                    heavy_traffic_approx_entropy_eta =  entropy_approximation(compatability_matrix, eta, mu, pad=True)
                     heavy_traffic_approx_entropy = np.dot(np.diag(1./s), heavy_traffic_approx_entropy_eta)
-                    exact_entropy_approximation = np.dot(np.diag(1./s), exact_entropy_approximation_eta)
                     sim_rate_gap = lamda.sum() - exp_res['mat']['sim_matching_rates'].sum()
                     sim_adj = lamda.sum() / exp_res['mat']['sim_matching_rates'].sum()
                     exp_res['mat']['fcfs_approx'] = heavy_traffic_approx_entropy
-                    exp_res['mat']['fcfs_approx_exact'] = exact_entropy_approximation
+
                     lamda_norm = lamda/lamda.sum()
                     alis_approx = fast_sparse_alis_approximation(compatability_matrix, lamda_norm, beta, rho, check_every=10, max_time=600)
                     alis_approx = alis_approx * lamda.sum()/rho
                     exp_res['mat']['alis_approx'] = alis_approx
                     exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + rho * exp_res['mat']['fcfs_approx']
-                    exp_res['mat']['fcfs_alis_approx_exact'] = (1. - rho) * exp_res['mat']['alis_approx'] + rho * exp_res['mat']['fcfs_approx_exact']
+
+                    printarr(exp_res['mat']['fcfs_alis_approx'].sum(), 'approx')
+                    printarr(exp_res['mat']['sim_matching_rates'].sum(), 'sim')
                     
                     print('ending - density_level: ', density_level, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' beta_dist: ', beta_dist, ' rho: ', rho,
-                    ' split:', split ,' duration: ', time() - st,
+                    ' split:', split ,' duration: ', time() - st, 
                     'pct_error:'  , np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['fcfs_alis_approx']).sum()/lamda.sum(),
-                    'pct_error_exact:',  np.abs(exp_res['mat']['sim_matching_rates'] - exp_res['mat']['fcfs_alis_approx_exact']).sum()/lamda.sum())
+                    'pct error adj:', )
 
                     exp_res['aux']['split'] = split
                     exp_res['aux']['graph_no'] = graph_no
@@ -1894,8 +1893,8 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-
     go_back_and_approximate_sbpss_customer_dependet_lqf()
+
     # ot_sbpss_exp()
     # growing_chains_exp()
     # run_assignmet(1000, 10**6)
@@ -1939,18 +1938,18 @@ if __name__ == '__main__':
 
     # n = 10
     # m = 10
-    # n = 6
+    # n = 5
     # # compatability_matrix = np.tril(np.ones((n, n)))
-    # compatability_matrix, _, _ = BASE_EXAMPLES[6]
+    # compatability_matrix, _, = BASE_EXAMPLES[6]
     # printarr(compatability_matrix)
     # # for i in range(n-1):
     # #     compatability_matrix[i,i+1]=1
-    # # printarr(compatability_matrix)
+    # printarr(compatability_matrix)
     # # lamda = np.arange(.94, 0.45, -0.05)
     # mu = np.ones(n)/n
-    # # lamda = np.array([1 - 0.01*i for i in range(n)])
-    # # lamda = lamda/lamda.sum()
-    # lamda = np.ones(n)/n
+    # lamda = np.array([1 - 0.01*i for i in range(n)])
+    # lamda = lamda/lamda.sum()
+    # # lamda = np.ones(n)/n
     # printarr(mu)
     # printarr(lamda)
     # res = simulate_queueing_system(compatability_matrix, lamda, mu, s=None, w=None, w_only=False, prt=False, sims=30, sim_len=None, warm_up=None, seed=None, per_edge=1000, prt_all=False, p=None, lqf=False, alis=True)
