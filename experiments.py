@@ -1378,7 +1378,7 @@ def approximate_sbpss_customer_dependent(exp, timestamp):
 
         sbpss_df = []
 
-        for policy in ['lqf_alis']:#'fcfs_alis']:#, 'lqf_alis']:
+        for policy in ['fcfs_alis']:#'fcfs_alis']:#, 'lqf_alis']:
 
             for rho in [.99, .95, .9, .8, .7, .6, .5, .4, .3, .2, .1, .05, .01]:
 
