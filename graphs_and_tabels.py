@@ -1483,7 +1483,7 @@ def sbpss_graph4(filename='FZ_Kaplan_exp_sbpss_good_w_alis_sum'):
     plt.show()
 
 
-def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_lqf5'):
+def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_fcfs5'):
 
     df = pd.read_csv(filename + '.csv')
 
