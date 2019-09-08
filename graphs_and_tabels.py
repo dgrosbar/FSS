@@ -1484,11 +1484,11 @@ def sbpss_graph4(filename='FZ_Kaplan_exp_sbpss_good_w_alis_sum'):
     plt.show()
 
 
-def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
+def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_fcfs5'):
 
     df = pd.read_csv(filename + '.csv')
 
-    base_cols = ['timestamp','rho','split', 'policy']
+    base_cols = ['timestamp','rho', 'split', 'policy']
 
     total_rates = df[base_cols + ['i', 'lamda']].drop_duplicates()[base_cols +['lamda']].groupby(by=base_cols, as_index=False).sum().rename(columns={'lamda':'total_lamda'})
     total_sim_rates = df[base_cols + ['sim_matching_rates']].groupby(by=base_cols, as_index=False).sum().rename(columns={'sim_matching_rates':'total_sim_rates'})
@@ -1541,7 +1541,7 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     base_cols = ['timestamp', 'graph_no', 'exp_no', 'm', 'n', 'density_level', 'beta_dist', 'rho', 'split' ,'approximation', 'policy']
     agg_res = df.groupby(by=base_cols, as_index=False).apply(f).reset_index()
 
-    agg_res.sort_values(by=['approximation', 'graph_no', 'exp_no', 'beta_dist','density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_agg_w_alis_lqf_x.csv', index=False)
+    agg_res.sort_values(by=['approximation', 'graph_no', 'exp_no', 'beta_dist','density_level', 'rho', 'split']).to_csv(filename + '_sum.csv', index=False)
 
     agg_res.loc[:, 'err_pct_of_rate'] = agg_res['sum_abs_error_sim']/agg_res['total_rate']
    
@@ -1574,7 +1574,7 @@ def sbpss_cd_table1(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
     
     print(sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']))
 
-    sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv('FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_x.csv', index=False)
+    sum_res.sort_values(by=['policy', 'approximation', 'density_level', 'rho', 'split']).to_csv(filename + '_agg.csv', index=False)
 
 
 def sbpss_cd_table2x(filename='FZ_Kaplan_exp_sbpss_cd_w_lqf2'):
@@ -3096,7 +3096,7 @@ if __name__ == '__main__':
     # base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
     sbpss_approx_graph()
     # sbpss_table3()
-    # sbpss_cd_table1()
+    sbpss_cd_table1()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
     # sbpss_cd_graph1_lqf_both('one')
     # sbpss_cd_graph1_lqf_both_fix('rand')
