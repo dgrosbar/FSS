@@ -67,5 +67,10 @@ def simulate_and_approximate_matching_sequence(exp, timestamp, newfilename):
 
 if __name__ == '__main__':
 
-	go_back_and_do_matching_sequence('er_for_test', 'er_for_test_res', p=3)
+	try:
+		print('erdos_renyi_sbpss')
+		go_back_and_do_matching_sequence('erdos_renyi_sbpss', 'erdos_renyi_sbpss_ms', p=30)
+	except:
+		print('new_grid_sbpss3')
+		go_back_and_do_matching_sequence('new_grid_sbpss3', 'new_grid_sbpss3_ms', p=30)		
 
