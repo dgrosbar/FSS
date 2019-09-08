@@ -22,7 +22,6 @@ from graphs_and_tabels import *
 import gc
 
 
-
 def grids_exp_for_parallel(p=30):
 
     jt_perm_dict = {9: list(jpermute(range(9)))}

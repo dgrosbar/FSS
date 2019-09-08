@@ -654,6 +654,7 @@ def growing_chains_graph(filename='./Results/growing_chains_new2'):
 
     plt.show()
 
+
 def ims_table(filename='./Results/FZ_final_w_qp'):
 
 
@@ -2140,7 +2141,7 @@ def sbpss_cd_graph1_lqf_both(split, filename='./Results/FZ_Kaplan_sbpss_cd_sum_w
     plt.show()
 
 
-def sbpss_approx_graph(filename='erdos_renyi_sbpss_comp_alis_rates_sum'):
+def sbpss_approx_graph(filename='./Results/grid_sbpss_comp_alis_rates_sum'):
 
     sum_res = pd.read_csv(filename + '.csv')
     sum_res.loc[:,'policy'] = 'fcfs_alis'
@@ -3079,6 +3080,8 @@ def sbpss_cd_graph1_lqf_both_fix(split, filename='./Results/FZ_Kaplan_sbpss_cd_s
 
     plt.show()
 
+
+
 if __name__ == '__main__':
 
     np.set_printoptions(threshold=sys.maxsize, precision=5)
@@ -3091,19 +3094,19 @@ if __name__ == '__main__':
     # ims_table()
     # alis_table()
     # base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
-    # sbpss_approx_graph()
+    sbpss_approx_graph()
     # sbpss_table3()
     # sbpss_cd_table1()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
     # sbpss_cd_graph1_lqf_both('one')
-    sbpss_cd_graph1_lqf_both_fix('rand')
+    # sbpss_cd_graph1_lqf_both_fix('rand')
     # sbpss_cd_table2x()
     # sbpss_gini_score('map_exp_sbpss_30x30_comp', base_cols)
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('map_exp_sbpss_lqf_30x30', base_cols)
     # sbpss_gini_table('./Results/grid_sbpss_comp_gini')
     # sbpss_gini_table_maps('map_exp_sbpss_30x30_comp_gini')
-    # sbpss_graph4()
+    # sbpss_graph3()
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')
 
