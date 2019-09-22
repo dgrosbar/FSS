@@ -124,7 +124,7 @@ def w_spbss(exp, timestamp, filename, lqf=False):
 
             print('policy: ', policy_name, 'lqf: ', lqf, ' split: ', split, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' rho: ', rho)
 
-            w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w, prt=True, lqf=lq, per_edge=5000)
+            w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w, prt=True, lqf=lqf, per_edge=5000)
             w_exp_res['mat']['fcfs_approx'] = r_weighted
             w_exp_res['mat']['alis_approx'] = alis_approx 
             w_exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * w_exp_res['mat']['alis_approx'] + (rho) * w_exp_res['mat']['fcfs_approx']
@@ -151,6 +151,6 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    compare_w_policy(newfilename='sbpss_w_compare', filename='FZ_final_w_qp', p=30, lqf=True)
+    compare_w_policy(newfilename='sbpss_w_compare_fcfs', filename='FZ_final_w_qp', p=30, lqf=False)
 
     
