@@ -151,6 +151,6 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    compare_w_policy(newfilename='sbpss_w_compare', filename='FZ_final_w_qp', p=30, lqf=False)
+    compare_w_policy(newfilename='sbpss_w_compare', filename='FZ_final_w_qp', p=30, lqf=True)
 
     
