@@ -22,12 +22,36 @@ from mr_calc_and_approx import *
 import gc
 
 
+def compare_w_policy(newfilename, filename='FZ_final_w_qp', p=30, lqf=False):
+
+    df = pd.read_csv(filename + '.csv')
+    pool = mp.Pool(processes=p)
+
+    for n in range(7,11,1):
+        exps = []
+        for timestamp, exp in df[df['n'] == n].groupby(by=['timestamp'], as_index=False):
+            exps.append([exp, timestamp, newfilename, lqf])
+            if len(exps) == p:
+                print('no_of_exps:', len(exps), 'n:', n)
+                print('starting work with {} cpus'.format(p))
+                print(len(exps[0]))
+                sbpss_dfs = pool.starmap(w_spbss, exps)
+                exps = []
+        else:
+            if len(exps) > 0:
+                print('no_of_exps:', len(exps), 'n:', n)
+                print('starting work with {} cpus'.format(p))
+                sbpss_dfs = pool.starmap(w_spbss, exps)
+                exps = []
+
         
-def w_spbss(exp, timestamp, policy):
+def w_spbss(exp, timestamp, filename, lqf=False):
 
     exp_data = exp[['timestamp','m', 'n' ,'exp_num', 'density_level', 'beta_dist', 'graph_no']].drop_duplicates()
     alpha_data = exp[['i', 'alpha']].drop_duplicates()
     beta_data = exp[['j', 'beta']].drop_duplicates()
+
+    policy_name = 'lqf_alis' if lqf else 'fcfs_alis' 
     
     m = exp_data['m'].iloc[0]
     n = exp_data['n'].iloc[0]
@@ -53,59 +77,70 @@ def w_spbss(exp, timestamp, policy):
 
     edge_count = compatability_matrix.sum()
 
-    for rho in [0.1, 0.3, 0.5, 0.6, 0.7, 0.8, 0.9, .95, .99]:
+    c = np.zeros((m,n))
 
-        st = time()
+    for split in ['zero', 'one', 'half', 'rand']:
 
-        lamda = alpha * rho
-        mu = beta
-        pad_lamda = np.append(alpha*rho, 1. - rho)
+        if split == 'zero':
+            theta = np.zeros(m)
+        elif split == 'one':
+            theta = np.ones(m)
+        elif split == 'half':
+            theta = 0.5 * np.ones(m)
+        else:
+            theta = np.random.uniform(0.1, 0.9, m)
 
-        fcfs_approx = fast_entropy_approximation(compatability_matrix, lamda, mu, pad=(rho < 1))
-        if rho < 1:
-            fcfs_approx = fcfs_approx[:m]
-        try:
+        for rho in [0.1, 0.3, 0.5, 0.6, 0.7, 0.8, 0.9, .95, .99]:
+
+            st = time()
+            eta = alpha * rho
+            lamda = eta**(1.- theta)
+            s = eta**theta        
+            mu = beta
+            fcfs_eta_approx = fast_entropy_approximation(compatability_matrix, eta, mu, pad=True)
+            fcfs_eta_approx = fcfs_eta_approx[:m]
+            r = np.dot(np.diag(1./s), fcfs_eta_approx)
             alis_approx = fast_alis_approximation(1. * compatability_matrix, alpha, beta, rho)
-        except:
-            alis_approx = np.zeros((m, n))
-        
-        q = fcfs_approx * (1./(mu - fcfs_approx.sum(axis=0)))
-        q = q/q.sum(axis=0)
+            q = r * (1./(mu - r.sum(axis=0)))
+            q = q/q.sum(axis=0)
+            r_weighted, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 0, weighted=True)
+            r_weighted = r_weighted[:m, :]
 
-        r_weighted, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 0, weighted=True)
-        
-        r_weighted = r_weighted[:m, :]
-        q_weighted = r_weighted * (1./(mu - r_weighted.sum(axis=0)))
-        q_weighted = q_weighted/q_weighted.sum(axis=0)
-        w  = np.divide(q_weighted, q_fcfs, out=np.zeros_like(q), where=(q != 0))
+            q_weighted = r_weighted * (1./(mu - r_weighted.sum(axis=0)))
+            q_weighted = q_weighted/q_weighted.sum(axis=0)
+            w  = np.divide(q_weighted, q, out=np.zeros_like(q), where=(q != 0))
 
-        w_exp = simulate_queueing_system(compatability_matrix, lamda, mu, s, w, prt=True)
-        w_exp_res['mat']['fcfs_approx'] = r_weighted
-        w_exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
-        w_exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * w_exp_res_fcfs['mat']['alis_approx'] + (rho) * w_exp_res_fcfs['mat']['fcfs_approx']
-        w_exp_res['aux']['rho'] = rho
-        w_exp_res['aux']['gamma'] = 0
-        w_exp_res['aux']['policy'] = 'weighted_fcfs_alis'
-        w_exp_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, w, timestamp, aux_exp_data)
-        write_df_to_file(filename, w_exp_df)
+            exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, prt=True, lqf=lqf)
+            exp_res['mat']['fcfs_approx'] = r
+            exp_res['mat']['alis_approx'] = alis_approx 
+            exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['fcfs_approx']
+            exp_res['aux']['rho'] = rho
+            exp_res['aux']['gamma'] = 0
+            exp_res['aux']['policy'] = policy_name
+            exp_res['aux']['split'] = split
+            exp_res['aux']['w'] = 1.
+            exp_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, exp_res, timestamp)
+            write_df_to_file(filename, exp_df)
 
-        exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, prt=True)
-        exp_res['mat']['fcfs_approx'] = fcfs_approx
-        exp_res['mat']['alis_approx'] = alis_approx if alis_approx is not None else np.zeros((m, n))
-        exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res_fcfs['mat']['alis_approx'] + (rho) * exp_res_fcfs['mat']['fcfs_approx']
-        exp_res['aux']['rho'] = rho
-        exp_res['aux']['gamma'] = 0
-        exp_res['aux']['policy'] = 'fcfs_alis'
+            print('policy: ', policy_name, 'lqf: ', lqf, ' split: ', split, ' exp_no: ', exp_no, ' rho: ', rho)
 
-        exp_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, exp_res_fcfs, timestamp, aux_exp_data)
-        write_df_to_file(filename, exp_df)
+            w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w, prt=True, lqf=lqf)
+            w_exp_res['mat']['fcfs_approx'] = r_weighted
+            w_exp_res['mat']['alis_approx'] = alis_approx 
+            w_exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * w_exp_res['mat']['alis_approx'] + (rho) * w_exp_res['mat']['fcfs_approx']
+            w_exp_res['aux']['rho'] = rho
+            w_exp_res['aux']['gamma'] = 0
+            w_exp_res['aux']['policy'] = 'weighted_' + policy_name
+            w_exp_res['aux']['split'] = split
+            w_exp_res['aux']['w'] = w
+            w_exp_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, w_exp_res, timestamp)
+            write_df_to_file(filename, w_exp_df)
 
-        print('ending - structure: ', aux_exp_data['structure'], ' exp_no: ', aux_exp_data['exp_no'], ' rho: ', rho, ' duration: ', time() - st)
-        print('pct_error_fcfs_alis_approx:'  , np.abs(exp_res_fcfs['mat']['sim_matching_rates'] - exp_res_fcfs['mat']['fcfs_alis_approx']).sum()/lamda.sum())
-        
-        gc.collect()
+            print('policy: ', 'weighted_' + policy_name, 'lqf: ', lqf, ' split: ', split, ' exp_no: ', exp_no, ' rho: ', rho)
 
-    return None
+            gc.collect()
+
+        return None
    
 
 if __name__ == '__main__':
@@ -115,5 +150,7 @@ if __name__ == '__main__':
     pd.options.display.max_columns = 1000000
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
+
+    compare_w_policy(newfilename='sbpss_w_compare', filename='FZ_final_w_qp', p=30, lqf=False)
 
     

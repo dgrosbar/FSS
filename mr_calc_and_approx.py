@@ -605,7 +605,7 @@ def fast_entropy_approximation(compatability_matrix, lamda, mu, check_every=10**
 
 
 @jit(nopython=True, cache=True)
-def fast_matrix_scaling(compatability_matrix, lamda, mu, m, n, check_every):
+def fast_matrix_scaling(compatability_matrix, lamda, mu, m, n, check_every=10**3):
 
 	max_iter = 10**7
 	# check_every = 10**2
