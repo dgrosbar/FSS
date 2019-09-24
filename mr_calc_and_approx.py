@@ -803,7 +803,7 @@ def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	return(np.dot(np.diag(lamda[: m - 1]), pi_hat[: m-1, :]))
 
 
-def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**7, max_time=600, epsilon=10**-6, prt=True, prtall=True):
+def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**7, max_time=1800, epsilon=10**-6, prt=True, prtall=True):
 
 	start_time = time()
 
@@ -830,6 +830,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 
 	def check_stop(i, prt=False):
 
+		cur_run_time = time() - start_time
 		opt_gap, opt_gap_pct = check_optimality_gap()
 		feas_gap = check_feasibility_gap()
 		if prtall or ((i % 10**5 == 0) and prt):
@@ -837,12 +838,13 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 			print('optimality gap is:', opt_gap)
 			print('optimality gap pct is: ', opt_gap_pct)
 			print('feasibility gap is: ', feas_gap)
+			print('time elapsed is: ', cur_run_time)
 		if feas_gap > 3:
 			return False, True, False
 		if opt_gap_pct < epsilon:
 			if feas_gap < epsilon:
 				return True, False, False
-		if time() - start_time > max_time:
+		if cur_run_time > max_time:
 			return False, False, True
 
 		return False, False, False
