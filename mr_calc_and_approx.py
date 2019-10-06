@@ -858,77 +858,77 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 
 	flag = False
 
-	try:
-		while not flag:
+	# try:
+	while not flag:
 
-			m_p_n_p_1, m_p_1_t_n = A.shape
-			At = A.transpose()
-			pi_k = np.zeros((m_p_1_t_n, ))
-			pi_hat = np.zeros((m_p_1_t_n, ))
-			prev_pi_hat = np.zeros((m_p_1_t_n, ))
-			prev_gap = np.zeros((m_p_n_p_1,))
-			lamda = np.zeros((m_p_n_p_1, ))
-			prev_lamda = np.zeros((m_p_n_p_1, ))
-			zeta = np.zeros((m_p_n_p_1, ))
-			ze = ma.log(z).filled(0) - 1.0
-			v = np.amin(z[np.where(z > 0)])
-			prev_gap_pct = 1
+		m_p_n_p_1, m_p_1_t_n = A.shape
+		At = A.transpose()
+		pi_k = np.zeros((m_p_1_t_n, ))
+		pi_hat = np.zeros((m_p_1_t_n, ))
+		prev_pi_hat = np.zeros((m_p_1_t_n, ))
+		prev_gap = np.zeros((m_p_n_p_1,))
+		lamda = np.zeros((m_p_n_p_1, ))
+		prev_lamda = np.zeros((m_p_n_p_1, ))
+		zeta = np.zeros((m_p_n_p_1, ))
+		ze = ma.log(z).filled(0) - 1.0
+		v = np.amin(z[np.where(z > 0)])
+		prev_gap_pct = 1
 
-			for i in np.arange(full_max_iter):
+		for i in np.arange(full_max_iter):
 
-				alpha = (i + 1.0)/2.0
-				tau = 2.0/(i+3.0)
+			alpha = (i + 1.0)/2.0
+			tau = 2.0/(i+3.0)
 
-				if i == 0 and prt:
-					print('starting fast primal dual gradient descent')
-					s = time()
+			if i == 0 and prt:
+				print('starting fast primal dual gradient descent')
+				s = time()
 
-					if i == 0 and pi0 is not None:
-						pi_k = pi0
-						pi_hat = pi0
-						gap = b - A.dot(pi_k)
-						prev_gap = gap
+				if i == 0 and pi0 is not None:
+					pi_k = pi0
+					pi_hat = pi0
+					gap = b - A.dot(pi_k)
+					prev_gap = gap
 
-					else:
-						log_exp_A_lamda = -At.dot(lamda)
-						pi_k = np.exp(ze + log_exp_A_lamda)
-				
-				if i > 0:
+				else:
 					log_exp_A_lamda = -At.dot(lamda)
 					pi_k = np.exp(ze + log_exp_A_lamda)
-				pi_hat = tau * pi_k + (1.0 - tau) * pi_hat
+			
+			if i > 0:
+				log_exp_A_lamda = -At.dot(lamda)
+				pi_k = np.exp(ze + log_exp_A_lamda)
+			pi_hat = tau * pi_k + (1.0 - tau) * pi_hat
 
-				if (i > 0 and i % check_every == 0):
-					converged, oob, time_violation, cur_gap_pct = check_stop(i, prt, prev_gap_pct)
-					if converged:
-						flag=True
-						break
-					elif oob:
-						flag=False
-						L = L * 2
-						print('oob feasibility gap halving step size, new L:', L)
-						break
-					elif time_violation:
-						print('time exceed aborting algorithm')
-						return None, None
-				if(i > 0 and i % max_iter == 0):
-					if (1 - cur_gap_pct/prev_gap_pct) < 0.1:
-						L = L * 2
-						print('slow converganve reducing step size, new L:',L)
-					prev_gap_pct = cur_gap_pct
+			if (i > 0 and i % check_every == 0):
+				converged, oob, time_violation, cur_gap_pct = check_stop(i, prt, prev_gap_pct)
+				if converged:
+					flag=True
+					break
+				elif oob:
+					flag=False
+					L = L * 2
+					print('oob feasibility gap halving step size, new L:', L)
+					break
+				elif time_violation:
+					print('time exceed aborting algorithm')
+					return None, None
+			if(i > 0 and i % max_iter == 0):
+				if (1 - cur_gap_pct/prev_gap_pct) < 0.1:
+					L = L * 2
+					print('slow converganve reducing step size, new L:',L)
+				prev_gap_pct = cur_gap_pct
 
-				gap = b - A.dot(pi_k)
-				eta = lamda - (1.0/L) * gap
-				zeta = zeta - (alpha/L) * gap
-				lamda = (tau * zeta) + (1.0 - tau) * eta
+			gap = b - A.dot(pi_k)
+			eta = lamda - (1.0/L) * gap
+			zeta = zeta - (alpha/L) * gap
+			lamda = (tau * zeta) + (1.0 - tau) * eta
 
-		if prt:
-			print('ended fast primal-dual algorithm after ' + str(i) + ' iterations', 'opt_gap_pct: ', cur_gap_pct)
-			print('run time:', time() - s, 'seconds')
-		return pi_hat, lamda
-	except:
-		print('failed to solve')
-		return None, None
+	if prt:
+		print('ended fast primal-dual algorithm after ' + str(i) + ' iterations', 'opt_gap_pct: ', cur_gap_pct)
+		print('run time:', time() - s, 'seconds')
+	return pi_hat, lamda
+	# except:
+	# 	print('failed to solve')
+	# 	return None, None
 
 
 def quadratic_approximation(compatability_matrix, alpha, beta, prt=False, pad=False):
