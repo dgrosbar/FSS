@@ -899,7 +899,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 			pi_hat = tau * pi_k + (1.0 - tau) * pi_hat
 
 			if (i > 0 and i % check_every == 0):
-				converged, oob, time_violation, cur_gap_pct = check_stop(i, prt, prev_gap_pct)
+				converged, oob, time_violation, cur_gap_pct = check_stop(i, prt)
 				if converged:
 					flag=True
 					break
