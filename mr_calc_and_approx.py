@@ -840,14 +840,14 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 			print('feasibility gap is: ', feas_gap)
 			print('time elapsed is: ', cur_run_time)
 		if feas_gap > 3 or k > max_iter:
-			return False, True, False
+			return False, True, False, opt_gap_pct
 		if opt_gap_pct < epsilon:
 			if feas_gap < epsilon:
-				return True, False, False
+				return True, False, False, opt_gap_pct
 		if cur_run_time > max_time:
-			return False, False, True
+			return False, False, True, opt_gap_pct
 
-		return False, False, False
+		return False, False, False, opt_gap_pct
 
 	# ze = z * exp(-1.0)
 	# v = np.amin(z[np.where(z > 0)])
@@ -899,7 +899,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 				pi_hat = tau * pi_k + (1.0 - tau) * pi_hat
 
 				if (i > 0 and i % check_every == 0):
-					converged, oob, time_violation = check_stop(i, k, prt)
+					converged, oob, time_violation, opt_gap_pct = check_stop(i, k, prt)
 					if converged:
 						flag=True
 						break
@@ -920,7 +920,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 				k += 1
 
 		if prt:
-			print('ended fast primal-dual algorithm after ' + str(i) + ' iterations')
+			print('ended fast primal-dual algorithm after ' + str(i) + ' iterations'., 'opt_gap_pct: ', opt_gap_pct)
 			print('run time:', time() - s, 'seconds')
 		return pi_hat, lamda
 	except:
@@ -1371,7 +1371,7 @@ def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 
 		print(A.shape[0], 'x',  A.shape[1], ' matrix going sparse')
 		A = sps.csr_matrix(A)
 
-	eta_w, _ = fast_primal_dual_algorithm(compatability_matrix, A, b, z, m + 1, n, pi0=pi_0, act_rows=None , check_every=10**3, max_iter=10**7, epsilon=10**-5, prt=True, prtall=False)
+	eta_w, _ = fast_primal_dual_algorithm(compatability_matrix, A, b, z, m + 1, n, pi0=pi_0, act_rows=None , check_every=10**3, max_iter=10**5, epsilon=10**-6, prt=True, prtall=False)
 	if eta_w is not None:
 		m_n_eta_w = np.zeros((m + 1, n))
 		for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
