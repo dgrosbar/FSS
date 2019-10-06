@@ -803,7 +803,7 @@ def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	return(np.dot(np.diag(lamda[: m - 1]), pi_hat[: m-1, :]))
 
 
-def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, max_iter=10**7, max_time=1800, epsilon=10**-6, prt=True, prtall=True):
+def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, full_max_iter=10**7,max_iter=10**6, max_time=1800, epsilon=10**-5, prt=True, prtall=True):
 
 	start_time = time()
 
@@ -828,18 +828,18 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 
 		return ((gap_k*gap_k).sum())**0.5
 
-	def check_stop(i, prt=False):
+	def check_stop(i, k,prt=False):
 
 		cur_run_time = time() - start_time
 		opt_gap, opt_gap_pct = check_optimality_gap()
 		feas_gap = check_feasibility_gap()
 		if prtall or ((i % 10**5 == 0) and prt):
-			print('iteration',  i)
+			print('iteration',  i, k)
 			print('optimality gap is:', opt_gap)
 			print('optimality gap pct is: ', opt_gap_pct)
 			print('feasibility gap is: ', feas_gap)
 			print('time elapsed is: ', cur_run_time)
-		if feas_gap > 3:
+		if feas_gap > 3 or k>max_iter:
 			return False, True, False
 		if opt_gap_pct < epsilon:
 			if feas_gap < epsilon:
@@ -852,7 +852,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 	# ze = z * exp(-1.0)
 	# v = np.amin(z[np.where(z > 0)])
 	L = 2 #min(((1.0/v) * (np.amax(np.abs(A[:m].sum(axis=1))) + np.amax(np.abs(A[m:].sum(axis=1))))), 3)
-
+	k = 0
 	if prt or True:
 		print('L', L)
 
@@ -873,7 +873,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 			ze = ma.log(z).filled(0) - 1.0
 			v = np.amin(z[np.where(z > 0)])
 
-			for i in np.arange(max_iter):
+			for i in np.arange(full_max_iter):
 
 				alpha = (i + 1.0)/2.0
 				tau = 2.0/(i+3.0)
@@ -898,7 +898,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 				pi_hat = tau * pi_k + (1.0 - tau) * pi_hat
 
 				if (i > 0 and i % check_every == 0):
-					converged, oob, time_violation = check_stop(i, prt)
+					converged, oob, time_violation = check_stop(i, k, prt)
 					if converged:
 						flag=True
 						break
@@ -916,6 +916,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 				eta = lamda - (1.0/L) * gap
 				zeta = zeta - (alpha/L) * gap
 				lamda = (tau * zeta) + (1.0 - tau) * eta
+				k += 1
 
 		if prt:
 			print('ended fast primal-dual algorithm after ' + str(i) + ' iterations')
@@ -1369,7 +1370,7 @@ def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 
 		print(A.shape[0], 'x',  A.shape[1], ' matrix going sparse')
 		A = sps.csr_matrix(A)
 
-	eta_w, _ = fast_primal_dual_algorithm(compatability_matrix, A, b, z, m + 1, n, pi0=pi_0, act_rows=None , check_every=10**3, max_iter=10**8, epsilon=10**-6, prt=True, prtall=False)
+	eta_w, _ = fast_primal_dual_algorithm(compatability_matrix, A, b, z, m + 1, n, pi0=pi_0, act_rows=None , check_every=10**3, max_iter=10**6, epsilon=10**-5, prt=True, prtall=False)
 	if eta_w is not None:
 		m_n_eta_w = np.zeros((m + 1, n))
 		for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
