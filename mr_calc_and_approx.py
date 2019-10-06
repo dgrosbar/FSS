@@ -920,7 +920,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 				k += 1
 
 		if prt:
-			print('ended fast primal-dual algorithm after ' + str(i) + ' iterations'., 'opt_gap_pct: ', opt_gap_pct)
+			print('ended fast primal-dual algorithm after ' + str(i) + ' iterations', 'opt_gap_pct: ', opt_gap_pct)
 			print('run time:', time() - s, 'seconds')
 		return pi_hat, lamda
 	except:
