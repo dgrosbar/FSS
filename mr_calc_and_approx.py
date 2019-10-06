@@ -819,7 +819,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 			pi_eta = np.exp(ze + log_exp_A_eta)
 			f_pi_eta = f(pi_eta) + eta.dot(A.dot(pi_eta) - b)
 			gap_k = f(pi_hat) - f_pi_eta
-			gap_k_pct = gap_k/np.abs(f_pi_eta)
+			gap_k_pct = np.abs(gap_k/np.abs(f_pi_eta))
 			return gap_k, gap_k_pct
 
 	def check_feasibility_gap():
