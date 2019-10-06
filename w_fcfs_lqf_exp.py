@@ -97,47 +97,60 @@ def w_spbss(exp, timestamp, filename, lqf=False):
             lamda = eta**(1.- theta)
             s = eta**theta        
             mu = beta
-            fcfs_eta_approx = fast_entropy_approximation(compatability_matrix, eta, mu, pad=True)
-            fcfs_eta_approx = fcfs_eta_approx[:m]
+
+            try:
+                fcfs_eta_approx = fast_entropy_approximation(compatability_matrix, eta, mu, pad=True)
+                fcfs_eta_approx = fcfs_eta_approx[:m]
+            except:
+                fcfs_eta_approx = -1 * np.ones((m,n))
+
             r = np.dot(np.diag(1./s), fcfs_eta_approx)
             alis_approx = fast_alis_approximation(1. * compatability_matrix, alpha, beta, rho)
             q = r * (1./(mu - r.sum(axis=0)))
             q = q/q.sum(axis=0)
-            r_weighted, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 0, weighted=True)
-            r_weighted = r_weighted[:m, :]
+            
+            try:
+                r_weighted, _ = weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 0, weighted=True)
+                r_weighted = r_weighted[:m, :]
 
-            q_weighted = r_weighted * (1./(mu - r_weighted.sum(axis=0)))
-            q_weighted = q_weighted/q_weighted.sum(axis=0)
-            w  = np.divide(q_weighted, q, out=np.zeros_like(q), where=(q != 0))
+                q_weighted = r_weighted * (1./(mu - r_weighted.sum(axis=0)))
+                q_weighted = q_weighted/q_weighted.sum(axis=0)
+                w  = np.divide(q_weighted, q, out=np.zeros_like(q), where=(q != 0))
 
-            exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, prt=True, lqf=lqf, per_edge=5000)
-            exp_res['mat']['fcfs_approx'] = r
-            exp_res['mat']['alis_approx'] = alis_approx 
-            exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['fcfs_approx']
-            exp_res['aux']['rho'] = rho
-            exp_res['aux']['gamma'] = 0
-            exp_res['aux']['policy'] = policy_name
-            exp_res['aux']['split'] = split
-            exp_res['aux']['w'] = 1.
-            exp_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, exp_res, timestamp)
-            write_df_to_file(filename, exp_df)
+                exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, prt=True, lqf=lqf, per_edge=5000)
+                exp_res['mat']['fcfs_approx'] = r
+                exp_res['mat']['alis_approx'] = alis_approx 
+                exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * exp_res['mat']['alis_approx'] + (rho) * exp_res['mat']['fcfs_approx']
+                exp_res['aux']['rho'] = rho
+                exp_res['aux']['gamma'] = 0
+                exp_res['aux']['policy'] = policy_name
+                exp_res['aux']['split'] = split
+                exp_res['aux']['w'] = 1.
+                exp_res['aux']['exp_no'] = exp_no
+                exp_res['aux']['grpah_no'] = graph_no
+                exp_res['aux']['beta_dist'] = beta_dist
+                exp_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, exp_res, timestamp)
+                write_df_to_file(filename, exp_df)
 
-            print('policy: ', policy_name, 'lqf: ', lqf, ' split: ', split, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' rho: ', rho)
+                print('policy: ', policy_name, 'lqf: ', lqf, ' split: ', split, ' graph_no: ', graph_no, ' exp_no: ', exp_no, ' rho: ', rho)
 
-            w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w, prt=True, lqf=lqf, per_edge=5000)
-            w_exp_res['mat']['fcfs_approx'] = r_weighted
-            w_exp_res['mat']['alis_approx'] = alis_approx 
-            w_exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * w_exp_res['mat']['alis_approx'] + (rho) * w_exp_res['mat']['fcfs_approx']
-            w_exp_res['aux']['rho'] = rho
-            w_exp_res['aux']['gamma'] = 0
-            w_exp_res['aux']['policy'] = 'weighted_' + policy_name
-            w_exp_res['aux']['split'] = split
-            w_exp_res['aux']['w'] = w
-            w_exp_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, w_exp_res, timestamp)
-            write_df_to_file(filename, w_exp_df)
-
-            print('policy: ', 'weighted_' + policy_name, 'lqf: ', lqf, ' split: ', split, ' graph_no: ', graph_no,' exp_no: ', exp_no, ' rho: ', rho)
-
+                w_exp_res = simulate_queueing_system(compatability_matrix, lamda, mu, s, w, prt=True, lqf=lqf, per_edge=5000)
+                w_exp_res['mat']['fcfs_approx'] = r_weighted
+                w_exp_res['mat']['alis_approx'] = alis_approx 
+                w_exp_res['mat']['fcfs_alis_approx'] = (1. - rho) * w_exp_res['mat']['alis_approx'] + (rho) * w_exp_res['mat']['fcfs_approx']
+                w_exp_res['aux']['rho'] = rho
+                w_exp_res['aux']['gamma'] = 0
+                w_exp_res['aux']['policy'] = 'weighted_' + policy_name
+                w_exp_res['aux']['split'] = split
+                w_exp_res['aux']['w'] = w
+                w_exp_res['aux']['exp_no'] = exp_no
+                w_exp_res['aux']['grpah_no'] = graph_no
+                w_exp_res['aux']['beta_dist'] = beta_dist
+                w_exp_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, w_exp_res, timestamp)
+                write_df_to_file(filename, w_exp_df)
+                print('policy: ', 'weighted_' + policy_name, 'lqf: ', lqf, ' split: ', split, ' graph_no: ', graph_no,' exp_no: ', exp_no, ' rho: ', rho)
+            except:
+                print('could not solve for policy: ', 'weighted_' + policy_name, 'lqf: ', lqf, ' split: ', split, ' graph_no: ', graph_no,' exp_no: ', exp_no, ' rho: ', rho )
             gc.collect()
 
         return None
