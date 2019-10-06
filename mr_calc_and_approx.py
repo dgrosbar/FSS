@@ -803,7 +803,7 @@ def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	return(np.dot(np.diag(lamda[: m - 1]), pi_hat[: m-1, :]))
 
 
-def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, full_max_iter=10**8,max_iter=10**7, max_time=1800, epsilon=10**-5, prt=True, prtall=True):
+def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, full_max_iter=10**8, max_iter=10**5, max_time=1800, epsilon=10**-6, prt=True, prtall=True):
 
 	start_time = time()
 
