@@ -839,7 +839,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 			print('optimality gap pct is: ', opt_gap_pct)
 			print('feasibility gap is: ', feas_gap)
 			print('time elapsed is: ', cur_run_time)
-		if feas_gap > 3 or k>max_iter:
+		if feas_gap > 3 or k > max_iter:
 			return False, True, False
 		if opt_gap_pct < epsilon:
 			if feas_gap < epsilon:
@@ -852,7 +852,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 	# ze = z * exp(-1.0)
 	# v = np.amin(z[np.where(z > 0)])
 	L = 2 #min(((1.0/v) * (np.amax(np.abs(A[:m].sum(axis=1))) + np.amax(np.abs(A[m:].sum(axis=1))))), 3)
-	k = 0
+
 	if prt or True:
 		print('L', L)
 
@@ -872,6 +872,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 			zeta = np.zeros((m_p_n_p_1, ))
 			ze = ma.log(z).filled(0) - 1.0
 			v = np.amin(z[np.where(z > 0)])
+			k = 0
 
 			for i in np.arange(full_max_iter):
 
