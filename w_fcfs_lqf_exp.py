@@ -90,7 +90,7 @@ def w_spbss(exp, timestamp, filename, lqf=False):
         else:
             theta = np.random.uniform(0.1, 0.9, m)
 
-        for rho in [0.1, 0.3, 0.5, 0.6, 0.7, 0.8, 0.9, .95, .99]:
+        for rho in [.99, 0.1, 0.3, 0.5, 0.6, 0.7, 0.8, 0.9, .95]:
 
             st = time()
             eta = alpha * rho
