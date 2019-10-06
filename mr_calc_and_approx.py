@@ -828,18 +828,18 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 
 		return ((gap_k*gap_k).sum())**0.5
 
-	def check_stop(i, k,prt=False):
+	def check_stop(i,prt=False):
 
 		cur_run_time = time() - start_time
 		opt_gap, opt_gap_pct = check_optimality_gap()
 		feas_gap = check_feasibility_gap()
 		if prtall or ((i % 10**5 == 0) and prt):
-			print('iteration',  i, k)
+			print('iteration',  i)
 			print('optimality gap is:', opt_gap)
 			print('optimality gap pct is: ', opt_gap_pct)
 			print('feasibility gap is: ', feas_gap)
 			print('time elapsed is: ', cur_run_time)
-		if feas_gap > 3 or k > max_iter:
+		if feas_gap > 3:
 			return False, True, False, opt_gap_pct
 		if opt_gap_pct < epsilon:
 			if feas_gap < epsilon:
@@ -872,7 +872,7 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 			zeta = np.zeros((m_p_n_p_1, ))
 			ze = ma.log(z).filled(0) - 1.0
 			v = np.amin(z[np.where(z > 0)])
-			k = 0
+			prev_gap_pct = 1
 
 			for i in np.arange(full_max_iter):
 
@@ -899,28 +899,31 @@ def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, ac
 				pi_hat = tau * pi_k + (1.0 - tau) * pi_hat
 
 				if (i > 0 and i % check_every == 0):
-					converged, oob, time_violation, opt_gap_pct = check_stop(i, k, prt)
+					converged, oob, time_violation, cur_gap_pct = check_stop(i, prt, prev_gap_pct)
 					if converged:
 						flag=True
 						break
 					elif oob:
 						flag=False
-						print('oob feasibility gap halving step size')
 						L = L * 2
-						print('new L', L)
+						print('oob feasibility gap halving step size, new L:', L)
 						break
 					elif time_violation:
 						print('time exceed aborting algorithm')
 						return None, None
+				if(i > 0 and i % max_iter == 0):
+					if (1 - cur_gap_pct/prev_gap_pct) < 0.1:
+						L = L * 2
+						print('slow converganve reducing step size, new L:',L)
+					prev_gap_pct = cur_gap_pct
 
 				gap = b - A.dot(pi_k)
 				eta = lamda - (1.0/L) * gap
 				zeta = zeta - (alpha/L) * gap
 				lamda = (tau * zeta) + (1.0 - tau) * eta
-				k += 1
 
 		if prt:
-			print('ended fast primal-dual algorithm after ' + str(i) + ' iterations', 'opt_gap_pct: ', opt_gap_pct)
+			print('ended fast primal-dual algorithm after ' + str(i) + ' iterations', 'opt_gap_pct: ', cur_gap_pct)
 			print('run time:', time() - s, 'seconds')
 		return pi_hat, lamda
 	except:
