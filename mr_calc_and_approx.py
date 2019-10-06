@@ -803,7 +803,7 @@ def node_entropy(compatability_matrix, lamda, mu, prt=False):
 	return(np.dot(np.diag(lamda[: m - 1]), pi_hat[: m-1, :]))
 
 
-def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, full_max_iter=10**7,max_iter=10**6, max_time=1800, epsilon=10**-5, prt=True, prtall=True):
+def fast_primal_dual_algorithm(compatability_matrix, A, b, z, m, n, pi0=None, act_rows=None , check_every=10**3, full_max_iter=10**8,max_iter=10**7, max_time=1800, epsilon=10**-5, prt=True, prtall=True):
 
 	start_time = time()
 
@@ -1370,7 +1370,7 @@ def weighted_entropy_regulerized_ot(compatability_matrix, c, lamda, s, mu, rho, 
 		print(A.shape[0], 'x',  A.shape[1], ' matrix going sparse')
 		A = sps.csr_matrix(A)
 
-	eta_w, _ = fast_primal_dual_algorithm(compatability_matrix, A, b, z, m + 1, n, pi0=pi_0, act_rows=None , check_every=10**3, max_iter=10**6, epsilon=10**-5, prt=True, prtall=False)
+	eta_w, _ = fast_primal_dual_algorithm(compatability_matrix, A, b, z, m + 1, n, pi0=pi_0, act_rows=None , check_every=10**3, max_iter=10**7, epsilon=10**-5, prt=True, prtall=False)
 	if eta_w is not None:
 		m_n_eta_w = np.zeros((m + 1, n))
 		for col, (i,j) in enumerate(zip(*compatability_matrix.nonzero())):
