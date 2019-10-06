@@ -129,6 +129,7 @@ def w_spbss(exp, timestamp, filename, lqf=False):
                 exp_res['aux']['exp_no'] = exp_no
                 exp_res['aux']['grpah_no'] = graph_no
                 exp_res['aux']['beta_dist'] = beta_dist
+                exp_res['aux']['density_level'] = density_level
                 exp_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, exp_res, timestamp)
                 write_df_to_file(filename, exp_df)
 
@@ -146,6 +147,7 @@ def w_spbss(exp, timestamp, filename, lqf=False):
                 w_exp_res['aux']['exp_no'] = exp_no
                 w_exp_res['aux']['grpah_no'] = graph_no
                 w_exp_res['aux']['beta_dist'] = beta_dist
+                w_exp_res['aux']['density_level'] = density_level
                 w_exp_df = log_res_to_df(compatability_matrix, alpha, beta, lamda, s, mu, w_exp_res, timestamp)
                 write_df_to_file(filename, w_exp_df)
                 print('policy: ', 'weighted_' + policy_name, 'lqf: ', lqf, ' split: ', split, ' graph_no: ', graph_no,' exp_no: ', exp_no, ' rho: ', rho)
