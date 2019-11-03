@@ -3087,7 +3087,7 @@ if __name__ == '__main__':
     # ims_table()
     # alis_table()
     # base_cols= ['policy','rho','timestamp','m','n','exp_no','size','structure']
-    sbpss_approx_graph()
+    # sbpss_approx_graph()
     # sbpss_table3()
     # sbpss_cd_table1()
     # sbpss_table1('erdos_renyi_sbpss_uni_mu_comp_alis')
