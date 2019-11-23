@@ -10,7 +10,7 @@ from math import exp
 
 prop_cycle = plt.rcParams['axes.prop_cycle']
 COLORS = prop_cycle.by_key()['color']
-MARKERS = ["o", "v", "*", "x", "H", "D", "s", "X", "P"]
+MARKERS = ["o", "x", "P", "X", "*", "D", "s", "v", "H"]
 
 
 def comparison_graph(filename):
@@ -2943,6 +2943,217 @@ def sbpss_gini_table_maps(filename):
 
 # def waiting_time_map(filename, exo_no, rho):
 
+def sbpss_gini_table_maps2(filename, base_cols):
+
+    plt.rc('text', usetex=True)
+    # plt.rc('font', family='serif')
+    mpl.rcParams['text.latex.preamble'] = [r'\usepackage{xfrac}']
+    mpl.rcParams['hatch.linewidth'] = 0.05
+
+    df = pd.read_csv(filename + '.csv')
+    df_comp = df[(df['rho']>=0.6)]
+    # print(df_comp[df_comp['rho']==0.99][base_cols + ['Avg. Wq']])
+    # & (df['exp_no'] != 18) & (df['exp_no'] != 15) & (df['exp_no'] != 7)]
+    # if 'grid' in filename:
+    #     df_comp = df_comp[(df_comp['exp_no'] != 9) | (df_comp['size'] != '30x30') ]
+    df_comp.loc[:, 'scaled_Wq'] = df_comp['Avg. Wq'] * (1. - df_comp['rho'])/df_comp['rho']
+    df_comp = df_comp.pivot_table(index=base_cols, values=['Avg. Wq', 'gini', 'scaled_Wq'], columns=['policy'], aggfunc=np.mean)
+    df_comp = df_comp.reset_index()
+
+    df_comp.columns = [' '.join(col).strip() for col in df_comp.columns.values]
+    # df_comp[df_comp['rho']==0.99]
+    df_comp.loc[:, 'Wq_ratio'] = df_comp['Avg. Wq weighted_fcfs_alis']/df_comp['Avg. Wq fcfs_alis']
+    df_comp.loc[:, 'gini_gap'] = df_comp['gini fcfs_alis'] - df_comp['gini weighted_fcfs_alis']
+    df_comp.loc[:, 'scaled_Wq_weighted_fcfs_alis'] = df_comp['Avg. Wq weighted_fcfs_alis']*(1. - df_comp['rho'])
+    df_comp.loc[:, 'scaled_Wq_fcfs_alis'] = df_comp['Avg. Wq fcfs_alis']*(1. - df_comp['rho'])
+    # df_comp = df_comp[df_comp['rho']<0.99]_
+    # print(df_comp[df_comp['rho']==0.99][base_cols + ['Avg. Wq', 'gini', 'scaled_Wq']])
+    print(df_comp[(df_comp['rho'] == .99) & (df_comp['density_level'] == 'low')][[
+        'density_level',
+        'exp_no',
+        'beta_dist',
+        'graph_no',
+        'rho',
+        'gini_gap',
+        'Wq_ratio',
+        'Avg. Wq weighted_fcfs_alis',
+        'Avg. Wq fcfs_alis']].sort_values(by='Avg. Wq fcfs_alis'))
+    # print(df_comp[df_comp['exp_no']== 9][['size','exp_no' ,'rho', 'gini_gap', 'Wq_ratio']])
+    
+    def f(df):
+
+        x = '_sim'
+
+        d = {}
+        
+        d['Wq_ratio'] = df['Wq_ratio'].mean()
+        d['Wq_ratio_stdev'] = df['Wq_ratio'].std()
+        d['Wq_ratio_max'] = df['Wq_ratio'].max()
+        d['Wq_ratio_min'] = df['Wq_ratio'].min()
+        d['gini_gap'] = df['gini_gap'].mean()
+        d['gini_gap_stdev'] = df['gini_gap'].std()
+        d['gini_gap_max'] = df['gini_gap'].max()
+        d['gini_gap_min'] = df['gini_gap'].min()
+
+
+        index = [
+            'Wq_ratio',
+            'Wq_ratio_stdev',
+            'gini_gap',
+            'gini_gap_stdev',
+            'Wq_ratio_max',
+            'Wq_ratio_min',
+            'gini_gap_max',
+            'gini_gap_min'
+        ]
+
+        return pd.Series(d, index=index)
+
+    agg_res = df_comp.groupby(by=['density_level', 'rho'], as_index=False).apply(f).reset_index()
+    agg_res['Wq_ratio_u'] = agg_res['Wq_ratio'] + 1.96 * agg_res['Wq_ratio_stdev']
+    agg_res['Wq_ratio_l'] = agg_res['Wq_ratio'] - 1.96 * agg_res['Wq_ratio_stdev']
+    agg_res['gini_gap_u'] = agg_res['gini_gap'] + 1.96 * agg_res['gini_gap_stdev']
+    agg_res['gini_gap_l'] = agg_res['gini_gap'] - 1.96 * agg_res['gini_gap_stdev']
+
+
+    fig, ax = plt.subplots(3, 1, sharex=True)
+    marker_dict = {'fcfs_alis': 'x', 'weighted_fcfs_alis': 'v'}
+    marker_dict = {'fcfs_alis': 'x', 'weighted_fcfs_alis': 'v'}
+
+    rho_max_x = 0
+    rho_max_y = 0
+    rho_min_x = 0
+    rho_min_y = 0
+
+
+    # for k, (density_level, grp) in enumerate(df_comp.groupby(by=['density_level'])):
+    #     # title = '(' + size + ')x(' + size  + ')' if 'x' in str(size) else str(int(size)) + 'x' + str(int(size))
+    #     title = density_level
+    #     # ax[1,k].set_title(title)
+    #     for v, (rho, exp_grp) in enumerate(grp.groupby(by=['exp_no'])):
+    #         exp_grp = exp_grp.sort_values(by='rho')
+    #         ax[1].plot(1.-exp_grp['Wq_ratio'], exp_grp['gini_gap'], color='black', linestyle=':', linewidth=0.5, alpha=0.3, label='_nolegend_')
+    #     for v, (rho, rho_grp) in enumerate(grp.groupby(by=['rho'])):
+    #         print(rho)
+    #         ax[1].scatter(1.- rho_grp['Wq_ratio'], rho_grp['gini_gap'], color=COLORS[v], marker=MARKERS[v],label="{:.2}".format(rho), s=3.**rho_grp['scaled_Wq_fcfs_alis'])
+    #         rho_max_x = max(rho_max_x, (1.-rho_grp['Wq_ratio']).max())
+    #         rho_max_y = max(rho_max_y, rho_grp['gini_gap'].max())
+    #         rho_min_x = min(rho_min_x, (1.-rho_grp['Wq_ratio']).min())
+    #         rho_min_y = min(rho_min_y, rho_grp['gini_gap'].min())
+
+    # for k in range(2):
+    #     ax[1].plot([-1, 1], [0,0], color='black', linewidth=1)
+    #     ax[1].plot([0,0], [-1, 1], color='black', linewidth=1)
+    #     abs_x = max(abs(rho_max_x), abs(rho_min_x))
+    #     abs_y = max(abs(rho_max_y), abs(rho_min_y))
+    #     ax[1].set_xlim(min(rho_min_x * 1.1, -0.25*abs_x), max(rho_max_x * 1.2,0.25 *abs_x))
+    #     ax[1].set_ylim(min(rho_min_y * 1.1, -0.25*abs_y), max(rho_max_y * 1.2,0.25 *abs_y))
+        # ax[1, k].set_xlim(max(min(min_x[k] * 1.1, -0.25*abs_x), -0.1), max(max_x[k] * 1.1,0.25*abs_x))
+        # ax[1, k].set_ylim(min(min_y[k] * 1.1, -0.25*abs_y), max(max_y[k] * 1.1,0.25*abs_y))
+
+    density_level_graph_location = {'low': 0, 'medium': 1, 'high': 2}
+    for density_level, grp in agg_res.groupby(by='density_level'):
+
+        k = density_level_graph_location[density_level]
+
+        # title = '(' + size + ')x(' + size  + ')' if 'x' in size else str(int(size)) + 'x' + str(int(size))
+        title = density_level
+        ax[k].set_title(title, fontsize=18)
+        ax[k].plot(grp['rho'], 1. - grp['Wq_ratio'], color='red', label=r"$1-\sfrac{Wq(w)}{Wq(1)}$")#label='Wq.(weighted) / Wq.(not weighted)')
+        ax[k].plot(grp['rho'], 1. - grp['Wq_ratio_u'], color='red', label='CI-95', linewidth=0.5, linestyle=':')
+        ax[k].plot(grp['rho'], 1. - grp['Wq_ratio_l'], color='red', label='_nolegend_', linewidth=0.5, linestyle=':')
+        ax[k].scatter(grp['rho'], 1. - grp['Wq_ratio_max'], color='red', label= 'Max-Min', marker='x')
+        ax[k].scatter(grp['rho'], 1. - grp['Wq_ratio_min'], color='red', label='_nolegend_', marker='x')
+        ax[k].plot(grp['rho'], grp['gini_gap'], color='blue', label=r"$G(Wq(1))-G(Wq(w))$", linestyle='--')
+        ax[k].plot(grp['rho'], grp['gini_gap_u'], color='blue', label='CI-95', linewidth=0.5, linestyle=':')
+        ax[k].plot(grp['rho'], grp['gini_gap_l'], color='blue', label='_nolegend_', linewidth=0.5, linestyle=':')
+        ax[k].scatter(grp['rho'], grp['gini_gap_max'], color='blue', label='Max-Min', marker='v')
+        ax[k].scatter(grp['rho'], grp['gini_gap_min'], color='blue', label='_nolegend_', marker='v')
+        ax[k].plot([.6,1], [0,0], color='black', linewidth=0.5, linestyle='--')
+        # ax[k, 0].plot([.6,1], [0,0], color='black', linewidth=0.5, linestyle='--')
+        # ax[k, 0].set_xlim(0.59, 1)
+        # ax[k, 0].set_ylim(-0.1, 1.3)
+
+    # ax[0].set_xlabel(r"$\rho$", fontsize=16)
+    # ax[0].set_xlabel(r"$\rho$", fontsize=16)
+    # ax[k].set_xlabel(r"$1-\sfrac{Wq(w)}{Wq(1)}$", fontsize=16)
+    # ax[1].set_xlabel(r"$1-\sfrac{Wq(w)}{Wq(1)}$", fontsize=16)
+    # ax[k].set_ylabel(r"$G(Wq(1))-G(Wq(w))$", fontsize=12)
+    # ax[1].set_ylabel(r"$G(Wq(1))-G(Wq(w))$", fontsize=12)
+
+    plt.rc('xtick',labelsize=14)
+    plt.rc('ytick',labelsize=14)
+
+    
+    # handles,labels = ax[0].get_legend_handles_labels()
+
+    order = [0, 2, 1, 3, 4, 5]
+
+    # handles = [handles[v] for v in order]
+    # labels = [labels[v] for v in order]
+
+    # print(labels)
+
+    # ax[0].legend(handles, labels, ncol=3)
+
+    # lgnd = ax[1].legend(title='utilization', loc="upper left")
+    
+    # lgnd.legendHandles[0]._sizes = [24]
+    # lgnd.legendHandles[1]._sizes = [24]
+    # lgnd.legendHandles[2]._sizes = [24]
+    # lgnd.legendHandles[3]._sizes = [24]
+    # lgnd.legendHandles[4]._sizes = [24]
+    # lgnd.legendHandles[5]._sizes = [24]
+
+    plt.legend()
+
+    plt.show()
+
+    # print(agg_res)
+
+
+def sbpss_gini_table_map_scatter(filename, base_cols):
+
+    plt.rc('text', usetex=True)
+    # plt.rc('font', family='serif')
+    mpl.rcParams['text.latex.preamble'] = [r'\usepackage{xfrac}']
+    mpl.rcParams['hatch.linewidth'] = 0.05
+
+    df = pd.read_csv(filename + '.csv')
+    df_comp = df[(df['rho']>=0.9)]
+    # print(df_comp[df_comp['rho']==0.99][base_cols + ['Avg. Wq']])
+    # & (df['exp_no'] != 18) & (df['exp_no'] != 15) & (df['exp_no'] != 7)]
+    # if 'grid' in filename:
+    #     df_comp = df_comp[(df_comp['exp_no'] != 9) | (df_comp['size'] != '30x30') ]
+    df_comp.loc[:, 'scaled_Wq'] = df_comp['Avg. Wq'] * (1. - df_comp['rho'])/df_comp['rho']
+    df_comp = df_comp.pivot_table(index=base_cols, values=['Avg. Wq', 'gini', 'scaled_Wq'], columns=['policy'], aggfunc=np.mean)
+    df_comp = df_comp.reset_index()
+
+    df_comp.columns = [' '.join(col).strip() for col in df_comp.columns.values]
+    # df_comp[df_comp['rho']==0.99]
+    df_comp.loc[:, 'Wq_ratio'] = df_comp['Avg. Wq weighted_fcfs_alis']/df_comp['Avg. Wq fcfs_alis']
+    df_comp.loc[:, 'gini_gap'] = df_comp['gini fcfs_alis'] - df_comp['gini weighted_fcfs_alis']
+    df_comp.loc[:, 'scaled_Wq_weighted_fcfs_alis'] = df_comp['Avg. Wq weighted_fcfs_alis']*(1. - df_comp['rho'])
+    df_comp.loc[:, 'scaled_Wq_fcfs_alis'] = df_comp['Avg. Wq fcfs_alis']*(1. - df_comp['rho'])
+    # df_comp = df_comp[df_comp['rho']<0.99]_
+    # print(df_comp[df_comp['rho']==0.99][base_cols + ['Avg. Wq', 'gini', 'scaled_Wq']])
+    fig, ax = plt.subplots(3, 1, sharex=True)
+    density_level_graph_location = {'low': 0, 'medium': 1, 'high': 2}
+
+    for density_level, dl_grp in df_comp.groupby(by='density_level'):
+        k = density_level_graph_location[density_level]
+        # ax[k].axhline(y=1, color='black', linewidth=1, linestyle='--')
+        # ax[k].axvline(y=1, color='black', linewidth=1, linestyle='--')
+        for i, (rho, dl_rho_grp) in enumerate(dl_grp.groupby(by='rho')):
+            print(MARKERS[i])
+            ax[k].scatter(np.log(dl_rho_grp['scaled_Wq_fcfs_alis']), dl_rho_grp['Wq_ratio'], color=COLORS[i], marker=MARKERS[i], label='{:.2}'.format(rho), s=10)
+        ax[k].legend()        
+
+    print('trying to show')
+    plt.show()
+
+
+
 def sbpss_cd_graph1_lqf_both_fix(split, filename='./Results/FZ_Kaplan_sbpss_cd_sum_w_alis_lqf_2'):
 
     sum_res = pd.read_csv(filename + '.csv')
@@ -3098,7 +3309,8 @@ if __name__ == '__main__':
     # comparison_graph5('./Results/grids_exp_parallel_new_9_x_9')
     # sbpss_gini_score('map_exp_sbpss_lqf_30x30', base_cols)
     # sbpss_gini_table('./Results/grid_sbpss_comp_gini')
-    # sbpss_gini_table_maps('map_exp_sbpss_30x30_comp_gini')
+    base_cols = ['density_level','graph_no','beta_dist', 'exp_no', 'rho']
+    sbpss_gini_table_maps2('sbpss_w_compare_fcfs_gini', base_cols)
     # sbpss_graph3()
     # make_test_file('grid_sbpss_comp')
     # make_test_file_ot('new_grid_sbpss_ot3')

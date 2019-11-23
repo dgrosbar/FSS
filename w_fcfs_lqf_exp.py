@@ -22,7 +22,7 @@ from mr_calc_and_approx import *
 import gc
 
 
-def compare_w_policy(newfilename, filename='FZ_final_w_qp', p=30, lqf=False):
+def compare_w_policy(newfilename, filename='FZ_final_w_qp', p=30, lqf=True):
 
     df = pd.read_csv(filename + '.csv')
     pool = mp.Pool(processes=p)
@@ -45,7 +45,7 @@ def compare_w_policy(newfilename, filename='FZ_final_w_qp', p=30, lqf=False):
                 exps = []
 
         
-def w_spbss(exp, timestamp, filename, lqf=False):
+def w_spbss(exp, timestamp, filename, lqf=True):
 
     exp_data = exp[['timestamp','m', 'n' ,'exp_num', 'density_level', 'beta_dist', 'graph_no']].drop_duplicates()
     alpha_data = exp[['i', 'alpha']].drop_duplicates()
@@ -143,7 +143,7 @@ def w_spbss(exp, timestamp, filename, lqf=False):
             w_exp_res['aux']['gamma'] = 0
             w_exp_res['aux']['policy'] = 'weighted_' + policy_name
             w_exp_res['aux']['split'] = split
-            w_exp_res['aux']['w'] = w
+            w_exp_res['mat']['w'] = w
             w_exp_res['aux']['exp_no'] = exp_no
             w_exp_res['aux']['grpah_no'] = graph_no
             w_exp_res['aux']['beta_dist'] = beta_dist
