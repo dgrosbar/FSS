@@ -155,7 +155,7 @@ def w_spbss(exp, timestamp, filename, lqf=True):
             #     print('could not solve for policy: ', 'weighted_' + policy_name, 'lqf: ', lqf, ' split: ', split, ' graph_no: ', graph_no,' exp_no: ', exp_no, ' rho: ', rho )
             gc.collect()
 
-        return None
+    return None
    
 
 if __name__ == '__main__':
@@ -166,6 +166,6 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 1000000
     pd.set_option('display.width', 10000)
 
-    compare_w_policy(newfilename='sbpss_w_compare_lqf', filename='FZ_final_w_qp', p=30, lqf=True)
+    compare_w_policy(newfilename='sbpss_w_compare_lqf_w_split', filename='FZ_final_w_qp', p=30, lqf=True)
 
     
