@@ -79,7 +79,7 @@ def w_spbss(exp, timestamp, filename, lqf=False):
 
     c = np.zeros((m,n))
 
-    for split in ['zero', 'one', 'half', 'rand']:
+    for split in ['one', 'half', 'rand']:
 
         if split == 'zero':
             theta = np.zeros(m)
